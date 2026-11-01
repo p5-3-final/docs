@@ -1,63 +1,112 @@
 # 프로젝트 문서 (docs 레포)
 
-프로젝트의 스펙, 아키텍처 결정, API 계약을 관리하는 루트 레포입니다. 서비스 코드는 각자 별도 레포에 있고, 이 레포 아래 `repos/`에 클론해서 작업합니다.
+스펙, API 계약, 아키텍처 문서, 공통 규칙을 관리하는 루트 레포입니다. 서비스 코드는 레포마다 따로 있고, 이 레포 아래 `repos/`에 클론해서 작업합니다.
+
+| 레포 | 내용 |
+| --- | --- |
+| [docs](https://github.com/p5-3-final/docs) | 이 레포. spec, 계약, 아키텍처, 공통 규칙, 로컬 docker-compose |
+| [backend](https://github.com/p5-3-final/backend) | Spring Boot 멀티모듈 MSA |
+| [ai](https://github.com/p5-3-final/ai) | Python FastAPI AI 서비스 |
+| [frontend](https://github.com/p5-3-final/frontend) | React SPA |
+| [infra](https://github.com/p5-3-final/infra) | Terraform (AWS) |
+| [gitops](https://github.com/p5-3-final/gitops) | Argo CD가 추적하는 Kubernetes 매니페스트 |
 
 ## 시작하기
 
+### 0. 사전 준비 (한 번만)
+
+`p5-3-final` 조직 초대를 수락한 뒤 진행합니다.
+
 ```bash
-git clone git@github.com:p5-3-final/docs.git project && cd project
-./scripts/clone-repos.sh   # repos.conf 목록대로 repos/ 아래에 클론
+xcode-select --install                  # git 포함 (macOS)
+brew install gh
+ssh-keygen -t ed25519 -C "<내 이메일>"   # 이미 키가 있으면 생략
+gh auth login                           # GitHub.com → SSH → 공개 키 업로드 → 브라우저 로그인
 ```
 
-## AI 코딩 도구별 사용법
+### 1. 레포 클론
 
-규칙 원본은 `AGENTS.md`입니다. 세 도구 모두 같은 규칙을 따릅니다.
+```bash
+git clone git@github.com:p5-3-final/docs.git project
+cd project
+./scripts/clone-repos.sh                # repos/ 아래에 backend, ai, frontend, infra, gitops 클론
+```
 
-| 도구 | 읽는 파일 | 사용 시 주의 |
+### 2. 도구 설치
+
+맡은 레포에 필요한 것만 설치합니다.
+
+| 대상 | 명령 |
+| --- | --- |
+| 공통 (문서, 검사) | `brew install node lychee shellcheck lefthook` |
+| backend | `brew install openjdk@21` (Gradle은 wrapper가 받음) |
+| ai | `brew install uv` → `uv python install 3.12` |
+| frontend | `brew install fnm` → `fnm install 22` → `corepack enable` (pnpm) |
+| infra | `brew install terraform tflint trivy` |
+| gitops | `brew install kubeconform kube-linter yamllint kubectl helm` |
+| 로컬 실행 | Docker Desktop 또는 OrbStack |
+
+### 3. 레포별 설정 (해당 파일이 생긴 뒤)
+
+```bash
+# 레포에 lefthook.yml이 있으면 레포마다 한 번
+cd repos/<레포> && lefthook install
+
+# local/에 docker-compose가 있으면
+cp local/.env.example local/.env        # 값은 팀 채널에서 받아 직접 입력
+docker compose -f local/docker-compose.yml up -d
+```
+
+## 작업 흐름
+
+`main`은 보호되어 있어 직접 push할 수 없습니다. 브랜치를 만들어 PR로 반영하고, squash merge만 허용합니다.
+
+```bash
+cd repos/<레포>                          # docs 레포 작업이면 project/에서
+git switch main && git pull
+git switch -c feat/SPEC-012-sign-up     # 또는 fix/87-token-expiry
+# 작업, 커밋
+git push -u origin HEAD
+gh pr create                            # 제목은 Conventional Commits 형식 (squash 커밋 제목이 됨)
+```
+
+기능 개발은 SDD 순서를 따릅니다. 자세한 규칙은 [AGENTS.md](AGENTS.md)에 있습니다.
+
+1. `sdd-spec`: `docs/specs/`에 spec 작성 → PR 리뷰·승인
+2. API·이벤트가 바뀌면 `docs/contracts/` 수정
+3. 각 레포에서 `sdd-plan`: `specs/SPEC-NNN-*/plan.md`, `tasks.md` 작성
+4. `sdd-implement`: 태스크마다 테스트 먼저(Red → Green → Refactor)
+5. 요구사항별 테스트 통과, 배포 후 spec 상태를 `Done`으로 변경
+
+## AI 코딩 도구
+
+규칙 원본은 `AGENTS.md`이고, 세 도구 모두 같은 규칙을 따릅니다.
+
+| 도구 | 실행 위치 | 스킬 호출 |
 | --- | --- | --- |
-| Claude Code | `CLAUDE.md`(→ `@AGENTS.md`), `.claude/rules`, `.claude/skills` | `repos/<레포>`에서 실행해도 루트 규칙이 자동으로 함께 적용됩니다. |
-| Codex | `AGENTS.md`, `.agents/skills` | 레포가 독립 git이라 루트 `AGENTS.md`를 자동으로 읽지 않습니다. 레포 AGENTS.md에 직접 읽으라는 지시가 들어 있습니다. |
-| Antigravity | `AGENTS.md`, `.agents/rules`, `.agents/skills` | 루트 `project/` 폴더를 workspace로 열어야 루트 규칙까지 적용됩니다. |
+| Claude Code | `project/` 또는 `repos/<레포>`. 하위 레포에서도 루트 규칙이 함께 적용됩니다. | `/sdd-spec` |
+| Codex | 레포 디렉터리. 레포 `AGENTS.md`의 지시에 따라 루트 `AGENTS.md`를 직접 읽습니다. | `$sdd-spec` |
+| Antigravity | `project/` 폴더를 workspace로 열어야 루트 규칙까지 적용됩니다. | 요청 내용에 맞으면 자동 |
 
-`.claude/rules`나 `.claude/skills`를 수정했다면 `./scripts/sync-agent-config.sh`를 실행해서 `.agents/`를 갱신하세요. 두 폴더가 어긋나면 CI에서 실패합니다.
+`.claude/rules`나 `.claude/skills`를 고쳤다면 `./scripts/sync-agent-config.sh`로 `.agents/`(Codex·Antigravity용 생성본)를 갱신하고 같은 커밋에 넣습니다. 어긋나면 CI가 실패합니다.
 
 ## 디렉터리 구조
 
-```
-project/                      ← docs 레포 (이 레포)
-├── AGENTS.md                 ← 전 레포 공통 규칙 (원본)
-├── CLAUDE.md                 ← @AGENTS.md + Claude Code 전용 안내
-├── .claude/
-│   ├── settings.json         ← Claude Code 권한 설정 (.env 읽기, apply·클러스터 변경 명령 차단)
-│   ├── rules/                ← 경로별 규칙 원본 (SDD, 문서 작성, 계약, 공통 검사 도구)
-│   └── skills/               ← 스킬 원본 (sdd-spec, sdd-adr)
+```text
+project/                      ← docs 레포
+├── AGENTS.md, CLAUDE.md      ← 공통 규칙
+├── .claude/                  ← 규칙·스킬 원본, 권한 설정
 ├── .agents/                  ← Codex·Antigravity용 생성본 (직접 수정 금지)
-├── .github/workflows/        ← agent-config-sync (생성본 최신 여부 검사)
 ├── docs/
-│   ├── principles.md         ← 프로젝트 원칙 (모든 plan의 검증 기준)
+│   ├── principles.md         ← 프로젝트 원칙
 │   ├── product/              ← PRD, 용어집
 │   ├── architecture/         ← 아키텍처 개요, 서비스 카탈로그
 │   ├── specs/                ← 기능 스펙 (SPEC-NNN-*/spec.md)
-│   ├── contracts/            ← OpenAPI / AsyncAPI 계약 원본
+│   ├── contracts/            ← OpenAPI / AsyncAPI 계약
 │   ├── adr/                  ← 아키텍처 결정 기록
-│   └── templates/            ← spec / plan / tasks / adr 템플릿
+│   └── templates/            ← spec, plan, tasks, adr 템플릿
 ├── scripts/                  ← clone-repos.sh, sync-agent-config.sh
-├── local/                    ← 로컬 docker-compose (repos/*를 빌드 컨텍스트로 사용)
+├── local/                    ← 로컬 docker-compose
 ├── repos.conf                ← 하위 레포 목록
 └── repos/                    ← (gitignore) 하위 레포 클론 위치
-    ├── backend/  ai/  frontend/
-    ├── infra/                ← Terraform (AWS)
-    └── gitops/               ← Argo CD가 추적하는 매니페스트
 ```
-
-## 개발 흐름 (SDD)
-
-1. `sdd-spec` 스킬: `docs/specs/`에 spec 작성 (무엇·왜, EARS 요구사항). PR로 리뷰받고 승인
-2. 계약 변경이 있으면 `docs/contracts/` 수정
-3. 각 레포에서 `sdd-plan` 스킬: `specs/SPEC-NNN-*/plan.md`, `tasks.md` 작성
-4. `sdd-implement` 스킬: 태스크 단위로 테스트 먼저 작성한 뒤 구현
-5. 요구사항별 테스트가 통과하고 배포까지 끝나면 spec 상태를 `Done`으로 변경
-
-스킬 호출 방법은 도구마다 다릅니다. Claude Code는 `/sdd-spec`, Codex는 `$sdd-spec`이고, Antigravity는 요청 내용에 맞으면 자동으로 씁니다.
-
-자세한 내용은 [docs/README.md](docs/README.md)를 보세요.
