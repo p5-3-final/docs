@@ -170,7 +170,7 @@ Claude Code와 Antigravity는 해당 경로의 파일을 다룰 때 아래 규�
   - type: `feat` `fix` `refactor` `test` `docs` `chore` `build` `ci` `perf`
   - 예: `feat(user-service): 회원가입 API 추가`
   - 본문 끝에 `Refs: SPEC-012` 또는 `Closes #87`을 붙인다.
-- PR: squash merge, 리뷰어 1명 이상 승인, CI 통과가 조건이다. PR 본문에 spec 링크와 충족한 요구사항 ID를 적는다.
+- PR: squash merge와 CI 통과가 병합 조건이다. 리뷰 승인은 지금은 필수가 아니다(ruleset 필수 승인 수 0). 단, spec PR과 검사 예외가 있는 PR은 리뷰어 승인을 받은 뒤 병합한다. PR 본문에 spec 링크와 충족한 요구사항 ID를 적는다.
 - `main`에 직접 push하거나 force push하지 않는다. 사용자가 요청할 때만 커밋하거나 push한다.
   - 유일한 예외: gitops 레포 `envs/dev`의 이미지 태그 갱신은 서비스 레포 CI가 전용 자격 증명 하나로 `main`에 직접 커밋한다. 브랜치 보호 우회도 그 자격 증명에만 허용한다. 커밋 메시지는 `chore(envs-dev): <service> 이미지를 <sha>로 갱신`이고 본문의 `Refs:`는 생략한다. 다른 환경의 태그와 그 밖의 변경은 PR로 한다.
 
