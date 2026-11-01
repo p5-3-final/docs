@@ -10,11 +10,6 @@ mkdir -p "$ROOT/repos"
 while read -r name url; do
   [[ -z "${name:-}" || "$name" == \#* ]] && continue
 
-  if [[ "$url" == *"<ORG>"* ]]; then
-    echo "error: repos.conf의 <ORG>를 실제 GitHub 조직명으로 바꾸세요 ($name)" >&2
-    exit 1
-  fi
-
   target="$ROOT/repos/$name"
   if [[ -d "$target/.git" ]]; then
     echo "skip: $name (이미 존재)"

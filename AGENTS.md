@@ -19,7 +19,7 @@
 
 - `repos/`는 docs 레포의 `.gitignore`에 포함된다. 그 아래 디렉터리는 **각각 독립된 git 레포**다.
 - git 명령은 반드시 변경한 파일이 속한 레포 디렉터리에서 실행한다. 루트에서 `repos/*` 파일을 커밋하지 않는다.
-- 레포 클론은 `./scripts/clone-repos.sh`, 새 레포 초기 설정은 `./scripts/bootstrap-repo.sh <name>`으로 한다. 레포 목록은 `repos.conf`에 있다.
+- 레포 클론은 `./scripts/clone-repos.sh`로 한다. 레포 목록은 `repos.conf`에 있다. 새 레포는 비슷한 기존 레포의 `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.github/`를 복사해서 시작한다.
 
 ### docs 레포 명령
 docs 레포에서 작업을 끝내기 전에 바꾼 대상에 해당하는 명령을 실행한다. 세부 규칙은 `docs-writing.md`, `contracts.md`, `ci-common.md`에 있다.
