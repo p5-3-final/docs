@@ -13,7 +13,7 @@ paths:
 | --- | --- | --- |
 | TypeScript | `tsconfig.json`: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noFallthroughCasesInSwitch` | 타입 |
 | ESLint (flat config) | `eslint.config.js` | 아래 표 |
-| Prettier | `.prettierrc` | 포맷. ESLint와 겹치는 규칙은 `eslint-config-prettier`로 끈다 |
+| Prettier | `.prettierrc` | 포맷. ESLint와 겹치는 규칙은 `eslint-config-prettier`로 끈다. Tailwind 클래스 순서는 `prettier-plugin-tailwindcss`로 정렬한다 |
 
 ESLint 구성과 그 규칙이 강제하는 이 레포의 규칙은 다음과 같다.
 

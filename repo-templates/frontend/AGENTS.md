@@ -15,7 +15,7 @@
 | `.github/workflows/**`, `Dockerfile`, `*.sh`, `.editorconfig`, `lefthook.yml` | `.claude/rules/ci-common.md` |
 
 ## 스택
-Node.js 22 LTS(`.nvmrc`) · pnpm · React 19 · TypeScript(strict) · Vite · React Router · TanStack Query · Zustand(필요할 때만) · React Hook Form + Zod · Vitest · React Testing Library · MSW · Playwright · ESLint(flat config) · Prettier
+Node.js 22 LTS(`.nvmrc`) · pnpm · React 19 · TypeScript(strict) · Vite · React Router · TanStack Query · Zustand(필요할 때만) · Tailwind CSS v4(`@tailwindcss/vite`) · React Hook Form + Zod · Vitest · React Testing Library · MSW · Playwright · ESLint(flat config) · Prettier
 
 ## 구조 (feature 기반)
 ```
@@ -68,7 +68,10 @@ pnpm gen:api        # ../../docs/contracts/openapi/*.yaml → src/api/generated
 - **환경변수**: `VITE_` 접두사가 붙은 변수는 브라우저에 그대로 노출된다. 비밀값은 절대 넣지 않는다.
 - **인증 토큰**: 토큰 저장 방식은 ADR로 결정할 때까지 `localStorage`에 저장하지 않는다. 권장 방식은 httpOnly 쿠키다.
 - **접근성**: 시맨틱 태그를 쓴다. 클릭할 수 있는 요소는 `<button>`이나 `<a>`로 만든다. 이미지에는 `alt`, 폼 요소에는 `label`을 단다. 키보드로 조작할 수 있어야 한다.
-- **스타일**: 스타일링 방식(Tailwind, CSS Modules 등)은 첫 UI spec의 plan에서 결정하고 이 파일에 기록한다.
+- **스타일**: Tailwind CSS 유틸리티 클래스로 스타일링한다.
+  - 색, 간격, 폰트 같은 디자인 토큰은 `src/app/index.css`의 `@theme`에 정의한다. 임의 값(`w-[37px]`)은 맞는 토큰이 없을 때만 쓴다.
+  - 별도 CSS 파일과 `style` 속성은 쓰지 않는다. 예외는 `src/app/index.css`(전역 스타일)와 런타임에 계산되는 값이다.
+  - 같은 클래스 조합이 반복되면 `shared/ui` 컴포넌트로 뽑는다.
 
 ## 테스트
 - 컴포넌트 테스트는 사용자 관점으로 쓴다. `getByRole`, `getByLabelText`를 우선 쓰고, 구현 세부(state, class)는 검증하지 않는다.
