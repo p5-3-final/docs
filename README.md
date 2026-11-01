@@ -6,8 +6,7 @@
 
 ```bash
 git clone git@github.com:p5-3-final/docs.git project && cd project
-./scripts/clone-repos.sh            # repos.conf 목록대로 repos/ 아래에 클론
-./scripts/bootstrap-repo.sh backend # 레포에 AGENTS.md·CLAUDE.md·규칙·스킬·PR 템플릿 복사 (기존 파일은 유지)
+./scripts/clone-repos.sh   # repos.conf 목록대로 repos/ 아래에 클론
 ```
 
 ## AI 코딩 도구별 사용법
@@ -42,8 +41,7 @@ project/                      ← docs 레포 (이 레포)
 │   ├── contracts/            ← OpenAPI / AsyncAPI 계약 원본
 │   ├── adr/                  ← 아키텍처 결정 기록
 │   └── templates/            ← spec / plan / tasks / adr 템플릿
-├── repo-templates/           ← 각 레포 초기 설정 (AGENTS.md, CLAUDE.md, .claude/, .github/)
-├── scripts/                  ← clone-repos.sh, bootstrap-repo.sh, sync-agent-config.sh
+├── scripts/                  ← clone-repos.sh, sync-agent-config.sh
 ├── local/                    ← 로컬 docker-compose (repos/*를 빌드 컨텍스트로 사용)
 ├── repos.conf                ← 하위 레포 목록
 └── repos/                    ← (gitignore) 하위 레포 클론 위치
