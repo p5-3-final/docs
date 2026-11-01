@@ -1,0 +1,18 @@
+# 하위 레포 (각각 독립 git 레포)
+/repos/*
+!/repos/.gitkeep
+
+# 비밀값
+.env
+.env.*
+!.env.example
+
+# Claude 개인 설정
+.claude/settings.local.json
+CLAUDE.local.md
+
+# OS / 에디터
+.DS_Store
+.idea/
+.vscode/
+*.swp

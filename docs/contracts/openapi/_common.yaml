@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: Common Schemas
+  version: 1.0.0
+  description: 모든 서비스가 $ref로 참조하는 공통 스키마
+paths: {}
+components:
+  schemas:
+    ProblemDetail:
+      type: object
+      description: RFC 9457 오류 응답
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          format: uri
+          default: about:blank
+        title:
+          type: string
+          example: Conflict
+        status:
+          type: integer
+          example: 409
+        detail:
+          type: string
+          example: 이미 가입된 이메일입니다.
+        instance:
+          type: string
+          example: /api/v1/users
+        code:
+          type: string
+          description: 서비스별 오류 코드 (<DOMAIN>_<REASON>)
+          example: USER_EMAIL_DUPLICATED
+        traceId:
+          type: string
+          description: 요청 추적 ID
+    PageMeta:
+      type: object
+      required: [page, size, totalElements, totalPages]
+      properties:
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
