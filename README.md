@@ -19,9 +19,15 @@
 
 ```bash
 xcode-select --install                  # git 포함 (macOS)
-brew install gh
 ssh-keygen -t ed25519 -C "<내 이메일>"   # 이미 키가 있으면 생략
-gh auth login                           # GitHub.com → SSH → 공개 키 업로드 → 브라우저 로그인
+pbcopy < ~/.ssh/id_ed25519.pub          # GitHub → Settings → SSH and GPG keys → New SSH key에 붙여넣기
+ssh -T git@github.com                   # "Hi <아이디>!"가 나오면 성공
+```
+
+[GitHub CLI](https://cli.github.com)(`gh`)는 선택입니다. 터미널에서 PR을 열고 싶을 때만 설치합니다.
+
+```bash
+brew install gh && gh auth login        # GitHub.com → SSH → 브라우저 로그인
 ```
 
 ### 1. 레포 클론
@@ -67,7 +73,8 @@ git switch main && git pull
 git switch -c feat/SPEC-012-sign-up     # 또는 fix/87-token-expiry
 # 작업, 커밋
 git push -u origin HEAD
-gh pr create                            # 제목은 Conventional Commits 형식 (squash 커밋 제목이 됨)
+# GitHub 웹에서 PR 생성 (gh가 있으면 gh pr create)
+# PR 제목은 Conventional Commits 형식 (squash 커밋 제목이 됨)
 ```
 
 기능 개발은 SDD 순서를 따릅니다. 자세한 규칙은 [AGENTS.md](AGENTS.md)에 있습니다.
