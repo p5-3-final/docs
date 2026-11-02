@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: media-service API
-  version: 1.0.0
+  version: 1.0.1
   description: |
     영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003).
     외부 경로(`/api/v1/media/**`)는 api-gateway를 거쳐 호출한다.
@@ -360,15 +360,12 @@ components:
         upload:
           $ref: '#/components/schemas/UploadInstruction'
     UploadInstruction:
-      description: 업로드 방법. `method`로 구분한다.
+      description: |
+        업로드 방법. `method`(`SINGLE`, `MULTIPART`)로 구분한다.
+        `discriminator`는 쓰지 않는다. 계약 검증 도구(swagger-request-validator)가 OpenAPI 3.1의 discriminator를 처리하지 못한다.
       oneOf:
         - $ref: '#/components/schemas/SingleUpload'
         - $ref: '#/components/schemas/MultipartUpload'
-      discriminator:
-        propertyName: method
-        mapping:
-          SINGLE: '#/components/schemas/SingleUpload'
-          MULTIPART: '#/components/schemas/MultipartUpload'
     SingleUpload:
       type: object
       description: |
