@@ -1,9 +1,10 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, auth-service, api-gateway가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, auth-service, api-gateway, frontend가 들어 있고, 서비스 구현이 시작되면 추가한다.
 
 | 컨테이너 | 호스트 포트 | 메모리 상한 |
 | --- | --- | --- |
+| frontend (nginx) | 3000 | 64M |
 | api-gateway | 8080 | 512M |
 | auth-service | 8081 | 768M |
 | postgres (auth_db) | 5432 | 512M |
@@ -12,7 +13,7 @@
 ## 준비
 
 - Docker Desktop 또는 OrbStack
-- `./scripts/clone-repos.sh`로 `repos/backend`를 클론해 둔다. 이미지는 `repos/backend/Dockerfile`로 빌드한다.
+- `./scripts/clone-repos.sh`로 `repos/backend`와 `repos/frontend`를 클론해 둔다. 이미지는 각 레포의 `Dockerfile`로 빌드한다.
 
 ## 실행
 
@@ -25,7 +26,9 @@ docker compose -f local/docker-compose.yml up -d --build
 docker compose -f local/docker-compose.yml ps
 ```
 
-게이트웨이를 거쳐 가입 → 로그인 → 내 정보를 확인한다.
+브라우저에서 <http://localhost:3000>을 열면 frontend 화면이 나온다. 샘플 관리자(`admin@example.com` / `admin1234`)로 로그인하거나 가입해서 확인한다. Safari는 `http://localhost`에서 `Secure` 쿠키를 저장하지 않을 수 있어 Chrome 계열을 쓴다.
+
+게이트웨이를 거쳐 API로 가입 → 로그인 → 내 정보를 확인한다.
 
 ```bash
 curl -s -X POST localhost:8080/api/v1/auth/signup -H 'Content-Type: application/json' \
