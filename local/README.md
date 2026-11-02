@@ -17,9 +17,9 @@
 ## 실행
 
 ```bash
+# 예시 파일에 로컬 전용 샘플값(비밀번호, 서명 키, 초기 관리자 admin@example.com)이 들어 있어 복사만 하면 뜬다.
+# 서명 키를 새로 만들려면 (cd repos/backend && ./gradlew -q :services:auth-service:generateSigningKey)
 cp local/.env.example local/.env
-# 비밀번호 두 개를 정하고, 서명 키를 만들어 AUTH_JWT_SIGNING_KEY에 작은따옴표로 감싸 넣는다.
-(cd repos/backend && ./gradlew -q :services:auth-service:generateSigningKey)
 
 docker compose -f local/docker-compose.yml up -d --build
 docker compose -f local/docker-compose.yml ps
