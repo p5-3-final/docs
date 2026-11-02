@@ -1,0 +1,385 @@
+openapi: 3.1.0
+info:
+  title: auth-service API
+  version: 1.0.0
+  description: |
+    회원가입, 로그인, 토큰 발급·재발급·폐기, 알림 연결 티켓 (SPEC-001).
+    외부 경로(`/api/v1/auth/**`)는 api-gateway를 거쳐 호출한다.
+    공개키 목록(`/.well-known/jwks.json`)은 클러스터 내부 전용이며 api-gateway가 라우팅하지 않는다.
+    토큰 형식과 키 교체 규칙은 `../auth/access-token.md`에 있다.
+servers:
+  - url: /
+    description: api-gateway 기준 경로 (로컬 http://localhost:8080)
+tags:
+  - name: auth
+    description: 가입, 로그인, 토큰
+  - name: internal
+    description: 클러스터 내부 전용
+paths:
+  /api/v1/auth/signup:
+    post:
+      operationId: signUp
+      summary: 회원가입
+      description: 가입한 계정은 USER 역할을 받는다. (SPEC-001 R-1~R-5)
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+            example:
+              email: user@example.com
+              password: secret123
+              nickname: 영상분석가
+      responses:
+        '201':
+          description: 계정 생성
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                id: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                email: user@example.com
+                nickname: 영상분석가
+                roles: [USER]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: 이미 가입된 이메일 (AUTH_EMAIL_DUPLICATED)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: 이미 가입된 이메일입니다.
+                code: AUTH_EMAIL_DUPLICATED
+        '429':
+          $ref: './_common.yaml#/components/responses/RateLimited'
+  /api/v1/auth/login:
+    post:
+      operationId: logIn
+      summary: 로그인
+      description: |
+        접근 토큰은 응답 본문으로, 재발급 토큰은 쿠키로 받는다. (SPEC-001 R-7~R-9, R-29)
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogInRequest'
+            example:
+              email: user@example.com
+              password: secret123
+      responses:
+        '200':
+          description: 로그인 성공
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshTokenCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                accessToken: eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjYtMTEtMDEifQ.payload.signature
+                tokenType: Bearer
+                expiresIn: 900
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: 이메일이 없거나 비밀번호가 틀림 (AUTH_INVALID_CREDENTIALS)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Unauthorized
+                status: 401
+                detail: 이메일 또는 비밀번호가 올바르지 않습니다.
+                code: AUTH_INVALID_CREDENTIALS
+        '423':
+          description: 연속 로그인 실패로 잠긴 계정 (AUTH_ACCOUNT_LOCKED)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Locked
+                status: 423
+                detail: 로그인 시도가 너무 많아 잠시 후 다시 시도해야 합니다.
+                code: AUTH_ACCOUNT_LOCKED
+        '429':
+          $ref: './_common.yaml#/components/responses/RateLimited'
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: 토큰 재발급
+      description: |
+        쿠키의 재발급 토큰으로 새 접근 토큰과 새 재발급 토큰을 받는다. 제출한 재발급 토큰은 무효가 된다.
+        이미 사용한 토큰을 다시 제출하면 같은 로그인 계열의 토큰이 모두 폐기된다. (SPEC-001 R-22~R-24)
+      tags: [auth]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RefreshTokenCookie'
+      responses:
+        '200':
+          description: 재발급 성공
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshTokenCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                accessToken: eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjYtMTEtMDEifQ.payload.signature
+                tokenType: Bearer
+                expiresIn: 900
+        '401':
+          description: 재발급 토큰이 없거나 무효 (AUTH_REFRESH_INVALID), 재사용 감지 (AUTH_REFRESH_REUSED)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              examples:
+                invalid:
+                  value:
+                    type: about:blank
+                    title: Unauthorized
+                    status: 401
+                    code: AUTH_REFRESH_INVALID
+                reused:
+                  value:
+                    type: about:blank
+                    title: Unauthorized
+                    status: 401
+                    code: AUTH_REFRESH_REUSED
+  /api/v1/auth/logout:
+    post:
+      operationId: logOut
+      summary: 로그아웃
+      description: 재발급 토큰을 폐기하고 쿠키를 지운다. (SPEC-001 R-25)
+      tags: [auth]
+      parameters:
+        - $ref: '#/components/parameters/RefreshTokenCookie'
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '204':
+          description: 로그아웃 완료
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/ClearRefreshTokenCookie'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /api/v1/auth/me:
+    get:
+      operationId: getMe
+      summary: 내 정보 조회
+      description: (SPEC-001 R-10)
+      tags: [auth]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '200':
+          description: 내 정보
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                id: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                email: user@example.com
+                nickname: 영상분석가
+                roles: [USER]
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /api/v1/auth/sse-tickets:
+    post:
+      operationId: issueSseTicket
+      summary: 알림 연결 티켓 발급
+      description: |
+        30초 동안 한 번만 쓸 수 있는 티켓을 발급한다. 알림 연결 시 `?ticket=<값>`으로 넘긴다. (SPEC-001 R-26)
+      tags: [auth]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '201':
+          description: 티켓 발급
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SseTicketResponse'
+              example:
+                ticket: 9f3c2a7e5b1d4c8fa0e6b2d9c7f1a3e5
+                expiresIn: 30
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /.well-known/jwks.json:
+    get:
+      operationId: getJwks
+      summary: 접근 토큰 검증용 공개키 목록 (내부 전용)
+      description: |
+        api-gateway가 접근 토큰 서명을 검증할 때 쓴다. 키 교체 기간에는 새 키와 이전 키를 함께 담는다. (SPEC-001 R-11)
+      tags: [internal]
+      security: []
+      responses:
+        '200':
+          description: JWK Set (RFC 7517)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwkSet'
+              example:
+                keys:
+                  - kty: EC
+                    crv: P-256
+                    kid: '2026-11-01'
+                    use: sig
+                    alg: ES256
+                    x: f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU
+                    y: x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: api-gateway가 검증한다. 하위 서비스는 XUserId, XUserRoles 헤더만 본다.
+  parameters:
+    RefreshTokenCookie:
+      name: refresh_token
+      in: cookie
+      required: false
+      description: 재발급 토큰. 없으면 AUTH_REFRESH_INVALID.
+      schema:
+        type: string
+  headers:
+    SetRefreshTokenCookie:
+      description: '`refresh_token=<값>; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict`'
+      schema:
+        type: string
+    ClearRefreshTokenCookie:
+      description: '`refresh_token=; Path=/api/v1/auth; Max-Age=0; HttpOnly; Secure; SameSite=Strict`'
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: 요청 형식 오류 (AUTH_INVALID_REQUEST), 비밀번호 정책 위반 (AUTH_PASSWORD_POLICY)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: 비밀번호는 8~64자이고 영문과 숫자를 모두 포함해야 합니다.
+            code: AUTH_PASSWORD_POLICY
+  schemas:
+    SignUpRequest:
+      type: object
+      required: [email, password, nickname]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: 영문과 숫자를 모두 포함한다.
+          writeOnly: true
+        nickname:
+          type: string
+          minLength: 2
+          maxLength: 20
+          pattern: '^[가-힣A-Za-z0-9]+$'
+    LogInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          writeOnly: true
+    TokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+          description: 접근 토큰 (JWT). 형식은 `../auth/access-token.md`
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          description: 만료까지 남은 초
+          example: 900
+    UserResponse:
+      type: object
+      required: [id, email, nickname, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        nickname:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: './_common.yaml#/components/schemas/Role'
+    SseTicketResponse:
+      type: object
+      required: [ticket, expiresIn]
+      properties:
+        ticket:
+          type: string
+        expiresIn:
+          type: integer
+          example: 30
+    JwkSet:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            required: [kty, kid, use, alg]
+            properties:
+              kty:
+                type: string
+              crv:
+                type: string
+              kid:
+                type: string
+              use:
+                type: string
+              alg:
+                type: string
+              x:
+                type: string
+              y:
+                type: string
+security:
+  - bearerAuth: []

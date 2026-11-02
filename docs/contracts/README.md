@@ -9,6 +9,8 @@ contracts/
 │   └── <service>.yaml        # 서비스별 REST 계약 (OpenAPI 3.1)
 ├── asyncapi/
 │   └── <service>.yaml        # 발행 서비스별 이벤트 계약 (AsyncAPI 3.0, Kafka)
+├── auth/
+│   └── access-token.md       # 접근 토큰 형식, 공개키 목록, 키 교체 규칙 (auth-service ↔ api-gateway)
 ├── events/
 │   └── <topic>.schema.json   # 이벤트 payload JSON Schema (Spring·Python 계약 테스트의 원본)
 └── taxonomy/
