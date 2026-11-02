@@ -1,0 +1,77 @@
+asyncapi: 3.0.0
+info:
+  title: media-service events
+  version: 1.0.0
+  description: |
+    media-service가 발행하는 이벤트 (SPEC-003).
+    상태 변경과 같은 트랜잭션에서 Outbox에 기록한 뒤 발행한다. 최소 한 번 전달이므로 소비자는 `eventId`로 중복을 흡수한다.
+    payload의 원본은 `../events/*.schema.json`이다.
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  videoUploaded:
+    address: video.uploaded
+    description: 영상 업로드 완료. 메시지 키는 sourceId다.
+    messages:
+      videoUploaded:
+        $ref: '#/components/messages/VideoUploaded'
+  videoDeleted:
+    address: video.deleted
+    description: 영상 삭제. 메시지 키는 sourceId다.
+    messages:
+      videoDeleted:
+        $ref: '#/components/messages/VideoDeleted'
+operations:
+  publishVideoUploaded:
+    action: send
+    summary: 영상이 업로드 완료로 바뀌면 발행 (SPEC-003 R-9)
+    channel:
+      $ref: '#/channels/videoUploaded'
+    messages:
+      - $ref: '#/channels/videoUploaded/messages/videoUploaded'
+  publishVideoDeleted:
+    action: send
+    summary: 영상이 삭제로 바뀌면 발행 (SPEC-003 R-19)
+    channel:
+      $ref: '#/channels/videoDeleted'
+    messages:
+      - $ref: '#/channels/videoDeleted/messages/videoDeleted'
+components:
+  messages:
+    VideoUploaded:
+      name: video.uploaded
+      title: 영상 업로드 완료
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/video.uploaded.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    VideoDeleted:
+      name: video.deleted
+      title: 영상 삭제
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/video.deleted.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. 요청을 처리한 trace를 이어 간다(원칙 VI).

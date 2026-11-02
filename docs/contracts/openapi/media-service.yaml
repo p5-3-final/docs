@@ -1,0 +1,475 @@
+openapi: 3.1.0
+info:
+  title: media-service API
+  version: 1.0.0
+  description: |
+    영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003).
+    외부 경로(`/api/v1/media/**`)는 api-gateway를 거쳐 호출한다.
+    영상 파일 바이트는 media-service를 거치지 않고 응답으로 받은 주소로 저장소에 바로 올린다. (SPEC-003 NFR-1)
+    상태가 바뀔 때 발행하는 이벤트는 `../asyncapi/media-service.yaml`에 있다.
+servers:
+  - url: /
+    description: api-gateway 기준 경로 (로컬 http://localhost:8080)
+tags:
+  - name: videos
+    description: 영상 업로드와 관리
+paths:
+  /api/v1/media/videos:
+    post:
+      operationId: createVideo
+      summary: 업로드 자리 발급
+      description: |
+        영상을 "업로드 중"(`UPLOADING`) 상태로 만들고 업로드 방법을 돌려준다.
+        100MB(104,857,600바이트) 이하는 단일 업로드(`SINGLE`), 넘으면 멀티파트 업로드(`MULTIPART`)다.
+        업로드 주소는 1시간 동안 유효하다. 24시간 안에 완료하지 않으면 영상은 만료된다.
+        (SPEC-003 R-1~R-6, NFR-6)
+      tags: [videos]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVideoRequest'
+            example:
+              fileName: parking-lot-0930.mp4
+              sizeBytes: 52428800
+              contentType: video/mp4
+      responses:
+        '201':
+          description: 영상 생성, 업로드 방법
+          headers:
+            Location:
+              description: 만든 영상의 상세 경로
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateVideoResponse'
+              examples:
+                single:
+                  summary: 100MB 이하 (단일 업로드)
+                  value:
+                    video:
+                      id: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                      fileName: parking-lot-0930.mp4
+                      sizeBytes: 52428800
+                      contentType: video/mp4
+                      status: UPLOADING
+                      createdAt: '2026-11-02T09:30:00Z'
+                      uploadedAt: null
+                    upload:
+                      method: SINGLE
+                      url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/
+                      fields:
+                        key: sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/original
+                        Content-Type: video/mp4
+                        policy: eyJleHBpcmF0aW9uIjoiMjAyNi0xMS0wMlQxMDozMDowMFoifQ==
+                        x-amz-algorithm: AWS4-HMAC-SHA256
+                        x-amz-credential: AKIAEXAMPLE/20261102/ap-northeast-2/s3/aws4_request
+                        x-amz-date: 20261102T093000Z
+                        x-amz-signature: 0123456789abcdef
+                      expiresAt: '2026-11-02T10:30:00Z'
+                multipart:
+                  summary: 100MB 초과 (멀티파트 업로드)
+                  value:
+                    video:
+                      id: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                      ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                      fileName: lobby-full-day.mov
+                      sizeBytes: 209715200
+                      contentType: video/quicktime
+                      status: UPLOADING
+                      createdAt: '2026-11-02T09:30:00Z'
+                      uploadedAt: null
+                    upload:
+                      method: MULTIPART
+                      partSizeBytes: 67108864
+                      parts:
+                        - partNumber: 1
+                          url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e10/original?partNumber=1&uploadId=abc&X-Amz-Signature=0123
+                        - partNumber: 2
+                          url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e10/original?partNumber=2&uploadId=abc&X-Amz-Signature=4567
+                        - partNumber: 3
+                          url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e10/original?partNumber=3&uploadId=abc&X-Amz-Signature=89ab
+                        - partNumber: 4
+                          url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e10/original?partNumber=4&uploadId=abc&X-Amz-Signature=cdef
+                      expiresAt: '2026-11-02T10:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+    get:
+      operationId: listVideos
+      summary: 내 영상 목록
+      description: |
+        요청자가 소유한 영상 중 "삭제" 상태가 아닌 것을 만든 시각 최신순으로 돌려준다. (SPEC-003 R-14)
+      tags: [videos]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+        - name: page
+          in: query
+          required: false
+          description: 0부터 시작하는 페이지 번호
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          description: 페이지 크기
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 영상 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPage'
+              example:
+                items:
+                  - id: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                    fileName: parking-lot-0930.mp4
+                    sizeBytes: 52428800
+                    contentType: video/mp4
+                    status: UPLOADED
+                    createdAt: '2026-11-02T09:30:00Z'
+                    uploadedAt: '2026-11-02T09:31:12Z'
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /api/v1/media/videos/{videoId}:
+    parameters:
+      - $ref: '#/components/parameters/VideoId'
+    get:
+      operationId: getVideo
+      summary: 영상 상세
+      description: |
+        소유자와 ADMIN만 볼 수 있다. 없는 영상, 삭제된 영상, 볼 권한이 없는 영상은 구분하지 않고 404다. (SPEC-003 R-15~R-17)
+      tags: [videos]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '200':
+          description: 영상 정보
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoResponse'
+              example:
+                id: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                fileName: parking-lot-0930.mp4
+                sizeBytes: 52428800
+                contentType: video/mp4
+                status: UPLOADED
+                createdAt: '2026-11-02T09:30:00Z'
+                uploadedAt: '2026-11-02T09:31:12Z'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/VideoNotFound'
+    delete:
+      operationId: deleteVideo
+      summary: 영상 삭제
+      description: |
+        영상을 "삭제" 상태로 바꾸고 `video.deleted`를 발행한다. 저장소의 파일과 끝나지 않은 조각도 지운다.
+        소유자와 ADMIN만 지울 수 있다. 이미 삭제된 영상은 404다. (SPEC-003 R-16~R-20)
+      tags: [videos]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '204':
+          description: 삭제됨
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/VideoNotFound'
+  /api/v1/media/videos/{videoId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/VideoId'
+    post:
+      operationId: completeVideoUpload
+      summary: 업로드 완료
+      description: |
+        저장소에 신고한 크기의 파일이 있으면 "업로드 완료"(`UPLOADED`)로 바꾸고 `video.uploaded`를 발행한다.
+        멀티파트 업로드면 `parts`에 모든 조각의 번호와 ETag를 담아 보낸다. 조각을 합친 뒤 같은 확인을 한다.
+        이미 완료된 영상에 다시 요청하면 상태를 바꾸지 않고 현재 정보를 돌려준다(이벤트도 다시 발행하지 않는다).
+        소유자만 요청할 수 있다. (SPEC-003 R-7~R-12)
+      tags: [videos]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteUploadRequest'
+            example:
+              parts:
+                - partNumber: 1
+                  eTag: '"9b2cf535f27731c974343645a3985328"'
+                - partNumber: 2
+                  eTag: '"6f5902ac237024bdd0c176cb93063dc4"'
+      responses:
+        '200':
+          description: 업로드 완료 (처음이거나 이미 완료됨)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoResponse'
+              example:
+                id: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                fileName: parking-lot-0930.mp4
+                sizeBytes: 52428800
+                contentType: video/mp4
+                status: UPLOADED
+                createdAt: '2026-11-02T09:30:00Z'
+                uploadedAt: '2026-11-02T09:31:12Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/VideoNotFound'
+        '409':
+          description: |
+            저장소에 파일이 없거나 크기가 다름 (`MEDIA_UPLOAD_INCOMPLETE`, 상태는 그대로),
+            만료되었거나 삭제 중인 영상 (`MEDIA_INVALID_STATE`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              examples:
+                incomplete:
+                  summary: 업로드가 끝나지 않음
+                  value:
+                    type: about:blank
+                    title: Conflict
+                    status: 409
+                    detail: 업로드가 아직 끝나지 않았습니다.
+                    code: MEDIA_UPLOAD_INCOMPLETE
+                invalidState:
+                  summary: 만료된 영상
+                  value:
+                    type: about:blank
+                    title: Conflict
+                    status: 409
+                    detail: 만료된 영상은 업로드를 완료할 수 없습니다.
+                    code: MEDIA_INVALID_STATE
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: api-gateway가 검증한다. 하위 서비스는 XUserId, XUserRoles 헤더만 본다.
+  parameters:
+    VideoId:
+      name: videoId
+      in: path
+      required: true
+      description: 영상 ID (이벤트의 `sourceId`와 같다)
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: |
+        요청 형식 오류 (`MEDIA_INVALID_REQUEST`), 파일 크기가 0이거나 5GB 초과 (`MEDIA_FILE_SIZE_INVALID`),
+        지원하지 않는 형식 (`MEDIA_UNSUPPORTED_FORMAT`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: mp4, mov, mkv, avi 영상만 올릴 수 있습니다.
+            code: MEDIA_UNSUPPORTED_FORMAT
+    VideoNotFound:
+      description: 없는 영상, 삭제된 영상, 볼 권한이 없는 영상 (`MEDIA_VIDEO_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: 영상을 찾을 수 없습니다.
+            code: MEDIA_VIDEO_NOT_FOUND
+  schemas:
+    VideoContentType:
+      type: string
+      description: |
+        영상 MIME 형식. 파일 이름의 확장자와 짝이 맞아야 한다:
+        `video/mp4`(.mp4), `video/quicktime`(.mov), `video/x-matroska`(.mkv), `video/x-msvideo`(.avi). (SPEC-003 R-5)
+      enum: [video/mp4, video/quicktime, video/x-matroska, video/x-msvideo]
+    VideoStatus:
+      type: string
+      description: |
+        영상 상태. `UPLOADING`(업로드 중), `UPLOADED`(업로드 완료), `EXPIRED`(24시간 안에 완료하지 않음).
+        `NORMALIZING`, `READY`, `REJECTED`는 정규화 기능에서 쓴다. 삭제된 영상은 응답에 나오지 않는다.
+      enum: [UPLOADING, UPLOADED, NORMALIZING, READY, REJECTED, EXPIRED]
+    CreateVideoRequest:
+      type: object
+      required: [fileName, sizeBytes, contentType]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: 원래 파일 이름. 표시용이며 저장 경로에는 쓰지 않는다. (SPEC-003 R-6)
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5368709120
+          description: 파일 크기(바이트). 최대 5GB
+        contentType:
+          $ref: '#/components/schemas/VideoContentType'
+    CreateVideoResponse:
+      type: object
+      required: [video, upload]
+      properties:
+        video:
+          $ref: '#/components/schemas/VideoResponse'
+        upload:
+          $ref: '#/components/schemas/UploadInstruction'
+    UploadInstruction:
+      description: 업로드 방법. `method`로 구분한다.
+      oneOf:
+        - $ref: '#/components/schemas/SingleUpload'
+        - $ref: '#/components/schemas/MultipartUpload'
+      discriminator:
+        propertyName: method
+        mapping:
+          SINGLE: '#/components/schemas/SingleUpload'
+          MULTIPART: '#/components/schemas/MultipartUpload'
+    SingleUpload:
+      type: object
+      description: |
+        브라우저 POST 업로드(multipart/form-data). `fields`를 모두 폼 필드로 넣고 마지막에 `file` 필드로 파일을 보낸다.
+        저장소는 신고한 크기와 다른 파일을 거절한다. (SPEC-003 R-2)
+      required: [method, url, fields, expiresAt]
+      properties:
+        method:
+          type: string
+          const: SINGLE
+        url:
+          type: string
+          format: uri
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+    MultipartUpload:
+      type: object
+      description: |
+        조각마다 해당 `url`로 PUT 요청을 보내고, 응답의 `ETag` 헤더 값을 모아 업로드 완료 요청의 `parts`로 보낸다.
+        마지막 조각을 뺀 모든 조각은 `partSizeBytes` 크기다. (SPEC-003 R-3, R-8)
+      required: [method, partSizeBytes, parts, expiresAt]
+      properties:
+        method:
+          type: string
+          const: MULTIPART
+        partSizeBytes:
+          type: integer
+          format: int64
+        parts:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [partNumber, url]
+            properties:
+              partNumber:
+                type: integer
+                minimum: 1
+              url:
+                type: string
+                format: uri
+        expiresAt:
+          type: string
+          format: date-time
+    CompleteUploadRequest:
+      type: object
+      description: 단일 업로드면 본문이 없거나 `parts`를 생략한다. 멀티파트 업로드면 모든 조각을 번호순으로 보낸다.
+      properties:
+        parts:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [partNumber, eTag]
+            properties:
+              partNumber:
+                type: integer
+                minimum: 1
+              eTag:
+                type: string
+                minLength: 1
+    VideoResponse:
+      type: object
+      required: [id, ownerId, fileName, sizeBytes, contentType, status, createdAt, uploadedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        contentType:
+          $ref: '#/components/schemas/VideoContentType'
+        status:
+          $ref: '#/components/schemas/VideoStatus'
+        createdAt:
+          type: string
+          format: date-time
+        uploadedAt:
+          type: [string, 'null']
+          format: date-time
+          description: 업로드 완료 시각. 완료 전이면 null
+    VideoPage:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoResponse'
+        page:
+          $ref: './_common.yaml#/components/schemas/PageMeta'
+security:
+  - bearerAuth: []
