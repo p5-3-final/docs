@@ -41,9 +41,15 @@ globs: "docs/**/*.md"
 ## 검사
 
 - 문서를 고친 뒤에는 아래를 실행한다. CI도 같은 검사를 한다.
+
   ```bash
   npx markdownlint-cli2 "docs/**/*.md" "*.md"
   lychee --offline "docs/**/*.md" "*.md"     # 내부 링크 확인
   ```
-- markdownlint 규칙 세트에서 줄 길이 제한(MD013)은 끈다. 한국어 문장, 표, 코드 블록은 줄이 길어질 수밖에 없다.
+
+- markdownlint 설정은 루트 `.markdownlint-cli2.jsonc`에 있다. 기본 규칙 세트에서 아래만 바꾼다. 새로 바꾸려면 이 목록을 같은 PR에서 고친다.
+  - MD013(줄 길이) 끔: 한국어 문장, 표, 코드 블록은 줄이 길어질 수밖에 없다.
+  - MD025(제목 하나): frontmatter `title`은 제목으로 세지 않는다. 템플릿이 `title`과 `#` 제목을 함께 둔다.
+  - MD024(중복 제목): 같은 상위 제목 안에서만 막는다. spec의 시나리오마다 "인수 조건" 소제목이 반복된다.
+- 빈 줄 같은 서식 오류는 `npx markdownlint-cli2 --fix <파일>`로 고친다. 루트 `*.md` 패턴에는 git에 올리지 않는 로컬 문서도 걸리므로, `--fix`는 바꾼 파일에만 쓴다.
 - 문서나 ADR을 삭제하거나 이름을 바꾸면 lychee로 끊긴 링크가 없는지 확인한다.
