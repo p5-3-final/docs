@@ -6,5 +6,6 @@
 | --- | --- | --- | --- | --- | --- |
 | [SPEC-001](SPEC-001-auth-and-gateway/spec.md) | 회원가입·로그인과 인증된 요청 | Implementing | backend | | 2026-11-02 |
 | [SPEC-002](SPEC-002-frontend-auth-shell/spec.md) | 인증 화면과 앱 기본 레이아웃 | Implementing | frontend | | 2026-11-02 |
+| [SPEC-003](SPEC-003-video-upload/spec.md) | 영상 업로드와 관리 | Approved | backend | | 2026-11-02 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
