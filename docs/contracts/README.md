@@ -2,14 +2,20 @@
 
 레포 경계를 넘는 인터페이스의 **원본(single source of truth)**이다. 규칙은 [`.claude/rules/contracts.md`](../../.claude/rules/contracts.md)에 있다.
 
-```
+```text
 contracts/
 ├── openapi/
 │   ├── _common.yaml          # 공통 스키마 (ProblemDetail, 페이지네이션)
 │   └── <service>.yaml        # 서비스별 REST 계약 (OpenAPI 3.1)
-└── asyncapi/
-    └── <service>.yaml        # 발행 서비스별 이벤트 계약 (AsyncAPI 3.0) — 브로커 확정 후 작성
+├── asyncapi/
+│   └── <service>.yaml        # 발행 서비스별 이벤트 계약 (AsyncAPI 3.0, Kafka)
+├── events/
+│   └── <topic>.schema.json   # 이벤트 payload JSON Schema (Spring·Python 계약 테스트의 원본)
+└── taxonomy/
+    └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
 ```
+
+프롬프트는 ai-gateway만 쓰므로 ai 레포 `services/ai-gateway/prompts/`에 둔다.
 
 ## 생산자와 소비자의 역할
 

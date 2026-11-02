@@ -19,14 +19,14 @@ globs: "docs/**/*.md"
 
 ## EARS 요구사항 문법
 
-키워드(WHEN, WHILE, IF, THEN, WHERE, SHALL)는 영어 대문자로 쓰고, 내용은 한국어로 쓴다. 주어는 구체적인 서비스 이름(`user-service`, `frontend` 등)으로 쓴다.
+키워드(WHEN, WHILE, IF, THEN, WHERE, SHALL)는 영어 대문자로 쓰고, 내용은 한국어로 쓴다. 주어는 구체적인 서비스 이름(`auth-service`, `frontend` 등)으로 쓴다.
 
 | 패턴 | 형식 | 예시 |
 | --- | --- | --- |
-| 상시 (Ubiquitous) | THE `<시스템>` SHALL `<응답>` | THE user-service SHALL 비밀번호를 bcrypt로 해시해 저장한다. |
-| 이벤트 (Event-driven) | WHEN `<트리거>`, THE `<시스템>` SHALL `<응답>` | WHEN 사용자가 유효한 이메일과 비밀번호로 가입을 요청하면, THE user-service SHALL 계정을 생성하고 201을 반환한다. |
-| 상태 (State-driven) | WHILE `<상태>`, THE `<시스템>` SHALL `<응답>` | WHILE 계정이 잠금 상태이면, THE user-service SHALL 로그인 요청을 423으로 거절한다. |
-| 비정상 (Unwanted) | IF `<조건>`, THEN THE `<시스템>` SHALL `<응답>` | IF 이미 가입된 이메일이면, THEN THE user-service SHALL 409와 오류 코드 `USER_EMAIL_DUPLICATED`를 반환한다. |
+| 상시 (Ubiquitous) | THE `<시스템>` SHALL `<응답>` | THE auth-service SHALL 비밀번호를 bcrypt로 해시해 저장한다. |
+| 이벤트 (Event-driven) | WHEN `<트리거>`, THE `<시스템>` SHALL `<응답>` | WHEN 사용자가 유효한 이메일과 비밀번호로 가입을 요청하면, THE auth-service SHALL 계정을 생성하고 201을 반환한다. |
+| 상태 (State-driven) | WHILE `<상태>`, THE `<시스템>` SHALL `<응답>` | WHILE 계정이 잠금 상태이면, THE auth-service SHALL 로그인 요청을 423으로 거절한다. |
+| 비정상 (Unwanted) | IF `<조건>`, THEN THE `<시스템>` SHALL `<응답>` | IF 이미 가입된 이메일이면, THEN THE auth-service SHALL 409와 오류 코드 `USER_EMAIL_DUPLICATED`를 반환한다. |
 | 선택 (Optional) | WHERE `<기능 포함 시>`, THE `<시스템>` SHALL `<응답>` | WHERE 소셜 로그인이 활성화된 경우, THE frontend SHALL 로그인 화면에 소셜 로그인 버튼을 표시한다. |
 
 - 비기능 요구사항(`NFR-*`)도 측정 가능한 숫자로 쓴다. 예: THE api-gateway SHALL p95 응답 지연을 300ms 이하로 유지한다.

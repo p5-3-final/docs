@@ -1,10 +1,10 @@
 ---
-updated: 2026-10-30
+updated: 2026-11-02
 ---
 
 # 아키텍처 개요
 
-> 서비스 이름은 도메인이 정해지기 전까지 쓰는 예시다. 확정되면 [service-catalog.md](service-catalog.md)와 함께 갱신한다.
+> 서비스 목록과 책임은 [service-catalog.md](service-catalog.md)에 있다. 서비스를 바꾸면 둘을 함께 갱신한다.
 
 ## 컨테이너 구성 (C4 Level 2)
 
@@ -12,14 +12,26 @@ updated: 2026-10-30
 flowchart TB
   U[사용자 브라우저] --> FE[frontend<br/>React SPA]
   FE -->|HTTPS /api/*| GW[api-gateway<br/>Spring Cloud Gateway]
-  GW --> US[user-service<br/>Spring Boot]
-  GW --> DS["&lt;domain&gt;-service<br/>Spring Boot"]
-  GW --> AI[ai-service<br/>FastAPI]
-  US --> USDB[(user DB<br/>PostgreSQL)]
-  DS --> DSDB[(domain DB<br/>PostgreSQL)]
-  DS -->|REST| AI
-  DS -.이벤트.-> MB{{메시지 브로커<br/>미정}}
-  MB -.-> AI
+  subgraph Domain["Domain (backend, Spring)"]
+    AU[auth-service]
+    ME[media-service]
+    PL[pipeline-service]
+    AN[analysis-api / analysis-loader]
+    SE[search-service]
+    NO[notification-service]
+  end
+  GW --> AU & ME & PL & AN & SE & NO
+  Domain -.이벤트.-> MB{{Kafka}}
+  MB -.-> DP
+  DP -.이벤트.-> MB
+  subgraph DP["Data Plane (ai, Python)"]
+    WK[normalize, chunk-processor, track-stitcher,<br/>track-analyzer, event-analyzer, vlm-worker,<br/>embedding-worker, aggregator]
+    AG[ai-gateway]
+    WK -->|내부 REST| AG
+  end
+  AG --> EXT[외부 AI API]
+  Domain --> DB[(PostgreSQL<br/>서비스별 DB)]
+  DP --> S3[(S3)]
 ```
 
 ## 통신 규칙
@@ -29,7 +41,7 @@ flowchart TB
 | 외부 → 내부 | frontend → api-gateway만 공개 | 각 서비스는 클러스터 내부(ClusterIP)에서만 접근 가능 |
 | 인증 | api-gateway에서 JWT 검증 후 사용자 정보를 헤더로 전달 | 각 서비스는 인가만 담당 |
 | 동기 호출 | REST(JSON), 타임아웃·재시도·서킷브레이커 필수 | 호출 체인은 최대 2단계 |
-| 비동기 | 도메인 이벤트 | 브로커 선정은 ADR로 결정할 예정 |
+| 비동기 | Kafka 이벤트 | 상태 변경은 이벤트로만 전달. [ADR-0002](../adr/0002-kafka-message-broker.md) |
 | 서비스 디스커버리 | Kubernetes Service DNS (로컬은 compose 서비스 이름) | Eureka 같은 별도 레지스트리는 쓰지 않음 |
 
 ## 환경

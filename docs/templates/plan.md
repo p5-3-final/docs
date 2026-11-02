@@ -18,7 +18,7 @@ updated: YYYY-MM-DD
 ## 2. 담당 요구사항
 | 요구사항 | 담당 모듈 / 컴포넌트 | 검증 테스트 |
 | --- | --- | --- |
-| R-1 | services/user-service | `SignUpApiTest` |
+| R-1 | services/auth-service | `SignUpApiTest` |
 
 ## 3. 원칙 점검
 | 원칙 | 준수 | 비고 |
