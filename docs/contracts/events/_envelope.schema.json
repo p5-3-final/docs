@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/_envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "모든 이벤트가 공통으로 담는 필드. 각 이벤트 스키마가 allOf로 포함한다. 소비자는 eventId로 중복을 흡수한다. 필드는 추가만 허용한다.",
+  "type": "object",
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "sourceId", "ownerId"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "이벤트 ID. 발행을 다시 시도해도 같은 값이다."
+    },
+    "eventType": {
+      "type": "string",
+      "description": "토픽 이름과 같다. 예: video.uploaded"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "payload 스키마 버전. 하위호환을 깨는 변경에서만 올린다."
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "상태가 바뀐 시각(UTC)"
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "영상 ID. Kafka 메시지 키로도 쓴다."
+    },
+    "ownerId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "영상 소유자의 사용자 ID(JWT sub). 소비자의 권한 필터 기준이다."
+    }
+  }
+}

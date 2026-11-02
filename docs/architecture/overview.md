@@ -76,7 +76,7 @@ flowchart LR
   AN -->|version.activated| SE
 ```
 
-1. 클라이언트가 media-service에서 업로드 URL을 받는다. 작은 파일은 presigned POST(크기 제한 포함), 큰 파일은 멀티파트 presigned URL이다.
+1. 클라이언트가 media-service에서 업로드 자리(영상 ID와 업로드 주소)를 받는다. 작은 파일은 presigned POST(크기 제한 포함), 큰 파일은 멀티파트 presigned URL이다.
 2. `/complete` 요청과 S3 업로드 이벤트 중 먼저 온 신호가 `UPLOADING → UPLOADED` 조건부 전이에 성공하고, 같은 트랜잭션에서 `video.uploaded`를 Outbox에 넣는다. 나중에 온 신호는 아무것도 하지 않는다.
 3. normalize가 영상을 검증하고 정규화 사본을 S3에 저장한 뒤, 영상 길이와 예상 비용을 담아 `video.normalized`를 발행한다.
 4. pipeline-service가 청크 계획(기본 2분, 영상 길이에 따라 1~3분, 앞뒤 5초 겹침)을 세우고 사용자별 → 소스별 → 전체 상한을 지키며 `chunk.requested`를 내보낸다.
@@ -236,7 +236,7 @@ sequenceDiagram
 | 경로 | 서비스 · 역할 |
 | --- | --- |
 | `POST /api/v1/auth/signup · login · refresh · logout`, `GET /api/v1/auth/me`, `POST /api/v1/auth/sse-tickets` | auth-service · 가입, 로그인, 재발급(회전), 로그아웃, 내 정보, 알림 연결 티켓 |
-| `POST /api/v1/media/videos/upload-url`, `POST …/{id}/complete`, `GET …/{id}/estimate`, `DELETE …/{id}` | media-service · 업로드 URL, 완료(조건부 전이), 예상 비용·시간, 삭제(전 서비스 전파) |
+| `POST /api/v1/media/videos`, `GET /api/v1/media/videos`, `GET · DELETE …/{id}`, `POST …/{id}/complete`, `GET …/{id}/estimate` | media-service · 업로드 자리 발급, 내 영상 목록·상세, 삭제(전 서비스 전파), 완료(조건부 전이), 예상 비용·시간 |
 | `GET /api/v1/jobs/{sourceId}`, `POST …/{sourceId}/reanalyze · reembed` | pipeline-service · 진행 상태, 이벤트 재판정·키프레임 재임베딩(운영자) |
 | `GET /api/v1/analysis/sources/{id}/events · summary · overlay · inspect`, `GET /api/v1/analysis/events/{id}`, `PUT …/events/{id}/review`, `PUT …/sources/{id}/active-version` | analysis-api · 이벤트 타임라인·상세·검토, 요약, 오버레이, 클릭 조회, 활성 버전 전환(운영자) |
 | `GET /api/v1/search/sources/{id}/moments?q=`, `GET /api/v1/search/moments?q=`, `POST …/moments/{id}/feedback` | search-service · 영상 안·내 영상 전체에서 장면 찾기, 이동·재생 기록과 맞음·틀림 |
