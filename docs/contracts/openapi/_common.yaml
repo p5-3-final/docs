@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Common Schemas
-  version: 1.1.0
+  version: 1.2.0
   description: 모든 서비스가 $ref로 참조하는 공통 스키마, 게이트웨이 헤더, 공통 오류 응답
 servers:
   - url: /
@@ -102,6 +102,19 @@ components:
         traceId:
           type: string
           description: 요청 추적 ID
+        errors:
+          type: array
+          description: 요청 본문 검증 오류일 때 필드별 오류 목록. 그 밖의 오류에는 없다.
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: 올바른 형식의 이메일 주소여야 합니다
     PageMeta:
       type: object
       required: [page, size, totalElements, totalPages]
