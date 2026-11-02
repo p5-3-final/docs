@@ -57,9 +57,9 @@ cd project
 # 레포에 lefthook.yml이 있으면 레포마다 한 번
 cd repos/<레포> && lefthook install
 
-# local/에 docker-compose가 있으면
-cp local/.env.example local/.env        # 값은 팀 채널에서 받아 직접 입력
-docker compose -f local/docker-compose.yml up -d
+# 로컬 전체 실행 (자세한 내용은 local/README.md)
+cp local/.env.example local/.env        # 로컬 전용 값을 직접 채운다. 서명 키 만드는 법은 파일 주석에 있다
+docker compose -f local/docker-compose.yml up -d --build
 ```
 
 ## 작업 흐름
