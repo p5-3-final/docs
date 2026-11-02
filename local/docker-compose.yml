@@ -1,0 +1,95 @@
+# 로컬 개발용 전체 구성. 사용법은 local/README.md를 본다.
+# 서비스는 구현이 시작되면 추가한다(ADR-0003). 컨테이너마다 메모리 상한을 둬서 전체가 개발 머신에 올라가게 한다.
+name: vlm
+
+services:
+  # 서비스마다 자기 DB를 쓰지만(원칙 IV), 로컬은 PostgreSQL 서버 하나에 DB와 계정을 나눠 둔다.
+  postgres:
+    image: postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?local/.env에 POSTGRES_PASSWORD를 넣는다}
+      # postgres/init 스크립트가 서비스 계정을 만들 때 쓴다.
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?local/.env에 AUTH_DB_PASSWORD를 넣는다}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # api-gateway 전용(알림 티켓 1회용 처리, 요청 수 제한)
+  redis:
+    image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  auth-service:
+    build:
+      context: ../repos/backend
+      args:
+        SERVICE: auth-service
+    image: vlm/auth-service:local
+    environment:
+      AUTH_DB_URL: jdbc:postgresql://postgres:5432/auth_db
+      AUTH_DB_USERNAME: auth
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      AUTH_JWT_ISSUER: vlm-auth-local
+      AUTH_JWT_SIGNING_KEY: ${AUTH_JWT_SIGNING_KEY:?local/.env에 AUTH_JWT_SIGNING_KEY를 넣는다}
+      AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:-}
+      AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD:-}
+    # 컨테이너 포트는 운영과 같이 8080이고, 호스트 포트는 서비스 카탈로그의 로컬 포트다.
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  api-gateway:
+    build:
+      context: ../repos/backend
+      args:
+        SERVICE: api-gateway
+    image: vlm/api-gateway:local
+    environment:
+      GATEWAY_JWKS_URI: http://auth-service:8080/.well-known/jwks.json
+      GATEWAY_JWT_ISSUER: vlm-auth-local
+      GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      GATEWAY_REDIS_HOST: redis
+      GATEWAY_REDIS_PORT: "6379"
+      AUTH_SERVICE_URI: http://auth-service:8080
+    ports:
+      - "8080:8080"
+    # 공개키 목록은 첫 토큰 검증 때 읽으므로 auth-service가 준비될 때까지 기다리지 않는다.
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+volumes:
+  postgres-data:
