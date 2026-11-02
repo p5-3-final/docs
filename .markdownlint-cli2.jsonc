@@ -1,0 +1,7 @@
+// docs 레포 markdownlint 설정. 규칙은 .claude/rules/docs-writing.md "검사"를 따른다.
+{
+  "config": {
+    // 한국어 문장, 표, 코드 블록은 줄이 길어질 수밖에 없어 줄 길이 제한을 끈다.
+    "MD013": false
+  }
+}
