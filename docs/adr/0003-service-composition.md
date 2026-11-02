@@ -1,7 +1,7 @@
 ---
 id: ADR-0003
 title: 서비스를 17개 배포 단위로 나눈다
-status: Accepted
+status: Superseded by ADR-0005
 date: 2026-11-02
 deciders: [팀]
 related: [ADR-0001, ADR-0002]
