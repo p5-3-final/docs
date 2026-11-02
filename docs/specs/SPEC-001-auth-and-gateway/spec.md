@@ -1,7 +1,7 @@
 ---
 id: SPEC-001
 title: 회원가입·로그인과 인증된 요청
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend]
 created: 2026-11-02
