@@ -1,7 +1,7 @@
 ---
 id: SPEC-002
 title: 인증 화면과 앱 기본 레이아웃
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [frontend]
 created: 2026-11-02
