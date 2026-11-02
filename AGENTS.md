@@ -22,7 +22,9 @@
 - 레포 클론은 `./scripts/clone-repos.sh`로 한다. 레포 목록은 `repos.conf`에 있다. 새 레포는 비슷한 기존 레포의 `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.github/`를 복사해서 시작한다.
 
 ### docs 레포 명령
+
 docs 레포에서 작업을 끝내기 전에 바꾼 대상에 해당하는 명령을 실행한다. 세부 규칙은 `docs-writing.md`, `contracts.md`, `ci-common.md`에 있다.
+
 ```bash
 npx markdownlint-cli2 "docs/**/*.md" "*.md"             # 문서 형식
 lychee --offline "docs/**/*.md" "*.md"                 # 내부 링크

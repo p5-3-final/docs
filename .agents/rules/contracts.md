@@ -20,11 +20,14 @@ globs: "docs/contracts/**"
 - 계약을 바꾼 PR에는 영향받는 소비자 레포(frontend 코드 생성, 호출하는 서비스)를 PR 본문에 적는다.
 
 ## 검사
+
 - 계약을 바꾼 뒤에는 아래를 실행하고 결과를 보고한다. CI도 같은 검사를 한다.
+
   ```bash
   npx @redocly/cli lint docs/contracts/openapi/*.yaml
   oasdiff breaking <main의 계약 파일> <바뀐 계약 파일> --fail-on ERR
   ```
+
 - Redocly 규칙 세트(`redocly.yaml`)는 `recommended`에 이 파일의 규칙을 추가해서 강제한다.
   - `operationId`: camelCase, 필수
   - 경로: kebab-case, `/api/v{n}/` 접두사
