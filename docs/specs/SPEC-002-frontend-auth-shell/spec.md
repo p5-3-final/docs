@@ -6,7 +6,7 @@ owner: <이름>
 repos: [frontend]
 created: 2026-11-02
 updated: 2026-11-02
-related: [SPEC-001]
+related: [SPEC-001, ADR-0004]
 ---
 
 # SPEC-002 인증 화면과 앱 기본 레이아웃
