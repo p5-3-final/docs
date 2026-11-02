@@ -98,6 +98,8 @@ services:
       args:
         # 브라우저가 호출할 주소라서 컨테이너 이름이 아니라 호스트의 게이트웨이 포트를 쓴다.
         VITE_API_BASE_URL: http://localhost:8080
+        # .env.compose를 읽어 로그인 칸에 샘플 관리자 계정(AUTH_ADMIN_*)을 미리 채운다.
+        BUILD_MODE: compose
     image: vlm/frontend:local
     # 5173은 개발 서버(pnpm dev)가 쓰므로 둘을 함께 띄울 수 있게 3000을 쓴다.
     ports:

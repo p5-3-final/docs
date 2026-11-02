@@ -26,7 +26,7 @@ docker compose -f local/docker-compose.yml up -d --build
 docker compose -f local/docker-compose.yml ps
 ```
 
-브라우저에서 <http://localhost:3000>을 열면 frontend 화면이 나온다. 샘플 관리자(`admin@example.com` / `admin1234`)로 로그인하거나 가입해서 확인한다. Safari는 `http://localhost`에서 `Secure` 쿠키를 저장하지 않을 수 있어 Chrome 계열을 쓴다.
+브라우저에서 <http://localhost:3000>을 열면 frontend 화면이 나온다. 로그인 칸에 샘플 관리자(`admin@example.com` / `admin1234`)가 미리 채워져 있다. `local/.env`의 `AUTH_ADMIN_*`를 바꿨다면 `repos/frontend/.env.compose`도 같이 바꾼다. Safari는 `http://localhost`에서 `Secure` 쿠키를 저장하지 않을 수 있어 Chrome 계열을 쓴다.
 
 게이트웨이를 거쳐 API로 가입 → 로그인 → 내 정보를 확인한다.
 
