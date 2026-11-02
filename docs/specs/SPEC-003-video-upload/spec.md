@@ -1,11 +1,11 @@
 ---
 id: SPEC-003
 title: 영상 업로드와 관리
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend, docs]
 created: 2026-11-02
-updated: 2026-11-02
+updated: 2026-11-03
 related: [SPEC-001, ADR-0002, ADR-0005]
 ---
 
