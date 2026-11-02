@@ -6,3 +6,4 @@
 | --- | --- | --- | --- |
 | [ADR-0001](0001-ai-uv-workspace.md) | ai 레포를 uv workspace로 구성한다 | Accepted | 2026-11-02 |
 | [ADR-0002](0002-kafka-message-broker.md) | 서비스 간 비동기 통신에 Kafka를 쓴다 | Accepted | 2026-11-02 |
+| [ADR-0003](0003-service-composition.md) | 서비스를 17개 배포 단위로 나눈다 | Accepted | 2026-11-02 |
