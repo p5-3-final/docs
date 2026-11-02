@@ -1,7 +1,7 @@
 ---
 id: ADR-0001
 title: ai 레포를 uv workspace로 구성한다
-status: Proposed
+status: Accepted
 date: 2026-11-02
 deciders: [팀]
 related: []
