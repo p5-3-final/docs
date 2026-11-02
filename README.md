@@ -18,7 +18,6 @@
 `p5-3-final` 조직 초대를 수락한 뒤 진행합니다.
 
 ```bash
-xcode-select --install                  # git 포함 (macOS)
 ssh-keygen -t ed25519 -C "<내 이메일>"   # 이미 키가 있으면 생략
 pbcopy < ~/.ssh/id_ed25519.pub          # GitHub → Settings → SSH and GPG keys → New SSH key에 붙여넣기
 ssh -T git@github.com                   # "Hi <아이디>!"가 나오면 성공
