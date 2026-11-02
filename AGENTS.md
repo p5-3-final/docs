@@ -111,7 +111,7 @@ shellcheck scripts/*.sh                                # 스크립트를 바꿨�
 ## 정적 검사 (lint)
 
 - 포맷과 lint는 도구가 결정한다. 손으로 정렬하거나 도구 결과와 다르게 맞추지 않는다.
-- 각 레포는 lefthook으로 커밋 전에 바뀐 파일을 검사하고, CI가 같은 검사를 전체 대상으로 다시 실행한다. 관문은 CI다.
+- 각 레포는 lefthook으로 커밋 전에 바뀐 파일을 검사하고, CI가 같은 검사를 전체 대상으로 다시 실행한다. 관문은 CI다. 단, shellcheck는 로컬 검사만 한다.
 - 도구와 규칙 세트는 아래 파일에 있다. **검사 도구의 설정 파일을 만들거나 고칠 때는 해당 파일을 먼저 읽는다.**
   - 모든 레포 공통(workflow, Dockerfile, 셸, `.editorconfig`, lefthook): `.claude/rules/ci-common.md`
   - 레포 고유: 각 레포의 `.claude/rules/lint.md`
