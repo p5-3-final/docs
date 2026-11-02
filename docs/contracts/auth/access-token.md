@@ -1,6 +1,6 @@
 # 접근 토큰 계약
 
-auth-service가 발급하고 api-gateway가 검증하는 접근 토큰의 형식이다(SPEC-001 R-7, R-11, R-12, R-15, R-16, NFR-5). 이 문서를 바꾸면 두 모듈을 함께 고친다.
+auth-service가 발급하고 api-gateway가 검증하는 접근 토큰과 알림 연결 티켓의 형식이다(SPEC-001 R-7, R-11, R-12, R-15, R-16, R-26~R-28, NFR-5). 이 문서를 바꾸면 두 모듈을 함께 고친다.
 
 ## 형식
 
@@ -30,6 +30,19 @@ auth-service가 발급하고 api-gateway가 검증하는 접근 토큰의 형식
 
 이메일, 닉네임 같은 개인정보는 클레임에 넣지 않는다. 필요하면 `GET /api/v1/auth/me`로 조회한다.
 
+## 알림 연결 티켓
+
+`POST /api/v1/auth/sse-tickets`가 발급하는 티켓도 같은 서명 키로 서명한 JWT다(SPEC-001 R-26~R-28). 접근 토큰과 구분하기 위해 `aud`와 유효기간만 다르다.
+
+| 클레임 | 값 |
+| --- | --- |
+| `sub`, `roles`, `iss`, `iat`, `jti` | 접근 토큰과 같다 |
+| `aud` | `vlm-sse` |
+| `exp` | `iat` + 30 |
+
+- 게이트웨이는 알림 연결 경로(`/api/v1/notify/stream?ticket=<티켓>`)에서만 티켓을 받는다. 다른 경로에서 `aud: vlm-sse` 토큰은 `AUTH_TOKEN_INVALID`이고, 알림 연결 경로에서 접근 토큰은 `AUTH_TICKET_INVALID`이다.
+- 1회용 처리는 게이트웨이가 한다. 처음 쓴 티켓의 `jti`를 만료 시각까지 기록하고, 같은 `jti`가 다시 오면 `AUTH_TICKET_INVALID`로 거절한다. auth-service는 티켓을 저장하지 않는다.
+
 ## 공개키 목록 (JWKS)
 
 - 경로: auth-service `GET /.well-known/jwks.json` (클러스터 내부 전용, 게이트웨이가 외부로 라우팅하지 않음)
@@ -56,3 +69,4 @@ auth-service가 발급하고 api-gateway가 검증하는 접근 토큰의 형식
 | `Authorization: Bearer` 헤더 없음 | 401 | `AUTH_TOKEN_MISSING` |
 | 서명, `alg`, `kid`, `iss`, `aud` 중 하나라도 불일치 | 401 | `AUTH_TOKEN_INVALID` |
 | `exp` 지남 | 401 | `AUTH_TOKEN_EXPIRED` |
+| 알림 연결 티켓이 없음, 서명·`aud` 불일치, 만료, 이미 사용됨 | 401 | `AUTH_TICKET_INVALID` |
