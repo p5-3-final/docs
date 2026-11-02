@@ -5,3 +5,4 @@
 | ID | 제목 | 상태 | 날짜 |
 | --- | --- | --- | --- |
 | [ADR-0001](0001-ai-uv-workspace.md) | ai 레포를 uv workspace로 구성한다 | Proposed | 2026-11-02 |
+| [ADR-0002](0002-kafka-message-broker.md) | 서비스 간 비동기 통신에 Kafka를 쓴다 | Accepted | 2026-11-02 |

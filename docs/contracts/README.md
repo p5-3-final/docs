@@ -8,7 +8,7 @@ contracts/
 │   ├── _common.yaml          # 공통 스키마 (ProblemDetail, 페이지네이션)
 │   └── <service>.yaml        # 서비스별 REST 계약 (OpenAPI 3.1)
 ├── asyncapi/
-│   └── <service>.yaml        # 발행 서비스별 이벤트 계약 (AsyncAPI 3.0) — 브로커 확정 후 작성
+│   └── <service>.yaml        # 발행 서비스별 이벤트 계약 (AsyncAPI 3.0, Kafka)
 ├── events/
 │   └── <topic>.schema.json   # 이벤트 payload JSON Schema (Spring·Python 계약 테스트의 원본)
 └── taxonomy/

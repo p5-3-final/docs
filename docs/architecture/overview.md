@@ -21,7 +21,7 @@ flowchart TB
     NO[notification-service]
   end
   GW --> AU & ME & PL & AN & SE & NO
-  Domain -.이벤트.-> MB{{메시지 브로커}}
+  Domain -.이벤트.-> MB{{Kafka}}
   MB -.-> DP
   DP -.이벤트.-> MB
   subgraph DP["Data Plane (ai, Python)"]
@@ -41,7 +41,7 @@ flowchart TB
 | 외부 → 내부 | frontend → api-gateway만 공개 | 각 서비스는 클러스터 내부(ClusterIP)에서만 접근 가능 |
 | 인증 | api-gateway에서 JWT 검증 후 사용자 정보를 헤더로 전달 | 각 서비스는 인가만 담당 |
 | 동기 호출 | REST(JSON), 타임아웃·재시도·서킷브레이커 필수 | 호출 체인은 최대 2단계 |
-| 비동기 | 도메인 이벤트 | 브로커 선정은 ADR로 결정할 예정 |
+| 비동기 | Kafka 이벤트 | 상태 변경은 이벤트로만 전달. [ADR-0002](../adr/0002-kafka-message-broker.md) |
 | 서비스 디스커버리 | Kubernetes Service DNS (로컬은 compose 서비스 이름) | Eureka 같은 별도 레지스트리는 쓰지 않음 |
 
 ## 환경

@@ -34,7 +34,7 @@ shellcheck scripts/*.sh                                # 스크립트를 바꿨�
 
 ## 아키텍처 요약
 
-- 흐름: 클라이언트 → `api-gateway` → 각 서비스. 서비스 간 동기 호출은 REST, 비동기 통신은 이벤트를 쓴다(브로커는 미정이며 ADR로 결정할 예정).
+- 흐름: 클라이언트 → `api-gateway` → 각 서비스. 서비스 간 동기 호출은 REST, 상태 변경은 Kafka 이벤트로 전달한다(ADR-0002).
 - 서비스마다 자기 DB를 소유한다. 다른 서비스의 DB에 직접 접근하지 않고 API나 이벤트로만 통신한다.
 - 로컬은 루트 `local/`의 docker-compose, 운영은 AWS EKS 클러스터 하나에 환경을 namespace로 나눠 운영한다.
 - 운영 변경은 모두 git을 거친다. AWS 리소스는 infra 레포(Terraform, PR에서 plan, 승인 후 CI가 apply), 클러스터 리소스는 gitops 레포(Argo CD가 sync)다. 두 레포를 같이 바꿀 때는 infra를 먼저 반영한다.
