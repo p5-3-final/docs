@@ -4,3 +4,4 @@
 
 | ID | 제목 | 상태 | 날짜 |
 | --- | --- | --- | --- |
+| [ADR-0001](0001-ai-uv-workspace.md) | ai 레포를 uv workspace로 구성한다 | Proposed | 2026-11-02 |

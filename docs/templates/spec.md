@@ -46,7 +46,7 @@ related: []              # ADR-NNNN, SPEC-NNN
 ## 5. 영향 범위
 | 레포 / 서비스 | 변경 개요 | 담당 요구사항 |
 | --- | --- | --- |
-| backend / user-service | | R-1, R-2 |
+| backend / auth-service | | R-1, R-2 |
 | frontend | | R-3 |
 
 ## 6. 계약 변경

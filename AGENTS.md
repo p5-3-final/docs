@@ -11,8 +11,8 @@
 | 경로 | 레포 | 내용 |
 | --- | --- | --- |
 | `./` | docs | SDD 문서(spec), ADR, API·이벤트 계약 원본, 아키텍처 문서, 로컬 docker-compose(`local/`) |
-| `repos/backend` | backend | Spring Boot 멀티모듈 MSA (api-gateway, user-service, …) |
-| `repos/ai` | ai | Python FastAPI AI 서비스 |
+| `repos/backend` | backend | Spring Boot 멀티모듈 MSA (api-gateway, auth, media, pipeline, analysis, search, notification) |
+| `repos/ai` | ai | Python uv workspace (ai-gateway와 Data Plane 워커 8개) |
 | `repos/frontend` | frontend | React SPA |
 | `repos/infra` | infra | Terraform (AWS 리소스). apply는 CI만 한다(예외: `bootstrap` 스택 최초 1회) |
 | `repos/gitops` | gitops | Argo CD가 추적하는 Kubernetes 매니페스트 (애드온, 서비스, 환경) |
@@ -168,7 +168,7 @@ Claude Code와 Antigravity는 해당 경로의 파일을 다룰 때 아래 규�
 - 커밋은 Conventional Commits 형식으로 쓰고, 설명은 한국어로 쓴다.
   - 형식: `<type>(<scope>): <설명>`. scope는 서비스, 모듈, 환경 이름이다.
   - type: `feat` `fix` `refactor` `test` `docs` `chore` `build` `ci` `perf`
-  - 예: `feat(user-service): 회원가입 API 추가`
+  - 예: `feat(auth-service): 회원가입 API 추가`
   - 본문 끝에 `Refs: SPEC-012` 또는 `Closes #87`을 붙인다.
 - PR: squash merge와 CI 통과가 병합 조건이다. 리뷰 승인은 지금은 필수가 아니다(ruleset 필수 승인 수 0). 단, spec PR과 검사 예외가 있는 PR은 리뷰어 승인을 받은 뒤 병합한다. PR 본문에 spec 링크와 충족한 요구사항 ID를 적는다.
 - `main`에 직접 push하거나 force push하지 않는다. 사용자가 요청할 때만 커밋하거나 push한다.
