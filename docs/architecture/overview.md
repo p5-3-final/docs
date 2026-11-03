@@ -609,6 +609,6 @@ sequenceDiagram
 
 ## 영상 처리 책임과 실행 경계 (ADR-0009)
 
-normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행·슬롯·재시도·결과 반영의 상세 단일 설명은 backend `specs/SPEC-008-normalized-intake/plan.md`에 둔다. 완료/실패 이벤트의 executionId·결과 참조·오류 코드는 후속 계약 대상이며 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
+normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행 슬롯·요청 Outbox와 종료 확인 복구는 [SPEC-009](../specs/SPEC-009-chunk-dispatch/spec.md) 및 backend `specs/SPEC-009-chunk-dispatch/plan.md`에서 다룬다. 만료만으로 슬롯을 반환하지 않으며 실제 worker 완료·결과 반영·자동 재시도는 후속이다. SPEC-008은 수신·계획 저장 범위다. 완료/실패 이벤트의 executionId·결과 참조·오류 코드는 후속 계약 대상이며 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
 
 기존 AI Gateway의 /v1/analyze·/v1/embed·/v1/parse와 블러 사본·모델 Adapter 정책은 유지한다. /v1/inferences는 문서 초안으로, 준비된 입력 객체 읽기 권한과 requestId별 실행 제어를 추가해야 한다. AI 출력의 실제 검출/설명/임베딩 구조를 이 문서로 확정하지 않는다.
