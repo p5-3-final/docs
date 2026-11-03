@@ -4,6 +4,8 @@ updated: 2026-11-03
 
 # 아키텍처 개요
 
+> 영상 처리 책임·계획/배정·정수 밀리초 규칙은 [ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)가 우선한다. 아래 v3는 목표 설계이며 구현 현황은 backend SPEC-008 plan의 비교표로 확인한다. 새 추론 endpoint·실행 저장소는 아직 구현되지 않았다.
+>
 > 서비스 목록과 책임은 [service-catalog.md](service-catalog.md)에 있다. 서비스를 바꾸면 둘을 함께 갱신한다. 이 구조의 근거는 [ADR-0008](../adr/0008-industrial-safety-v3.md)이고, 설계 원본은 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`(내용은 v3)다.
 
 산업현장 CCTV 영상을 대상으로, VLM을 꼭 필요한 순간에만 부르는 두 경로로 분석한다. 두 경로는 청크를 한 번 디코딩하는 지점에서 갈라지고, 비싼 결과는 모두 DB에 남겨 재사용한다.
@@ -42,7 +44,7 @@ flowchart TB
   Domain -.이벤트.-> MB{{Kafka}}
   MB -.-> DP
   DP -.이벤트.-> MB
-  subgraph DP["Data Plane (ai, Python)"]
+  subgraph DP["Data Plane (Python 경로 · backend 영상 처리 / AI 추론)"]
     VW[normalize, chunk-processor, track-stitcher,<br/>frame-encoder, grounding-worker]
     AW[event-analyzer, track-analyzer,<br/>embedding-worker, aggregator]
     AG[ai-gateway]
@@ -59,7 +61,7 @@ flowchart TB
 | --- | --- | --- |
 | 맡는 일 | 사용자 요청, 업무 상태(업로드·작업·버전), 권한, 저장, 조회, 품질 검토 | 영상 디코딩, 객체 탐지·추적, 이미지 벡터, VLM 호출, bbox 주석 |
 | 서버 형태 | HTTP API 서버 (analysis-loader만 컨슈머 전용) | ai-gateway 1개는 HTTP 서버, 나머지 9개는 Kafka 워커 |
-| DB 접근 | 자기 DB를 직접 읽고 씀(Outbox 포함) | PostgreSQL에 직접 쓰지 않음. 결과는 Kafka 이벤트나 S3 파일로 내보냄. 예외는 자기 DB(ai_db)를 가진 ai-gateway |
+| DB 접근 | 자기 DB를 직접 읽고 씀(Outbox 포함) | 기존 v3는 PostgreSQL 직접 쓰기를 금지했으나, backend 소유 normalize·chunk-processor의 수신/실행·결과 Outbox 원장은 후속 설계에서 자체 저장소를 사용한다. pipeline DB 직접 쓰기는 금지한다. ai-gateway는 자기 DB 소유 |
 | 스케일 기준 | HPA (CPU·요청 수) | KEDA (Kafka 처리 대기량), ai-gateway는 HPA |
 | 이미지 | 서비스마다 하나 (backend 공통 `Dockerfile`) | 서비스마다 하나 ([ADR-0001](../adr/0001-ai-uv-workspace.md)). 무거운 의존성(PyTorch, Ultralytics, FFmpeg)이 가벼운 워커에 섞이지 않게 함 |
 | 모델 | 없음 | 자체 실행(CPU): 이미지·질의 인코더, 탐지기. 외부: VLM·텍스트 임베딩 |
@@ -71,7 +73,9 @@ flowchart LR
   ME[media-service] -->|video.uploaded| NZ[normalize]
   NZ -->|video.normalized| PL[pipeline-service]
   NZ -->|video.normalized| ME
-  PL -->|chunk.requested| CP[chunk-processor]
+  PL -->|Job·Chunk 계획 저장만| DS[배정기 · 후속]
+  DS -->|실행·슬롯·Outbox 커밋 후 chunk.requested| CP[chunk-processor]
+  CP -->|준비된 청크 객체 참조 · 내부 HTTP| INF[AI 추론 경계 · endpoint 초안]
   CP -->|segment.ready| FEN[frame-encoder]
   FEN -->|segment.embedded| SE[search-service]
   FEN -->|segment.embedded| TS
@@ -96,9 +100,9 @@ flowchart LR
 
 1. 클라이언트가 media-service에서 업로드 자리(영상 ID와 업로드 주소)를 받는다. 100MB 이하는 presigned POST(크기 고정), 넘으면 멀티파트 presigned URL이다([SPEC-003](../specs/SPEC-003-video-upload/spec.md)).
 2. `/complete` 요청이 `UPLOADING → UPLOADED` 조건부 전이에 성공하면 같은 트랜잭션에서 `video.uploaded`를 Outbox에 넣는다. 운영에서는 S3 업로드 이벤트도 같은 전이를 시도하고, 나중에 온 신호는 아무것도 하지 않는다.
-3. normalize가 ffprobe로 검증하고(video 스트림·duration·fps가 없으면 `REJECTED`), 재생 정보를 앞으로 옮기거나 고정 fps로 다시 인코딩한 사본과 HLS 조각을 S3에 저장한다. 영상 길이와 예상 처리 시간을 담아 `video.normalized`를 발행하고, media-service가 이를 받아 source 상태를 바꾼다.
-4. pipeline-service가 청크 계획(기본 2분, 영상 길이에 따라 1~3분, 앞뒤 5초 겹침)을 세우고 사용자별 → 소스별 → 전체 상한을 지키며 `chunk.requested`를 내보낸다.
-5. chunk-processor가 청크를 **한 번만** 디코딩해 두 경로로 나눈다.
+3. backend 소유 normalize가 ffprobe로 검증하고(video 스트림·duration·fps가 없으면 `REJECTED`), 재생 정보를 앞으로 옮기거나 고정 fps로 다시 인코딩한 불변 normalizationId별 사본과 HLS 조각을 S3에 저장한다. 재정규화는 새 식별자·경로를 쓴다. 영상 길이와 예상 처리 시간을 담아 `video.normalized`를 발행하고, media-service가 이를 받아 source 상태를 바꾼다.
+4. pipeline-service는 구간을 계산해 Job·Chunk와 정규화 수신 완료 기록만 원자적으로 저장한다. 전체 청크 요청 Outbox를 미리 쓰지 않는다. 후속 배정기가 사용자별 → 소스별 → 전체 한도와 공정성을 적용한 뒤 실행 시도·배정 상태·슬롯 점유·`chunk.requested` Outbox를 같은 트랜잭션에 기록한다. Publisher는 발행만 담당한다.
+5. backend의 chunk-processor는 배정받은 processingRange만 실제 추출·디코딩하고 AI 입력을 준비하고 객체 저장소에 보존한다. 추론은 내부 HTTP로 AI 서버에 요청하고 결과 저장·시간 매핑·이벤트 처리는 backend가 담당한다. 아래 두 경로의 v3 모델·후처리 역할을 이 추론 경계에 맞춰 연결하며, 새 결과 스키마는 추측하지 않는다.
    - 검색 경로: 소유 범위 안에서 시작하는 10초 창·5초 간격 구간마다 균등 간격 프레임 4장을 뽑고, 얼굴·번호판을 블러 처리한 사본을 저장한다(`segment.ready`). 정적 구간은 플래그만 남기고 벡터는 모두 만든다.
    - 이벤트 경로: 확장 범위로 탐지 프로필의 탐지기(기본 YOLO26n·YOLO-pose·YOLOE 텍스트 클래스)와 추적(ByteTrack)을 돌리고, 이벤트 정의 목록의 규칙과 탐지기 능력 선언에 맞고 시작 시각이 소유 범위 안인 후보만 청크당 한 건(0건, 미지원 유형 목록 포함)으로 묶는다(`event.candidate`). 체류·배회처럼 시간이 기준인 규칙은 판단하지 않고 트랙별 구역 진입·이탈 시각만 남긴다.
    - 청크 안에서 끝난 트랙은 `track.detected`, 경계에 걸친 트랙은 `chunk.boundary`로 보내고, 검출 박스·크롭은 S3에 둔다. 마지막에 구간·후보·트랙 수와 탐지기 능력을 담은 `chunk.manifest`를 발행한다.
@@ -114,22 +118,24 @@ flowchart LR
 
 ## 분할 단위와 연결 키
 
-영상 하나는 청크로 쪼개고, **sourceId + 분석 버전 + PTS(정규화 사본 기준 초)** 세 축으로 다시 잇는다. 트랙만 청크 로컬 ID에서 최종 ID로 한 번 더 번역하고, 그 번역표를 track-stitcher가 만든다.
+원본 sourceId → 불변 normalizationId → 정규화 결과와 분석 설정의 Job(jobId) → 계획 Chunk(chunkId) → 개별 실행(executionId)을 구분한다. eventId는 메시지 식별자다. 기존 sourceId+순번으로만 Chunk를 식별하면 다른 정규화/계획과 충돌하므로 외부 chunkId의 실제 표현은 후속 backend 계약에서 정한다.
+
+연동 시각은 정규화 사본 시작 기준 정수 밀리초, 구간은 [start,end)다. UI의 초 단위 표시와 SPEC-004의 기존 BigDecimal 초 구현은 경계에서 정확히 변환한다. AI 결과는 입력 청크 기준 ms이며 실제 추출 PTS 매핑으로 전역 ms로 변환한다. 요청 시작값과 실제 seek 시작이 같다고 가정하지 않는다.
 
 ```text
-영상 (sourceId)                              ← 업로드·삭제·활성 버전의 단위
-└─ 청크 (chunkId = sourceId + 순번)           ← 병렬 처리 단위 · 기본 2분 + 앞뒤 5초 겹침
-   ├─ 구간 (segmentId = uuid5(sourceId, start, end))  ← 검색 경로 · 10초 창 · 5초 간격 · 소유 범위 안에서 시작하는 것만
-   │   └─ 대표 프레임 4장 (segmentId + PTS)       ← 평균 벡터 입력 · 블러 사본 1장은 썸네일·재순위화·RAG에 재사용
-   ├─ 트랙 (로컬 trackId = chunkId + 번호)        ← 객체 하나가 화면에 있는 동안
-   │   ├─ 검출 박스 (trackId + PTS)               ← 1~2fps로 저장 · 클릭 · 오버레이
-   │   └─ 대표 크롭 1~3장 + 외형 벡터               ← 속성 분석 · Re-ID · 크롭 검색
-   └─ 이벤트 후보 (proposalId = uuid5(sourceId, 유형, 트랙, start, end)) ← 청크당 1건으로 묶어 전달
+sourceId
+└─ normalizationId (불변 결과)
+   └─ jobId (분석 설정 불변 버전 포함)
+      └─ chunkId (소유·처리 구간)
+         ├─ executionId (새 실제 실행마다 새 ID)
+         └─ 구간·트랙·후보·결과 참조 (v3 의미 유지, 정규화·분석 버전으로 분리)
 ```
+
+기존 v3의 segment/proposal 결정적 ID 설명은 정규화 결과·분석 설정을 구별해야 한다. source와 시각만 같은 재정규화 결과를 동일 산출물로 간주하지 않는다. 실제 ID 타입·정규 생성식은 해당 계약에서 확정한다.
 
 | 산출물 | 범위 | 이유 |
 | --- | --- | --- |
-| 구간 | 시작 시각이 소유 범위 안일 때만 | 같은 구간을 두 번 임베딩하지 않기 위해. 구간 ID가 (sourceId, start, end)로 결정적이라 청크 경계와 무관하다 |
+| 구간 | 시작 시각이 소유 범위 안일 때만 | 같은 구간을 두 번 임베딩하지 않기 위해. 동일 정규화 결과·설정의 구간 식별은 청크 경계와 무관해야 하며 생성식은 후속 계약에서 정한다 |
 | 이벤트 후보 | 시작 시각이 소유 범위 안일 때만 | VLM 판정이 중복되지 않기 위해 |
 | 추적 | 확장 범위(겹침 포함) | 경계에서 트랙이 끊기지 않게 5초를 더 보고, track-stitcher가 겹치는 5초로 같은 객체를 맞춤 |
 | 검출 박스 | 소유 범위만 저장(경계 5초는 stitcher용 파일로만) | 같은 시각에 박스가 두 벌 생기지 않기 위해 |
@@ -198,7 +204,7 @@ sequenceDiagram
 | 인코더 일치 | 구간 벡터(frame-encoder)와 질의 벡터(ai-gateway)는 같은 인코더 모델 ID여야 한다. 벡터마다 `embedding_model`을 기록하고 같은 모델 벡터만 검색한다. 교체는 재임베딩을 끝낸 뒤 활성 버전 전환으로 한다. |
 | 한국어 질의 | 기본 인코더의 텍스트 타워가 영어 위주라 규칙 사전이 만든 영어 검색 문장으로 시각 검색을 한다. 한국어 원문 점수는 비교 로그로만 남긴다. |
 | 프레임 평균의 한계 | 구간 벡터는 움직임 정보가 없다. 행동 질의는 이벤트 텍스트 인덱스로 보완하고, 결과 화면에 "장면 외형 기준 검색"임을 표시한다. |
-| 시간 기준 | 모든 시각은 정규화 사본의 PTS 기준 초다. |
+| 시간 기준 | 연동 시각은 정규화 영상 시작 기준 정수 밀리초다. 기존 내부 소수 초·UI 초 표시는 정확히 변환하고 AI 로컬 시각은 실제 추출 매핑으로 복원한다. |
 | 지연·장애 | 검색은 ai-gateway 호출이 타임아웃(5~8초)을 넘기면 인코더 순위로 응답하고, 서킷이 열리면 재순위화 없이 응답한다. RAG는 15초를 넘기면 답변 `null`과 근거만 돌려준다. |
 | 정밀 검색 상한 | 사용자별 분당·일별 정밀 검색·RAG 횟수에 상한을 두고, 넘으면 인코더 순위만 돌려준다. |
 | 질의 로그 | 질의, 해석 방법, 결과, 실제 이동·재생 구간, 맞음·틀림을 기록해 사전 보강과 Golden Set 질의 후보로 쓴다. |
@@ -343,9 +349,9 @@ sequenceDiagram
 | 외부 → 내부 | frontend → api-gateway만 공개한다. 각 서비스는 클러스터 내부(ClusterIP)에서만 접근한다. |
 | 인증 | api-gateway가 JWKS로 JWT를 검증하고 사용자 ID와 역할을 헤더로 전달한다. 클라이언트가 보낸 같은 이름의 헤더는 지운다. 각 서비스는 인가만 한다. |
 | 서비스 ↔ 서비스 | 상태 변경은 Kafka 이벤트로만 전달한다([ADR-0002](../adr/0002-kafka-message-broker.md)). 내부 읽기 전용 API는 허용한다(aggregator → analysis-api, search-service → analysis-api(RAG 근거), api-gateway → auth-service JWKS). 읽기 API는 호출하는 쪽이 없어도 제공하는 쪽이 동작한다. |
-| 동기 예외 | search-service → ai-gateway(질의 해석, 질의 벡터, 선택 재순위화, RAG)와 워커 → ai-gateway만 동기 호출이다. 타임아웃·재시도·서킷브레이커를 필수로 둔다. |
+| 동기 예외 | 기존 search-service/워커 → ai-gateway는 유지한다. chunk-processor → 내부 추론 HTTP는 ADR-0009의 새 논리 경계이며 /v1/inferences facade와 별도 서버 adapter를 비교한다. 실제 서버 연결을 임의 교체하지 않는다. |
 | 시작 신호 | 같은 작업을 시작시키는 신호가 여러 개여도 하나의 조건부 상태 전이로 모은다. |
-| 파티션 키 | 청크 단위 작업은 chunkId, 트랙은 trackId, 주석은 groundingId로 흩어 병렬화하고, 경계 연결과 엔티티 상태만 sourceId로 묶는다. |
+| 파티션 키 | 공통 envelope의 sourceId를 사용한다. 이전 v3의 chunkId/trackId/groundingId 키 표기는 구현된 계약이 아니다. 같은 source의 병렬 처리는 제한된 비동기 실행과 연속 완료 offset 처리로 설계한다. |
 | 대량 데이터 | 구간 목록, 벡터, 검출 박스처럼 큰 데이터는 S3 파일로 두고 이벤트에는 경로와 개수만 싣는다. |
 | 완료는 적재하는 쪽이 확인 | pipeline-service는 생산 신호(`segment.embedded`)가 아니라 적재 신호(`segment.indexed`)를 센다. analysis-api와 search-service는 자기 적재 수가 manifest 수와 맞을 때만 활성 버전을 전환한다. |
 | 순서 | 상태 전체를 담은 이벤트(`version.activated`, `job.status`)는 단조 증가 순번을 실어 소비자가 오래된 것을 버린다. 각각 처리해야 하는 이벤트(`video.uploaded`·`deleted`, `event.analyzed`, `track.detected`)는 버리지 않고 조건부 상태 전이와 삭제 흔적(tombstone)으로 순서를 다룬다. |
@@ -373,25 +379,25 @@ sequenceDiagram
 | 토픽 | 키 | 발행 → 소비 |
 | --- | --- | --- |
 | `video.uploaded` · `video.normalized` · `video.deleted` | sourceId | media-service · normalize → pipeline-service · media-service · search-service · 전 서비스 |
-| `chunk.requested` | chunkId | pipeline-service → chunk-processor |
-| `segment.ready` | chunkId | chunk-processor → frame-encoder (구간 목록·대표 프레임·크롭 경로·개수) |
-| `segment.embedded` | chunkId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embedding_model`·차원) |
-| `segment.indexed` | chunkId | search-service → pipeline-service (COPY 적재 완료·개수) |
+| `chunk.requested` | sourceId | pipeline-service → chunk-processor |
+| `segment.ready` | sourceId | chunk-processor → frame-encoder (구간 목록·대표 프레임·크롭 경로·개수) |
+| `segment.embedded` | sourceId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embedding_model`·차원) |
+| `segment.indexed` | sourceId | search-service → pipeline-service (COPY 적재 완료·개수) |
 | `chunk.manifest` | sourceId | chunk-processor → pipeline-service (구간·후보·트랙 수, 탐지기 능력, `unsupported_events`) |
 | `chunk.boundary` | sourceId | chunk-processor → track-stitcher |
-| `track.detected` · `track.manifest` | trackId · sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service |
-| `attribute.requested` | trackId | analysis-api → track-analyzer (이벤트 관련 트랙, 클릭, 자유 질문) |
-| `track.analyzed` | trackId | track-analyzer → analysis-api · embedding-worker · notification-service |
-| `event.candidate` | chunkId | chunk-processor → event-analyzer (청크당 1건, 0건 포함, `unsupported_events`, 상한 초과 시 S3 경로) |
-| `event.analyzed` · `event.manifest` | eventId · sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`VLMAnalysis`, `reviewRequired`) |
-| `grounding.requested` | groundingId | search-service → grounding-worker (segmentId 최대 3개, 대상어, 표준 질의) |
-| `grounding.completed` | groundingId | grounding-worker → search-service · notification-service (클립 경로, 프레임별 객체 수) |
+| `track.detected` · `track.manifest` | sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service |
+| `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙, 클릭, 자유 질문) |
+| `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service |
+| `event.candidate` | sourceId | chunk-processor → event-analyzer (청크당 1건, 0건 포함, `unsupported_events`, 상한 초과 시 S3 경로) |
+| `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`VLMAnalysis`, `reviewRequired`) |
+| `grounding.requested` | sourceId | search-service → grounding-worker (segmentId 최대 3개, 대상어, 표준 질의) |
+| `grounding.completed` | sourceId | grounding-worker → search-service · notification-service (클립 경로, 프레임별 객체 수) |
 | `segment.annotated` | sourceId | search-service → embedding-worker (정밀 검색에서 확인된 구간 주석) |
-| `embedding.ready` | eventId · trackId · annotationId | embedding-worker → search-service (텍스트 인덱스) |
+| `embedding.ready` | sourceId | embedding-worker → search-service (텍스트 인덱스) |
 | `version.activated` | sourceId | analysis-api → search-service (전환 순번 포함) |
 | `analysis.completed` · `job.status` | sourceId | pipeline-service → aggregator · notification-service (`job.status`는 상태 전체 + 순번) |
 | `source.completed` | sourceId | aggregator → analysis-api · notification-service (병합 목록, 시간 규칙 이벤트, 스냅샷, 위험 상태, 요약. 크면 S3 경로) |
-| `{토픽}.{그룹}.retry` · `{그룹}.dlq` | 원본과 같음 | 지터 재시도, 운영자 재처리 |
+| `{토픽}.{그룹}.retry` · `{그룹}.dlq` | sourceId | 지터 재시도, 운영자 재처리 |
 
 Kafka 보존 기간은 30일이다. 토픽별 파티션 수는 소비 그룹의 최대 Pod 수 이상으로 잡는다. 이벤트 계약 원본은 `docs/contracts/events/`에 기능 spec과 함께 추가한다.
 
@@ -418,7 +424,7 @@ Kafka 보존 기간은 30일이다. 토픽별 파티션 수는 소비 그룹의 
 | 상태 위치 | 공유 상태는 DB·Redis·S3에만 둔다. Pod 메모리는 캐시, 묶음 처리 버퍼, 로드한 모델로만 쓴다. |
 | 중복 실행 방지 | 조건부 상태 전이, `FOR UPDATE SKIP LOCKED`, Redis 원자 연산(SET NX·Lua) 중 하나로 한 Pod만 성공하게 한다. |
 | 멱등 | 구간·후보·트랙·결과·주석 ID와 S3 경로는 결정적으로 만든다. 소비자는 eventId로 중복을 흡수하고, 일괄 적재(analysis-loader·search-service)는 임시 테이블에 COPY한 뒤 고유 키로 upsert한다. |
-| Outbox 발행기 | 각 Pod가 `FOR UPDATE SKIP LOCKED`로 Outbox 행을 가져가 발행한다. |
+| Outbox 발행기 | 현재 구현은 ID 순 행 단위 FOR UPDATE SKIP LOCKED다. source별 잠금·다중 Pod 간 발행 순서까지 보장하지 않는다. Publisher는 배정·슬롯 점유를 하지 않는다. |
 | 주기 작업 | 타임아웃 처리, 완료 점검기, 정리 작업은 행 잠금이나 분산 락으로 한 Pod만 실행한다. |
 | 긴 처리 | chunk-processor·normalize·event-analyzer·grounding-worker는 pause/resume으로 처리하고 메인 루프는 poll을 계속 불러 재배치에 바로 응답한다. 재배치는 cooperative-sticky를 쓴다. |
 | 종료 신호 | SIGTERM이 오면 진행 중 작업을 커밋하지 않은 채 소비 그룹에서 나간다. 재처리는 결정적 ID로 흡수한다. |
@@ -598,3 +604,9 @@ sequenceDiagram
 | --- | --- |
 | Phase 1 · MVP (산업안전 검색·이벤트·위험 상태·클릭·품질) | 19개 배포 단위, 이벤트 정의 목록 v1(6종)·탐지기 능력 선언·`unsupported_events` 표시·위험구역 정의, 문장으로 장면 찾기(규칙 사전·시각 벡터·텍스트 RRF·정밀 검색 선택·bbox 주석·결과 재사용)와 이미지로 찾기, Video RAG·객체 자유 질문, 위험 상태·상태 스냅샷, 클릭 조회·오버레이·HLS 재생, Re-ID, Quality(Golden Set·검토 큐·CI Gate·회귀 평가), 재판정·재임베딩과 Shadow·Canary 전환, 로컬 compose, 여러 Pod 운영 장치, 커스텀 탐지기 파인튜닝 경로 |
 | Phase 2 · 실시간 스트리밍 | Stream 서비스 + Stream Ingestor. 카메라 단위 추적, 이벤트 즉시 발행, 상태 전이 즉시 적용, 구간 10~30초 묶음, severity high 1차 알림(`alert.raised`) |
+
+## 영상 처리 책임과 실행 경계 (ADR-0009)
+
+normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행·슬롯·재시도·결과 반영의 상세 단일 설명은 backend `specs/SPEC-008-normalized-intake/plan.md`에 둔다. 완료/실패 이벤트의 executionId·결과 참조·오류 코드는 후속 계약 대상이며 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
+
+기존 AI Gateway의 /v1/analyze·/v1/embed·/v1/parse와 블러 사본·모델 Adapter 정책은 유지한다. /v1/inferences는 문서 초안으로, 준비된 입력 객체 읽기 권한과 requestId별 실행 제어를 추가해야 한다. AI 출력의 실제 검출/설명/임베딩 구조를 이 문서로 확정하지 않는다.

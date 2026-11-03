@@ -136,3 +136,7 @@ backend 개발자로서 계획 생성을 재시도해도 중복 Job을 만들지
 - SPEC-003은 영상 업로드이며 Pipeline 계획은 SPEC-004다. 구현 추적은 backend #32를 재사용한다.
 
 - backend PR #33의 내부 계획 구현은 머지됐다. 필수 CI와 로컬 전체 309개 테스트(IDE DEBUG 환경변수 제거)가 통과했다. 운영 배포는 범위 밖이므로 Done이 아닌 Implementing으로 추적한다.
+
+### 후속 연동과의 관계
+
+SPEC-004는 구현 당시 소수 초·내부 계획 ID 비교를 보존한다. [SPEC-008](../SPEC-008-normalized-intake/spec.md)은 연동 시간의 정수 ms와 불변 normalizationId·분석 설정의 의미상 Job 재사용을 추가하는 후속 설계다. 기존 DB가 이미 ms로 바뀐 것은 아니다. 계획 저장 시 chunk.requested Outbox는 생성하지 않으며 실제 발행은 배정 후속 작업이다.

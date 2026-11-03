@@ -11,5 +11,6 @@
 | [SPEC-005](SPEC-005-frontend-video-upload/spec.md) | 영상 업로드 화면과 내 영상 목록 | Implementing | frontend, docs | | 2026-11-03 |
 | [SPEC-006](SPEC-006-video-playback/spec.md) | 원본 영상 재생 | Implementing | backend, frontend, docs | | 2026-11-03 |
 | [SPEC-007](SPEC-007-video-normalize/spec.md) | 영상 정규화 | Approved | ai, backend, frontend, docs | | 2026-11-03 |
+| [SPEC-008](SPEC-008-normalized-intake/spec.md) | 정규화 완료 수신과 계획 저장 | Approved | backend | backend 담당자 | 2026-11-03 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)

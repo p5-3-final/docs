@@ -15,7 +15,7 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 
 ## 1. 배경과 목적
 
-사용자가 올린 원본은 코덱, 컨테이너, 프레임률이 제각각이다. 그대로 분석하면 프레임 시각(PTS)이 영상마다 다르게 해석되고, 브라우저가 열지 못하는 형식도 섞인다. 분석을 시작하기 전에 원본을 한 번 검증하고 **정규화 사본** 하나로 맞춘다. 이후 청크 계획(SPEC-004), 구간 추출, 탐지, 이벤트 시각은 모두 이 사본의 PTS(초)를 기준으로 한다([아키텍처 개요](../../architecture/overview.md) "분석 처리 흐름" 3단계, [ADR-0008](../../adr/0008-industrial-safety-v3.md)).
+사용자가 올린 원본은 코덱, 컨테이너, 프레임률이 제각각이다. 그대로 분석하면 프레임 시각(PTS)이 영상마다 다르게 해석되고, 브라우저가 열지 못하는 형식도 섞인다. 분석을 시작하기 전에 원본을 한 번 검증하고 **정규화 사본** 하나로 맞춘다. 이후 청크 계획(SPEC-004), 구간 추출, 탐지, 이벤트 시각은 모두 이 사본의 PTS(연동 정수 밀리초, 호환 표시 초)를 기준으로 한다([아키텍처 개요](../../architecture/overview.md) "분석 처리 흐름" 3단계, [ADR-0008](../../adr/0008-industrial-safety-v3.md)).
 
 분석할 수 없는 영상은 이 단계에서 이유와 함께 거절해서, 뒤 단계가 비용을 쓰기 전에 사용자에게 알린다. 재생용 HLS 조각도 여기서 만들어 두고, 재생에 쓰는 일은 다음 spec에서 다룬다. PRD의 에픽은 아직 정의되지 않았다.
 
@@ -97,7 +97,7 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 | R-3 | WHERE 원본 영상이 H.264이고 고정 프레임률인 경우, THE normalize SHALL 다시 인코딩하지 않고 복사 경로로 정규화 사본을 만든다. | US-1 |
 | R-4 | WHERE 원본 영상이 H.264가 아니거나 가변 프레임률인 경우, THE normalize SHALL 원본 평균 프레임률(최대 30)의 고정 프레임률 H.264로 다시 인코딩한다. | US-1 |
 | R-5 | WHEN 정규화 사본을 저장하면, THE normalize SHALL 정규화 사본에서 HLS 재생 목록과 조각을 만들어 저장한다. | US-3 |
-| R-6 | WHEN 정규화 사본과 HLS를 모두 저장하면, THE normalize SHALL 결과 `READY`, 두 저장 경로, 정규화 사본의 PTS 기준 길이(초), 프레임률, 가로·세로 픽셀, 재인코딩 여부를 담아 `video.normalized`를 발행한다. | US-1, US-3 |
+| R-6 | WHEN 정규화 사본과 HLS를 모두 저장하면, THE normalize SHALL 결과 `READY`, 두 저장 경로, 정규화 사본의 durationMs(정수 밀리초)와 같은 값의 durationSec(호환 초), normalizationId·normalizationVersion, 프레임률, 가로·세로 픽셀, 재인코딩 여부를 담아 `video.normalized`를 발행한다. | US-1, US-3 |
 | R-7 | IF 원본을 열 수 없으면, THEN THE normalize SHALL 결과 `REJECTED`, 거절 사유 `UNREADABLE`로 `video.normalized`를 발행한다. | US-2 |
 | R-8 | IF 원본에 영상 스트림이 없으면, THEN THE normalize SHALL 거절 사유 `NO_VIDEO_STREAM`으로 거절한다. | US-2 |
 | R-9 | IF 영상 길이나 프레임률을 읽을 수 없으면, THEN THE normalize SHALL 거절 사유 `MISSING_METADATA`로 거절한다. | US-2 |
@@ -105,7 +105,7 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 | R-11 | IF 영상 길이가 4시간을 넘으면, THEN THE normalize SHALL 거절 사유 `TOO_LONG`으로 거절한다. | US-2 |
 | R-12 | IF 원본 영상을 디코딩하다 실패하면, THEN THE normalize SHALL 거절 사유 `DECODE_FAILED`로 거절한다. | US-2 |
 | R-13 | IF 원본 품질과 무관한 이유(저장소·Kafka 장애 등)로 처리하지 못하면, THEN THE normalize SHALL 거절하지 않고 다시 시도하며, 끝내 실패한 메시지는 DLQ에 남긴다. | US-1 |
-| R-14 | THE normalize SHALL 같은 영상에 대해 저장 경로와 `video.normalizing`·`video.normalized`의 이벤트 ID를 영상 ID에서 결정적으로 만든다. | US-3 |
+| R-14 | THE normalize SHALL 같은 영상에 대해 저장 경로와 `video.normalized` 이벤트 ID를 정규화 결과 식별자별로 불변하게 만든다. 같은 결과 재전달은 같은 ID를 쓰고, 실제 재정규화는 새 normalizationId·저장 경로·eventId를 사용한다. `video.normalizing`은 기존 시작 신호 정책을 유지한다. | US-3 |
 | R-15 | WHEN media-service가 `video.normalizing`을 받고 영상이 `UPLOADED`이면, THE media-service SHALL 영상을 `NORMALIZING`으로 바꾼다. | US-1 |
 | R-16 | WHEN media-service가 결과 `READY`인 `video.normalized`를 받고 영상이 `UPLOADED` 또는 `NORMALIZING`이면, THE media-service SHALL 영상을 `READY`로 바꾸고 영상 길이, 정규화 사본·HLS 경로, 예상 처리 시간을 저장한다. | US-1 |
 | R-17 | WHEN media-service가 결과 `REJECTED`인 `video.normalized`를 받고 영상이 `UPLOADED` 또는 `NORMALIZING`이면, THE media-service SHALL 영상을 `REJECTED`로 바꾸고 거절 사유를 저장한다. | US-2 |
@@ -143,7 +143,7 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
 | `docs/contracts/events/video.normalizing.schema.json` | 새 이벤트: envelope만 | 예(추가) |
-| `docs/contracts/events/video.normalized.schema.json` | 새 이벤트: `result`(`READY`·`REJECTED`), `rejectReason`, `normalizedKey`, `hlsPlaylistKey`, `durationSec`, `fps`, `width`, `height`, `transcoded` | 예(추가) |
+| `docs/contracts/events/video.normalized.schema.json` | 새 이벤트: `normalizationId`, `normalizationVersion`, `durationMs`(READY), `result`(`READY`·`REJECTED`), `rejectReason`, `normalizedKey`, `hlsPlaylistKey`, `durationSec`, `fps`, `width`, `height`, `transcoded` | 예(추가) |
 | `docs/contracts/asyncapi/normalize.yaml` | 새 파일: normalize가 발행하는 두 채널. 메시지 키는 sourceId | 예(추가) |
 | `docs/contracts/openapi/media-service.yaml` | `VideoResponse`에 선택 필드 `durationSec`, `estimatedProcessingSec`, `rejectReason` 추가, `VideoStatus` 설명 갱신. 1.1.0 → 1.2.0 | 예(선택 필드 추가) |
 
@@ -158,3 +158,9 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 ## 8. 미결 사항
 
 - 없음
+
+### Pipeline 수신과의 호환 보완 (사용자 확정)
+
+SPEC-008과 공유하는 video.normalized는 READY/REJECTED와 기존 메타데이터를 유지한다. READY는 normalizationId(UUID), normalizationVersion, normalizedKey·hlsPlaylistKey, 정수 durationMs와 정확히 일치하는 durationSec를 담는다. 객체 경로는 `sources/<sourceId>/normalizations/<normalizationId>/` 아래의 불변 참조다. REJECTED는 결과 식별자·버전·rejectReason을 담고 성공 메타데이터는 생략 또는 null이다. Pipeline은 이를 기록만 하고 계획하지 않는다. 구문상 같은 eventId의 변경 payload 및 같은 normalizationId의 다른 결과는 충돌이다. 변경은 아직 normalize 런타임 구현을 완료했다는 뜻이 아니다.
+
+기존 v1 계약은 그대로 보존하고 위 보완은 schemaVersion=2로 발행한다. video.normalized.schema.json은 v1/v2 합집합, video.normalized.v2.schema.json은 Pipeline용 v2 원본이다. 신규 producer의 v2 전환은 구현 작업에서 반영하며 이번 수신 구현이 producer를 자동 교체하지 않는다.
