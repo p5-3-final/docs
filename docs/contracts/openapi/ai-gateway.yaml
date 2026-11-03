@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
     taskType별 입력 변수·출력 형식의 원본은 `../prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다.
     이미지는 저장소 경로로만 넘기며, 허용 패턴에 맞는 블러 사본 경로만 받는다. (SPEC-009 R-9, R-10)
+    `/v1/embed`는 질의·텍스트·이미지 벡터를 만든다. 검색용 이미지는 taskType별 허용 패턴(질의 전용 폴더)의 경로만 받는다. (SPEC-011)
 servers:
   - url: http://ai-gateway:8000
     description: 클러스터 내부 주소 (로컬 compose 서비스 이름 기준)
@@ -84,6 +85,67 @@ paths:
           $ref: '#/components/responses/ProviderFailed'
         '503':
           $ref: '#/components/responses/ProviderUnavailable'
+  /v1/embed:
+    post:
+      operationId: embed
+      summary: 문장이나 이미지를 벡터로 바꿈
+      description: |
+        입력 순서대로 벡터를 돌려준다. 벡터는 모두 길이 1로 정규화되어 있다. (SPEC-011 R-1~R-4)
+        - `embed_visual_text`·`embed_image`는 ai-gateway 안의 이미지·질의 인코더로 만들고, `modelId`는 frame-encoder의 `embedding_model`과 같은 문자열이다. VLM·텍스트 임베딩 공급자 상태와 상관없이 동작한다. (R-6, R-22)
+        - `embed_text`는 텍스트 임베딩 공급자를 부른다.
+        - 같은 모델로 같은 입력을 다시 보내면 같은 벡터(코사인 유사도 0.9999 이상)를 받는다. (R-5)
+        - 호출 로그에는 입력 수·지연·상태만 남고 벡터와 문장 원문은 남지 않는다. (R-23)
+      tags: [internal]
+      # /v1/analyze와 같은 이유로 토큰 인증 없이 NetworkPolicy와 호출자 헤더 허용 목록으로 막는다.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbedRequest'
+            examples:
+              visualText:
+                summary: 시각 검색 질의 문장
+                value:
+                  taskType: embed_visual_text
+                  texts: [a forklift passing by]
+              image:
+                summary: 검색용 이미지
+                value:
+                  taskType: embed_image
+                  images:
+                    - storageKey: queries/0192f0d2-9a8b-7c6d-8e4f-5a6b7c8d9e0f/query.jpg
+              text:
+                summary: 이벤트 설명문
+                value:
+                  taskType: embed_text
+                  texts: [적재 구역에서 작업자 한 명이 지게차 옆에 넘어져 일어나지 못하고 있다.]
+      responses:
+        '200':
+          description: 입력 순서대로 만든 벡터
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbedResponse'
+              example:
+                callId: 0192f0e1-0000-7000-8000-000000000002
+                taskType: embed_visual_text
+                modelId: open_clip:MobileCLIP2-S0:dfndr2b:mean-4
+                dimension: 4
+                vectors:
+                  - [0.5, -0.5, 0.5, 0.5]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/ProviderFailed'
+        '503':
+          $ref: '#/components/responses/EmbedUnavailable'
 components:
   parameters:
     XCaller:
@@ -109,6 +171,8 @@ components:
       description: |
         요청 형식이나 입력 변수가 입력 스키마와 맞지 않음 (`AI_INVALID_REQUEST`), 모르는 taskType (`AI_UNKNOWN_TASK_TYPE`),
         이미지 수가 taskType 상한을 넘음 (`AI_TOO_MANY_IMAGES`), 저장소에 없는 이미지 (`AI_IMAGE_NOT_FOUND`). (SPEC-009 R-2~R-4, R-11)
+        `/v1/embed`: 입력 수가 taskType 상한을 넘음 (`AI_TOO_MANY_INPUTS`), 디코딩할 수 없는 이미지 (`AI_IMAGE_UNREADABLE`).
+        taskType에 맞지 않는 입력 종류·빈 목록·빈 문장·길이 상한을 넘는 문장은 `AI_INVALID_REQUEST`다. (SPEC-011 R-7~R-9, R-11, R-12, R-26)
       content:
         application/problem+json:
           schema:
@@ -123,6 +187,7 @@ components:
       description: |
         호출자 헤더가 없거나 허용 목록에 없음 (`AI_CALLER_FORBIDDEN`),
         이미지 경로가 허용 패턴 밖이거나 요청한 영상 폴더 밖 (`AI_IMAGE_PATH_FORBIDDEN`). 원본·정규화 사본·HLS 경로도 여기에 해당한다. (SPEC-009 R-9, R-10, R-16)
+        `/v1/embed`의 이미지 경로는 taskType별 허용 패턴을 따른다. (SPEC-011 R-10, R-13)
       content:
         application/problem+json:
           schema:
@@ -157,11 +222,88 @@ components:
             status: 503
             detail: 모델을 일시적으로 사용할 수 없습니다.
             code: AI_PROVIDER_UNAVAILABLE
+    EmbedUnavailable:
+      description: |
+        텍스트 임베딩 공급자가 제한 시간 안에 응답하지 않음, 연결할 수 없음, 429·5xx (`AI_PROVIDER_UNAVAILABLE`). 다시 시도할 수 있다. (SPEC-011 R-20)
+        그 taskType의 모델이 프로필에 없음 (`AI_MODEL_NOT_CONFIGURED`). 설정을 바꾸기 전에는 다시 보내도 같은 결과다. (SPEC-011 R-14)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            detail: 이 작업의 모델이 설정되지 않았습니다.
+            code: AI_MODEL_NOT_CONFIGURED
   schemas:
     TaskType:
       type: string
       description: 분석 작업 유형. 다른 taskType은 각 기능 spec에서 추가한다.
       enum: [event_judge]
+    EmbedTaskType:
+      type: string
+      description: |
+        벡터 종류. (SPEC-011)
+        - `embed_visual_text`: 영어 검색 문장 → 이미지·질의 인코더의 텍스트 벡터. `texts`를 쓴다.
+        - `embed_image`: 검색용 이미지 → 같은 인코더의 이미지 벡터. `images`를 쓴다.
+        - `embed_text`: 문장(한국어 포함) → 텍스트 임베딩 벡터. `texts`를 쓴다.
+      enum: [embed_visual_text, embed_image, embed_text]
+    EmbedRequest:
+      type: object
+      additionalProperties: false
+      required: [taskType]
+      description: taskType에 따라 `texts`와 `images` 중 하나만 보낸다. 다른 쪽을 보내거나 둘 다 없으면 `AI_INVALID_REQUEST`다. (SPEC-011 R-7)
+      properties:
+        taskType:
+          $ref: '#/components/schemas/EmbedTaskType'
+        texts:
+          type: array
+          minItems: 1
+          description: 벡터로 바꿀 문장. 최대 개수와 문장 길이 상한은 taskType별 설정이다. (R-8, R-26)
+          items:
+            type: string
+            minLength: 1
+        images:
+          type: array
+          minItems: 1
+          description: 벡터로 바꿀 이미지. 최대 개수는 taskType별 설정이다. (R-8, R-10)
+          items:
+            $ref: '#/components/schemas/EmbedImageRef'
+    EmbedImageRef:
+      type: object
+      additionalProperties: false
+      required: [storageKey]
+      properties:
+        storageKey:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: 저장소 객체 키. taskType별 허용 패턴(설정)에 맞아야 한다. 검색용 이미지는 질의 전용 폴더 경로다. (R-10)
+    EmbedResponse:
+      type: object
+      required: [callId, taskType, modelId, dimension, vectors]
+      properties:
+        callId:
+          type: string
+          format: uuid
+          description: 호출 ID. 호출 로그를 찾는 키다. (SPEC-011 R-23)
+        taskType:
+          $ref: '#/components/schemas/EmbedTaskType'
+        modelId:
+          type: string
+          description: 벡터를 만든 모델 ID(프로필 값). 저장하는 벡터의 `embedding_model`로 쓴다. 인코더 taskType이면 frame-encoder와 같은 문자열이다. (R-6)
+        dimension:
+          type: integer
+          minimum: 1
+          description: 벡터 차원(프로필 값)
+        vectors:
+          type: array
+          description: 입력 순서대로 만든 벡터. 각 벡터는 길이(L2 노름) 1이다. (R-4)
+          items:
+            type: array
+            items:
+              type: number
     AnalyzeRequest:
       type: object
       additionalProperties: false
