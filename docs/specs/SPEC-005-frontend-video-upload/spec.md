@@ -1,7 +1,7 @@
 ---
 id: SPEC-005
 title: 영상 업로드 화면과 내 영상 목록
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-03
