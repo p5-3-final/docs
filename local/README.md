@@ -90,7 +90,7 @@ docker compose -f local/docker-compose.yml exec postgres psql -U postgres -d ai_
 
   ```bash
   ollama serve &                 # 이미 떠 있으면 생략
-  ollama pull qwen3-vl:4b        # 프로필 local.toml의 모델
+  ollama pull qwen3-vl:4b-instruct   # 프로필 local.toml의 모델. 생각 단계가 없는 판이라 출력 상한 안에 답한다
   AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
   ```
 
