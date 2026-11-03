@@ -24,7 +24,7 @@ updated: 2026-11-03
 
 ## Data Plane (ai, Python)
 
-ai-gateway만 HTTP 서버이고 나머지 9개는 Kafka 소비 워커다. 워커는 PostgreSQL에 직접 쓰지 않고, 결과를 Kafka 이벤트나 S3 파일로 내보낸다. 저장은 데이터를 소유한 Spring 서비스가 한다. 이미지는 워커마다 따로 만든다([ADR-0001](../adr/0001-ai-uv-workspace.md)). 공급자 SDK·모델 라이브러리는 `libs/`의 인터페이스 구현 뒤에 둔다.
+ai-gateway만 API를 제공하는 HTTP 서버이고 나머지 9개는 Kafka 소비 워커다. 워커는 API와 Service를 두지 않고 health 전용 포트만 연다(아래 포트 규칙). 워커는 PostgreSQL에 직접 쓰지 않고, 결과를 Kafka 이벤트나 S3 파일로 내보낸다. 저장은 데이터를 소유한 Spring 서비스가 한다. 이미지는 워커마다 따로 만든다([ADR-0001](../adr/0001-ai-uv-workspace.md)). 공급자 SDK·모델 라이브러리는 `libs/`의 인터페이스 구현 뒤에 둔다.
 
 | 서비스 | 경로 | 책임 | 받는 이벤트 → 내보내는 이벤트 | 로컬 포트 | 저장소 | 모델·외부 AI | 담당 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -49,5 +49,8 @@ ai-gateway만 HTTP 서버이고 나머지 9개는 Kafka 소비 워커다. 워커
 
 ## 포트 규칙
 
-- 로컬 Spring 서비스는 8080부터 순서대로, Python HTTP 서비스는 8000부터 쓴다. Kafka 소비 워커는 HTTP 포트를 열지 않는다.
+- 로컬 Spring 서비스는 8080부터 순서대로, Python HTTP 서비스는 8000부터 쓴다. Kafka 소비 워커는 호스트에 포트를 내보내지 않는다(표의 로컬 포트 `—`).
 - 운영(EKS)에서는 컨테이너 포트를 Spring 8080, FastAPI 8000으로 통일하고 Service 이름으로 구분한다.
+- Kafka 소비 워커는 컨테이너 포트 8000에 health 전용 HTTP 서버만 연다. Service는 만들지 않고 kubelet이 Pod IP로 프로브를 부른다.
+  - `/health`(liveness): 소비 루프가 최근에 돌았는지만 본다. Kafka 연결 여부는 넣지 않는다. 브로커가 잠깐 끊겨도 모든 워커가 한꺼번에 재시작되는 연쇄 장애를 막기 위해서다.
+  - `/ready`(readiness): 프로필 검증과 모델 로드가 끝났는지 본다. 모델을 내려받는 동안 재시작되지 않도록 startupProbe도 같은 경로로 둔다.
