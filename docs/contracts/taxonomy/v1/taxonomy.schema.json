@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/taxonomy/v1/taxonomy.schema.json",
+  "title": "Taxonomy v1",
+  "description": "분류 체계 v1(산업안전). 출력 스키마의 enum은 여기를 참조한다. 이번 버전은 VLMAnalysis에 필요한 이벤트 유형과 severity만 담는다(SPEC-009). 객체 종류·속성·위험 유형은 해당 기능 spec에서 추가한다.",
+  "$defs": {
+    "eventType": {
+      "description": "이벤트 유형 6종과 other. fall(쓰러짐), fire_or_smoke(화재·연기), ppe_missing(보호구 미착용), object_removed(물건 제거), barrier_not_restored(방호 미복구), hazard_zone_access(위험구역 접근), other(목록 밖)",
+      "type": "string",
+      "enum": [
+        "fall",
+        "fire_or_smoke",
+        "ppe_missing",
+        "object_removed",
+        "barrier_not_restored",
+        "hazard_zone_access",
+        "other"
+      ]
+    },
+    "severity": {
+      "description": "알림 우선순위와 상향 판정 기준",
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    }
+  }
+}
