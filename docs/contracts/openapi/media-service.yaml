@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
   title: media-service API
-  version: 1.0.1
+  version: 1.1.0
   description: |
-    영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003).
+    영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003), 원본 재생·내려받기 주소 발급 (SPEC-006).
     외부 경로(`/api/v1/media/**`)는 api-gateway를 거쳐 호출한다.
-    영상 파일 바이트는 media-service를 거치지 않고 응답으로 받은 주소로 저장소에 바로 올린다. (SPEC-003 NFR-1)
+    영상 파일 바이트는 media-service를 거치지 않고 응답으로 받은 주소로 저장소에 바로 올리고 바로 읽는다. (SPEC-003 NFR-1, SPEC-006 NFR-1)
     상태가 바뀔 때 발행하는 이벤트는 `../asyncapi/media-service.yaml`에 있다.
 servers:
   - url: /
@@ -278,6 +278,48 @@ paths:
                     status: 409
                     detail: 만료된 영상은 업로드를 완료할 수 없습니다.
                     code: MEDIA_INVALID_STATE
+  /api/v1/media/videos/{videoId}/playback:
+    parameters:
+      - $ref: '#/components/parameters/VideoId'
+    get:
+      operationId: getVideoPlayback
+      summary: 원본 재생·내려받기 주소 발급
+      description: |
+        업로드 완료 이후 상태(`UPLOADED`, `NORMALIZING`, `READY`, `REJECTED`)인 영상의 원본을 읽을 수 있는 서명 주소를 돌려준다.
+        `url`은 업로드 때 신고한 형식(Content-Type)으로 응답하는 재생 주소이고, `downloadUrl`은 원래 파일 이름으로 내려받는 주소다.
+        두 주소는 발급 시점부터 1시간 동안 유효하다. 만료되면 이 API를 다시 호출해 새 주소를 받는다.
+        소유자와 ADMIN만 요청할 수 있다. (SPEC-006 R-1~R-5)
+      tags: [videos]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '200':
+          description: 재생·내려받기 주소
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPlayback'
+              example:
+                url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/original?response-content-type=video%2Fmp4&X-Amz-Expires=3600&X-Amz-Signature=0123
+                downloadUrl: https://vlm-media.s3.ap-northeast-2.amazonaws.com/sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/original?response-content-disposition=attachment&X-Amz-Expires=3600&X-Amz-Signature=4567
+                expiresAt: '2026-11-02T10:30:00Z'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/VideoNotFound'
+        '409':
+          description: 업로드가 끝나지 않았거나 만료된 영상 (`MEDIA_NOT_PLAYABLE`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: 업로드가 끝난 영상만 재생할 수 있습니다.
+                code: MEDIA_NOT_PLAYABLE
 components:
   securitySchemes:
     bearerAuth:
@@ -468,5 +510,22 @@ components:
             $ref: '#/components/schemas/VideoResponse'
         page:
           $ref: './_common.yaml#/components/schemas/PageMeta'
+    VideoPlayback:
+      type: object
+      description: 원본 영상을 저장소에서 바로 읽는 서명 주소. 로그나 브라우저 저장소에 남기지 않는다. (SPEC-006 NFR-3)
+      required: [url, downloadUrl, expiresAt]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: 재생 주소. 응답 형식은 업로드 때 신고한 영상 형식이다.
+        downloadUrl:
+          type: string
+          format: uri
+          description: 원래 파일 이름으로 내려받는 주소
+        expiresAt:
+          type: string
+          format: date-time
+          description: 두 주소의 만료 시각 (발급 시점 + 1시간)
 security:
   - bearerAuth: []
