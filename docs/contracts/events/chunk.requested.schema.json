@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/chunk.requested.schema.json",
   "title": "ChunkRequested",
-  "description": "SPEC-009 backend 요청 계약. requestId=executionId. 소유 구간은 처리 구간 안에 있고 시작<끝이다. startBefore 이후 신규 실행 금지; 만료는 실행 종료 증거가 아니다. consumer는 executionId와 입력을 원자적으로 보존해 중복을 흡수한다. 실제 worker는 후속 구현이다.",
+  "description": "SPEC-010 backend 요청 계약. requestId=executionId. 소유 구간은 처리 구간 안에 있고 시작<끝이다. startBefore 이후 신규 실행 금지; 만료는 실행 종료 증거가 아니다. consumer는 executionId와 입력을 원자적으로 보존해 중복을 흡수한다. 실제 worker는 후속 구현이다.",
   "type": "object",
   "allOf": [
     {
