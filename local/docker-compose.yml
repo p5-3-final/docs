@@ -195,6 +195,55 @@ services:
         limits:
           memory: 768M
 
+  # 정규화 워커(SPEC-007). 토픽을 미리 만들어야 컨슈머가 재시도 토픽을 바로 구독한다.
+  kafka-init:
+    image: apache/kafka:4.3.2@sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        for topic in video.uploaded video.deleted video.normalizing video.normalized
+        video.uploaded.normalize.retry normalize.dlq; do
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
+        --topic "$$topic" --partitions 3 --replication-factor 1 || exit 1; done
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
+  normalize:
+    build:
+      context: ../repos/ai
+      dockerfile: services/normalize/Dockerfile
+      target: runtime
+    image: vlm/normalize:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-normalize-key
+      AWS_SECRET_ACCESS_KEY: local-normalize-secret
+      NORMALIZE_WORK_DIR: /work
+    # 원본과 결과를 잠시 두는 폴더. 이미지의 실행 사용자(UID 10001)가 쓸 수 있게 한다.
+    tmpfs:
+      - /work:uid=10001,gid=10001
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
   frontend:
     build:
       context: ../repos/frontend
