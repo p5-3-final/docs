@@ -17,7 +17,7 @@ updated: 2026-11-04
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
-| D-1 | ADR: v4 반영 결정(구성은 7절 결정 2). 후보는 벡터 후보 경로(③), 정적 객체 재고 비교(⑤), 파생 데이터 보존 등급(⑧) | ③⑤⑧ | 대기 | |
+| D-1 | ADR: v4 채택 1건([ADR-0010](../adr/0010-v4-evaluation-readiness.md), ①~⑦·⑨·⑩)과 파생 데이터 보존 등급 1건(⑧) | 전체 | 진행 | |
 | D-2 | `overview.md` v4 반영: 새 토픽 `stage.timing`·`event.candidate.vector`, `chunk.manifest`·`source.completed`·`video.uploaded`·`video.deleted` 확장, AI Gateway 확장점(taskType 등록, `predictor` Adapter, `state_compare`·`risk_forecast`), 이벤트 유형 8종, Quality 확장, 보존 등급. 모델 원문은 지금처럼 호출 로그 DB에 둔다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md)). | 전체 | 대기 | |
 | D-3 | `service-catalog.md` 갱신: 토픽 발행·구독, Quality 역할 | 전체 | 대기 | |
 | D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 클래스 대응표 형식, 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`) | ① | 대기 | |
@@ -35,7 +35,7 @@ v4 기능을 넣기 전에 한다. 옮길 파일이 적을 때 정리해야 비�
 | B-2 | media-service를 기능 패키지로 재배치: `video`(업로드·완료·조회·삭제), `normalization`, `playback`, `shared`. Kafka 소비자(`NormalizationEventListener` 등)를 `api`에서 `infra/messaging`으로 옮긴다. | 대기 | |
 | B-3 | auth-service를 기능 패키지로 재배치: `account`(가입·내 정보), `session`(로그인·재발급·로그아웃·감사), `token`(JWT·JWKS·알림 연결 티켓) | 대기 | |
 | B-4 | 중복 공통화: 사용자 헤더 읽기(auth `UserIdHeader`, media `UserHeaders`), `TimeConfig`, 오류 응답 작성(gateway `ProblemResponseWriter`)을 `libs/common-web`로 모은다. | 대기 | |
-| B-5 | 이벤트 봉투를 `common-messaging`이 채우게 바꾼다. 서비스는 payload만 정의한다(4절 F-4의 `producedAt` 선행 작업). | 대기 | |
+| B-5 | 이벤트 봉투를 `common-messaging`이 채우게 바꾼다. 서비스는 payload만 정의한다(4절 F-4의 `producedAt` 선행 작업). 7절 결정 5 | 보류 | |
 | B-6 | (선택) docs JSON Schema에서 이벤트 record 생성. 새 빌드 도구라 7절 결정 3 | 보류 | |
 
 api-gateway는 파일이 16개라 지금 구조를 유지한다.
@@ -59,7 +59,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 | F-1 | media 작업 세션: `work_session` 테이블·API, `video.uploaded`에 `sessionId`·`role` | ④ | 대기 | |
 | F-2 | media 보존 등급: 영상별 학습용 보존 동의 저장, `video.deleted`에 등급 | ⑧ | 대기 | |
 | F-3 | media 외부 데이터셋 가져오기: Quality의 매니페스트 대량 등록 경로, 데이터셋 영상은 삭제 전파 제외 | ⑨ | 대기 | |
-| F-4 | `common-messaging` 처리 시간 측정: 발행 시 `producedAt`, 공통 소비 래퍼로 큐 대기·처리 시간, `stage.timing` 발행. media `media.upload` 단계. 담당은 7절 결정 5 | ⑩ | 대기 | |
+| F-4 | `common-messaging` 처리 시간 측정: 발행 시 `producedAt`, 공통 소비 래퍼로 큐 대기·처리 시간, `stage.timing` 발행. media `media.upload` 단계. 7절 결정 5 | ⑩ | 보류 | |
 | F-5 | api-gateway Quality 라우트와 `OPERATOR` 제한(Quality를 만들 때) | ⑨ | 보류 | |
 
 auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남은 범위로 v4와 별개다.
@@ -88,8 +88,8 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 
 | 번호 | 질문 | 결정 |
 | --- | --- | --- |
-| 1 | backend 패키지 규칙(B-1)을 pipeline-service에도 적용할지, 담당 서비스에만 적용할지 | |
-| 2 | ADR을 v4 하나로 묶을지, ③⑤⑧ 3건으로 나눌지 | |
-| 3 | 이벤트 계약 코드 생성(B-6)을 할지 | |
-| 4 | 프롬프트·프로필을 이미지에 넣는 지금 방식을 실행 중 읽기(S3 버전 경로 또는 gitops ConfigMap)로 바꿀지 | |
-| 5 | pipeline-service도 쓰는 `common-messaging` 변경(B-5, F-4)을 이 작업 공간에서 할지 | |
+| 1 | backend 패키지 규칙(B-1)을 pipeline-service에도 적용할지, 담당 서비스에만 적용할지 | 규칙은 레포 전체에 둔다. 재배치는 담당 서비스(media·auth)만 하고, pipeline-service는 기존 레이어 구조를 허용해 담당자가 정한다. |
+| 2 | ADR을 v4 하나로 묶을지, ③⑤⑧ 3건으로 나눌지 | v4 채택 1건(ADR-0010)과 보존 등급 1건 |
+| 3 | 이벤트 계약 코드 생성(B-6)을 할지 | 미정(B-6 보류) |
+| 4 | 프롬프트·프로필을 이미지에 넣는 지금 방식을 실행 중 읽기(S3 버전 경로 또는 gitops ConfigMap)로 바꿀지 | 저장소 버전 경로에서 기동 시 받는다(ADR-0010 ⑦). |
+| 5 | pipeline-service도 쓰는 `common-messaging` 변경(B-5, F-4)을 이 작업 공간에서 할지 | 진행 중인 다른 담당자 코드가 머지된 뒤 이 작업 공간에서 한다(그때까지 보류). |
