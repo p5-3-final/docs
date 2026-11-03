@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: media-service API
-  version: 1.2.0
+  version: 1.2.1
   description: |
     영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003), 원본 재생·내려받기 주소 발급 (SPEC-006).
     외부 경로(`/api/v1/media/**`)는 api-gateway를 거쳐 호출한다.
@@ -377,13 +377,6 @@ components:
         `READY`(정규화 완료, 분석 가능), `REJECTED`(분석할 수 없어 거절), `EXPIRED`(24시간 안에 완료하지 않음).
         삭제된 영상은 응답에 나오지 않는다. (SPEC-003, SPEC-007)
       enum: [UPLOADING, UPLOADED, NORMALIZING, READY, REJECTED, EXPIRED]
-    VideoRejectReason:
-      type: string
-      description: |
-        정규화에서 거절한 사유 (SPEC-007 R-7~R-12).
-        `UNREADABLE`(파일을 열 수 없음), `NO_VIDEO_STREAM`(영상 스트림 없음), `MISSING_METADATA`(길이·프레임률을 읽을 수 없음),
-        `TOO_SHORT`(1초 미만), `TOO_LONG`(4시간 초과), `DECODE_FAILED`(디코딩 실패).
-      enum: [UNREADABLE, NO_VIDEO_STREAM, MISSING_METADATA, TOO_SHORT, TOO_LONG, DECODE_FAILED]
     CreateVideoRequest:
       type: object
       required: [fileName, sizeBytes, contentType]
@@ -519,10 +512,14 @@ components:
           description: 예상 분석 처리 시간(초). 영상 길이 × 처리 계수로 낸 추정치다. `READY`가 아니면 null (SPEC-007 R-20, R-21)
           example: 613
         rejectReason:
-          description: 거절 사유. `REJECTED`가 아니면 null (SPEC-007 R-21)
-          oneOf:
-            - $ref: '#/components/schemas/VideoRejectReason'
-            - type: 'null'
+          type: [string, 'null']
+          description: |
+            정규화에서 거절한 사유. `REJECTED`가 아니면 null (SPEC-007 R-7~R-12, R-21).
+            `UNREADABLE`(파일을 열 수 없음), `NO_VIDEO_STREAM`(영상 스트림 없음), `MISSING_METADATA`(길이·프레임률을 읽을 수 없음),
+            `TOO_SHORT`(1초 미만), `TOO_LONG`(4시간 초과), `DECODE_FAILED`(디코딩 실패).
+          # 다른 nullable 필드와 같은 형식으로 둔다. 계약 검증 도구(swagger-request-validator)가 oneOf 안의 type: 'null'을
+          # 모든 값과 일치한다고 보아, oneOf로 쓰면 값이 있는 응답을 거절한다.
+          enum: [UNREADABLE, NO_VIDEO_STREAM, MISSING_METADATA, TOO_SHORT, TOO_LONG, DECODE_FAILED, null]
     VideoPage:
       type: object
       required: [items, page]
