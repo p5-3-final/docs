@@ -1,7 +1,7 @@
 ---
 id: SPEC-011
 title: ai-gateway 벡터 생성
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-03
