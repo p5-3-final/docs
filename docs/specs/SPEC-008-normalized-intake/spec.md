@@ -1,7 +1,7 @@
 ---
 id: SPEC-008
 title: 정규화 완료 수신과 계획 저장
-status: Approved
+status: Implementing
 owner: backend 담당자
 repos: [backend]
 created: 2026-11-03
@@ -130,3 +130,7 @@ backend 개발자로서 유효한 정규화 결과로 미배정 계획을 만들
 - 기존 SPEC-004 계획에는 정규화 ID를 자동 백필하지 않는다. 활성 legacy Job이 있으면 충돌 처리하고 수신 전체를 롤백한다. 종료된 legacy Job은 보존하고 새 정규화 연결 계획을 만든다.
 - 실패한 입력은 성공 offset을 커밋하지 않고 같은 파티션에서 재시도한다. 자동 DLQ/skip은 이번 범위에 없고 잘못된 입력·충돌은 운영자가 수정·해소해야 한다.
 - 후속 AI 입력·output·프로필/모델·오류·timeout·requestId 중복 제어 협의는 실행 기능의 선행 조건이다. 이번 intake를 차단하지 않는다.
+
+### 구현 결과
+
+backend #36은 실제 수신 코드·additive migration·계약 검증·PostgreSQL/Kafka 통합 테스트를 포함해 머지됐다. 로컬 전체 backend 386개(Pipeline 99개)와 GitHub 필수 CI가 통과했다. 수신은 opt-in이며 producer의 v2 발행·운영 토픽/offset 설정·배포는 별도 연결 사항이다. 요청 Outbox·배정·슬롯·실행·영상 처리·AI는 추가하지 않았다. 배포까지 끝난 상태가 아니므로 Done으로 표기하지 않는다.
