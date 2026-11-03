@@ -1,7 +1,7 @@
 ---
 id: SPEC-010
 title: Pipeline 공정 배정과 실행 슬롯·요청 발행
-status: Approved
+status: Implementing
 owner: backend 담당자
 repos: [backend, docs]
 created: 2026-11-03
@@ -126,3 +126,7 @@ startBefore는 배정 후 기본 5분의 새 실행 시작 기한이며 AI 실�
 이번 backend 배정·발행·수동 복구 범위에 미결 사항은 없다. worker의 내구 중복 제어·완료/실패 계약·정상 슬롯 반환·heartbeat/fencing·자동 재시도 및 producer v2 실제 연결은 후속 연동이며 이번 구현 완료에 포함하지 않는다. 자동 배정은 운영 활성화하지 않는다.
 
 저장소 확인 결과: ai origin/main의 normalize는 .gitkeep뿐이다. producer v2 구현이 머지되지 않았고 로컬 compose에도 pipeline 자동 수신 연결이 없다. SPEC-008 수신기는 opt-in이다. 테스트에서 만든 v2 입력은 실제 정규화 producer 연결의 증거가 아니다.
+
+### 구현 검증 상태
+
+실제 코드·마이그레이션·계약/Kafka/DB 검증을 포함하는 [backend #40](https://github.com/p5-3-final/backend/pull/40)을 생성했다. 로컬 전체 466개/Pipeline 132개 테스트와 필수 빌드·포맷 검사를 통과했다(실패·skip 0). 패키징 JAR의 종료 확인 복구 명령도 임시 DB에서 검증했다. GitHub CI·머지 상태는 해당 PR을 기준으로 확인한다. 실제 worker의 정상 완료 자동 슬롯 반환과 producer v2 연결·운영 배포는 아직 없으며 Done으로 표시하지 않는다.
