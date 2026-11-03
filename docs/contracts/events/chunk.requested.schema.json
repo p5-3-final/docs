@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/chunk.requested.schema.json",
+  "title": "ChunkRequested",
+  "description": "SPEC-010 backend 요청 계약. requestId=executionId. 소유 구간은 처리 구간 안에 있고 시작<끝이다. startBefore 이후 신규 실행 금지; 만료는 실행 종료 증거가 아니다. consumer는 executionId와 입력을 원자적으로 보존해 중복을 흡수한다. 실제 worker는 후속 구현이다.",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "eventType",
+    "schemaVersion",
+    "jobId",
+    "chunkId",
+    "executionId",
+    "requestId",
+    "normalizationId",
+    "normalizedKey",
+    "ownedRange",
+    "processingRange",
+    "processingProfile",
+    "startBefore"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "chunk.requested"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizedKey": {
+      "type": "string",
+      "pattern": "^sources/[0-9a-f-]{36}/normalizations/[0-9a-f-]{36}/[^?#]+$"
+    },
+    "ownedRange": {
+      "type": "object",
+      "required": [
+        "startMs",
+        "endMs"
+      ],
+      "properties": {
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        }
+      },
+      "additionalProperties": false
+    },
+    "processingRange": {
+      "type": "object",
+      "required": [
+        "startMs",
+        "endMs"
+      ],
+      "properties": {
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        }
+      },
+      "additionalProperties": false
+    },
+    "processingProfile": {
+      "type": "object",
+      "required": [
+        "version",
+        "mode",
+        "inferenceProfileVersion"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$"
+        },
+        "mode": {
+          "enum": [
+            "production",
+            "local"
+          ]
+        },
+        "inferenceProfileVersion": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "startBefore": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "unevaluatedProperties": false,
+  "examples": [
+    {
+      "eventId": "44444444-4444-4444-8444-444444444444",
+      "eventType": "chunk.requested",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-03T06:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "22222222-2222-4222-8222-222222222222",
+      "chunkId": "55555555-5555-4555-8555-555555555555",
+      "executionId": "33333333-3333-4333-8333-333333333333",
+      "requestId": "33333333-3333-4333-8333-333333333333",
+      "normalizationId": "11111111-1111-4111-8111-111111111111",
+      "normalizedKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/normalizations/11111111-1111-4111-8111-111111111111/normalized.mp4",
+      "ownedRange": {
+        "startMs": 0,
+        "endMs": 60000
+      },
+      "processingRange": {
+        "startMs": 0,
+        "endMs": 65000
+      },
+      "processingProfile": {
+        "version": "analysis-v1",
+        "mode": "production",
+        "inferenceProfileVersion": "inference-v1"
+      },
+      "startBefore": "2026-11-03T06:05:00Z"
+    }
+  ]
+}

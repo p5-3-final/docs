@@ -13,11 +13,14 @@ contracts/
 │   └── access-token.md       # 접근 토큰 형식, 공개키 목록, 키 교체 규칙 (auth-service ↔ api-gateway)
 ├── events/
 │   └── <topic>.schema.json   # 이벤트 payload JSON Schema (Spring·Python 계약 테스트의 원본)
-└── taxonomy/
-    └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
+├── taxonomy/
+│   └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
+└── prompts/
+    ├── _prefix.md            # 모든 taskType 공통 고정 접두부
+    └── <taskType>/           # prompt.md, 입력 스키마, 출력 스키마. ai-gateway Prompt Registry의 원본
 ```
 
-프롬프트는 ai-gateway만 쓰므로 ai 레포 `services/ai-gateway/prompts/`에 둔다.
+프롬프트는 ai-gateway만 쓰지만 이력을 계약과 같이 관리하려고 여기에 둔다. 버전 ID는 사람이 정하지 않고 ai-gateway가 내용 해시로 계산한다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md) R-13).
 
 ## 생산자와 소비자의 역할
 
@@ -37,4 +40,6 @@ oasdiff breaking <main의 계약 파일> <바뀐 계약 파일> --fail-on ERR
 
 ## Pipeline 연동 초안의 위치
 
-[ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)와 [SPEC-008](../specs/SPEC-008-normalized-intake/spec.md)은 backend 소유 메시지의 의미 초안이다. video.normalized와 normalize AsyncAPI는 SPEC-008에서 확정한다. chunk.requested·실행 완료/실패·POST /v1/inferences는 후속 계약이다. 공통 envelope·sourceId Kafka 키·traceparent를 재사용하고, 정수 밀리초·객체 참조·실행 식별자는 후속 계약 PR로 확정한다. 이전 아키텍처의 다른 파티션 키 표기를 구현된 계약으로 취급하지 않는다.
+[ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)와 [SPEC-008](../specs/SPEC-008-normalized-intake/spec.md)은 backend 소유 메시지의 의미 초안이다. video.normalized와 normalize AsyncAPI는 SPEC-008에서 확정한다. chunk.requested는 [SPEC-010](../specs/SPEC-010-chunk-dispatch/spec.md)의 신규 backend 계약으로 정의한다. 실제 worker 소비·실행 완료/실패·POST /v1/inferences는 후속 연동이다. 공통 envelope·sourceId Kafka 키·traceparent를 재사용하고, 정수 밀리초·객체 참조·실행 식별자는 후속 계약 PR로 확정한다. 이전 아키텍처의 다른 파티션 키 표기를 구현된 계약으로 취급하지 않는다.
+
+요청 계약: [chunk.requested](events/chunk.requested.schema.json), [Pipeline AsyncAPI](asyncapi/pipeline-service.yaml).
