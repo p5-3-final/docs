@@ -2,8 +2,33 @@
   "identities": [
     {
       "name": "media-service",
-      "credentials": [{ "accessKey": "local-media-key", "secretKey": "local-media-secret" }],
-      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+      "credentials": [
+        {
+          "accessKey": "local-media-key",
+          "secretKey": "local-media-secret"
+        }
+      ],
+      "actions": [
+        "Admin",
+        "Read",
+        "Write",
+        "List",
+        "Tagging"
+      ]
+    },
+    {
+      "name": "normalize",
+      "credentials": [
+        {
+          "accessKey": "local-normalize-key",
+          "secretKey": "local-normalize-secret"
+        }
+      ],
+      "actions": [
+        "Read",
+        "Write",
+        "List"
+      ]
     }
   ]
 }

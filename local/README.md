@@ -1,6 +1,6 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007)가 들어 있고, 서비스 구현이 시작되면 추가한다.
 
 | 컨테이너 | 호스트 포트 | 메모리 상한 |
 | --- | --- | --- |
@@ -8,12 +8,15 @@
 | api-gateway | 8080 | 512M |
 | auth-service | 8081 | 768M |
 | media-service | 8082 | 768M |
+| normalize | — (health 8000, 내부) | 768M |
 | postgres (auth_db, media_db) | 5432 | 512M |
 | redis | 6379 | 128M |
 | kafka (KRaft 단일 노드) | 9092 | 512M |
 | seaweedfs (S3 API, 버킷 `vlm-media`) | 8333 | 384M |
 
-`seaweedfs-init`은 버킷을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service 설정과 같다.
+`seaweedfs-init`은 버킷을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
+
+`kafka-init`은 normalize가 쓰는 토픽(재시도·DLQ 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
 
 ## 준비
 
