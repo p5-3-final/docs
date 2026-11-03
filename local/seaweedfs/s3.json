@@ -29,6 +29,18 @@
         "Write",
         "List"
       ]
+    },
+    {
+      "name": "ai-gateway",
+      "credentials": [
+        {
+          "accessKey": "local-ai-gateway-key",
+          "secretKey": "local-ai-gateway-secret"
+        }
+      ],
+      "actions": [
+        "Read"
+      ]
     }
   ]
 }

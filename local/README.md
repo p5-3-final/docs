@@ -1,6 +1,6 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007)가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), ai-gateway(SPEC-009)가 들어 있고, 서비스 구현이 시작되면 추가한다.
 
 | 컨테이너 | 호스트 포트 | 메모리 상한 |
 | --- | --- | --- |
@@ -9,19 +9,20 @@
 | auth-service | 8081 | 768M |
 | media-service | 8082 | 768M |
 | normalize | — (health 8000, 내부) | 768M |
-| postgres (auth_db, media_db) | 5432 | 512M |
+| ai-gateway (내부 전용 API) | 8000 | 768M |
+| postgres (auth_db, media_db, ai_db) | 5432 | 512M |
 | redis | 6379 | 128M |
 | kafka (KRaft 단일 노드) | 9092 | 512M |
 | seaweedfs (S3 API, 버킷 `vlm-media`) | 8333 | 384M |
 
-`seaweedfs-init`은 버킷을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
+`seaweedfs-init`은 버킷을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
 
-`kafka-init`은 normalize가 쓰는 토픽(재시도·DLQ 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
+`kafka-init`은 normalize·ai-gateway가 쓰는 토픽(재시도·DLQ 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
 
 ## 준비
 
 - Docker Desktop 또는 OrbStack
-- `./scripts/clone-repos.sh`로 `repos/backend`와 `repos/frontend`를 클론해 둔다. 이미지는 각 레포의 `Dockerfile`로 빌드한다.
+- `./scripts/clone-repos.sh`로 `repos/backend`, `repos/frontend`, `repos/ai`를 클론해 둔다. 이미지는 각 레포의 `Dockerfile`로 빌드한다.
 
 ## 실행
 
@@ -70,6 +71,24 @@ docker compose -f local/docker-compose.yml exec kafka /opt/kafka/bin/kafka-conso
 
 브라우저(frontend)에서 저장소로 바로 올리는 CORS 설정은 frontend 업로드 화면 spec에서 다룬다.
 
+### ai-gateway 분석 호출 (SPEC-009)
+
+`ai-gateway-migrate`가 호출 로그 테이블을 만들고 끝나면 ai-gateway가 뜬다. 기본 프로필은 모델 없이 흐름만 보는 mock(`/app/profiles/local-mock.toml`)이다. ai-gateway는 내부 전용이라 api-gateway를 거치지 않고 8000으로 직접 부른다.
+
+이미지는 허용 패턴(`sources/<sourceId>/.../blurred/*.jpg` 등)에 맞는 블러 사본 경로만 받는다. 아래는 영상 폴더에 이미지를 하나 넣었다고 가정한 예시다.
+
+```bash
+curl -s -X POST localhost:8000/v1/analyze -H 'Content-Type: application/json' -H 'X-Caller: event-analyzer' \
+  -d "{\"taskType\":\"event_judge\",\"sourceId\":\"$ID\",
+       \"images\":[{\"storageKey\":\"sources/$ID/chunks/0/candidates/c1/blurred/000.jpg\",\"ptsSec\":1.0}],
+       \"variables\":{\"eventType\":\"fall\",\"startSec\":0.5,\"endSec\":3.0}}" | jq .output
+docker compose -f local/docker-compose.yml exec postgres psql -U postgres -d ai_db \
+  -c 'SELECT caller, model_id, status, latency_ms FROM ai.ai_call_log ORDER BY created_at DESC LIMIT 5'
+```
+
+- 로컬 Ollama(Qwen3-VL)를 쓰려면 `local/.env`에 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`을 넣고, 같은 compose 네트워크에 `ollama`라는 이름으로 Ollama를 띄운 뒤 ai-gateway를 다시 띄운다.
+- 기존 DB 볼륨에 ai_db를 더하려면 아래 "자주 쓰는 명령"의 postgres/init 안내처럼 `30-ai-db.sh`만 실행한다.
+
 ## 자주 쓰는 명령
 
 ```bash
@@ -85,5 +104,5 @@ docker compose -f local/docker-compose.yml down -v                  # 중지하�
     ```bash
     docker compose -f local/docker-compose.yml up -d postgres
     docker compose -f local/docker-compose.yml exec -e POSTGRES_USER=postgres postgres \
-      sh /docker-entrypoint-initdb.d/20-media-db.sh
+      sh /docker-entrypoint-initdb.d/20-media-db.sh   # ai_db는 30-ai-db.sh
     ```
