@@ -1,7 +1,7 @@
 ---
 id: SPEC-006
 title: 원본 영상 재생
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend, frontend, docs]
 created: 2026-11-03

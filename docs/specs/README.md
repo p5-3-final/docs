@@ -9,6 +9,6 @@
 | [SPEC-003](SPEC-003-video-upload/spec.md) | 영상 업로드와 관리 | Implementing | backend | | 2026-11-03 |
 | [SPEC-004](SPEC-004-pipeline-job-planning/spec.md) | Pipeline 청크 구간 계산과 작업 계획 저장 | Implementing | backend | backend 담당자 | 2026-11-03 |
 | [SPEC-005](SPEC-005-frontend-video-upload/spec.md) | 영상 업로드 화면과 내 영상 목록 | Implementing | frontend, docs | | 2026-11-03 |
-| [SPEC-006](SPEC-006-video-playback/spec.md) | 원본 영상 재생 | Approved | backend, frontend, docs | | 2026-11-03 |
+| [SPEC-006](SPEC-006-video-playback/spec.md) | 원본 영상 재생 | Implementing | backend, frontend, docs | | 2026-11-03 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
