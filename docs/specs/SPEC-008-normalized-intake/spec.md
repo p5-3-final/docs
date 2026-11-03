@@ -1,7 +1,7 @@
 ---
 id: SPEC-008
 title: 정규화 완료 수신과 계획 저장
-status: Draft
+status: Approved
 owner: backend 담당자
 repos: [backend]
 created: 2026-11-03
@@ -21,7 +21,7 @@ SPEC-004의 청크 계산·Job/Chunk 저장을 video.normalized 수신에 연결
 
 ### 포함
 
-- backend 소유 video.normalized 계약 초안 정리와 입력 검증 설계
+- backend 소유 video.normalized 계약에 따른 입력 검증·수신 기록
 - 불변 normalizationId와 분석 설정을 이용한 Job 재사용
 - 정규화 수신 처리 기록·Job·Chunk의 원자적 저장 및 재조회
 - eventId 기반 재전달과 의미상 동일 결과의 동시 중복 방지
@@ -29,7 +29,6 @@ SPEC-004의 청크 계산·Job/Chunk 저장을 video.normalized 수신에 연결
 
 ### 제외
 
-- 이번 요청의 애플리케이션 코드·DB 마이그레이션·계약 스키마 수정
 - 배정기, 실행 슬롯, executionId 생성, chunk.requested Outbox 기록·발행 구현
 - normalize·chunk-processor 및 AI 서버의 런타임 구현
 - 실행 임대·장애 복구·완료/실패 반영 구현 (후속 설계만 포함)
@@ -79,11 +78,13 @@ backend 개발자로서 유효한 정규화 결과로 미배정 계획을 만들
 
 분석 설정은 청크 길이·겹침·프로필 및 추론 프로필의 불변 버전처럼 계획·결과에 영향을 주는 값을 포함한다. eventId는 메시지 ID이며 Job ID가 아니다. 기존 SPEC-004 입력 비교를 없애지 않고 정규화 결과·설정 버전 검증을 추가하는 후속 변경이다. 기존 구현의 소수 초 DB 저장은 이미 밀리초로 바뀌었다고 서술하지 않는다.
 
+| R-13 | WHEN 유효한 REJECTED 결과를 수신하면, THE pipeline-service SHALL 정규화 결과와 수신 사실만 저장하고 Job을 생성하지 않는다. | US-1 |
+
 ### 비기능 요구사항
 
 | ID | 요구사항 |
 | --- | --- |
-| NFR-1 | THE pipeline-service SHALL R-1~R-12 각각에 최소 1개의 자동화 검증을 제공한다. |
+| NFR-1 | THE pipeline-service SHALL R-1~R-13 각각에 최소 1개의 자동화 검증을 제공한다. |
 | NFR-2 | THE pipeline-service SHALL 이번 통합 검증에서 청크 발행·영상 추출·AI 호출을 각각 0회 수행한다. |
 | NFR-3 | THE pipeline-service SHALL 커밋 전 실패와 커밋 후 재전달 시나리오를 실제 PostgreSQL·Kafka로 검증한다. |
 
@@ -98,7 +99,7 @@ backend 개발자로서 유효한 정규화 결과로 미배정 계획을 만들
 
 ## 6. 계약 변경
 
-이 문서는 의미 기준 초안이다. 이번 요청에서는 JSON Schema·AsyncAPI·OpenAPI를 생성하거나 수정하지 않는다. 기존 envelope의 eventId/sourceId/ownerId(UUID), eventType(토픽 이름), schemaVersion, occurredAt과 traceparent를 재사용한다. sourceId를 Kafka 키로 쓴다.
+이 문서는 의미 기준 초안이다. 이번에 video.normalized JSON Schema·normalize AsyncAPI를 확정하며, 실행 요청·추론 계약은 후속이다. 기존 envelope의 eventId/sourceId/ownerId(UUID), eventType(토픽 이름), schemaVersion, occurredAt과 traceparent를 재사용한다. sourceId를 Kafka 키로 쓴다.
 
 | 메시지 / API | 의미 초안 | 후속 문서 |
 | --- | --- | --- |
@@ -117,8 +118,13 @@ backend 개발자로서 유효한 정규화 결과로 미배정 계획을 만들
 - 밀리초 경계·SPEC-004 활성/중복 정책 회귀 검증 통과
 - 계약·필수 검사 통과 후에만 구현 착수
 
-## 8. 미결 사항
+## 8. 확정 정책과 후속 사항
 
-- [NEEDS CLARIFICATION: AI 입력 규격·프로필/모델 버전·결과 스키마와 시간 의미·오류 코드·추론 제한 시간·requestId 중복 제어 응답을 AI팀과 협의해야 한다. 이번 intake 구현의 선행 조건과 후속 실행 기능의 선행 조건은 plan에서 분리한다.]
-- backend의 객체 참조 직렬화, 정규화 버전·설정의 정규 표현, 새 식별자의 실제 타입·마이그레이션은 후속 계약/plan에서 확정해야 한다. AI팀 소관으로 돌리지 않는다.
-- Draft plan은 사용자의 문서 전용 요청에 따른 검토 자료다. 이 초안·미정 계약으로 기능 코드를 작성하지 않는다.
+- 이번 수신·계획 범위의 미결 사항은 없다. 영상 정규화 SPEC-007과 사용자 확인으로 호환 보완했다.
+- READY만 계획한다. REJECTED는 수신 기록·정규화 결과만 저장하며 Job은 없다.
+- normalizationId는 UUID, 객체 참조는 기존 normalizedKey/hlsPlaylistKey이며 `sources/<sourceId>/normalizations/<normalizationId>/` 아래의 불변 key다. URL·바이트는 받지 않는다.
+- durationMs는 양의 signed 64-bit 정수이고 durationSec와 정확히 일치해야 한다. 내부 SPEC-004 계산은 BigDecimal.valueOf(durationMs,3)로 정확히 재사용한다. 운영 길이 상한은 설정(기본 4시간)으로 관리한다. 기존 데이터의 소수 초 단위는 변경하지 않는다.
+- 분석 설정은 backend의 불변 profileVersion, production/local 모드와 inferenceProfileVersion이다. 같은 설정 버전의 정의 변경은 충돌이다. 재전달 eventId는 최초 결과를 재사용하며 운영 설정이 바뀌었다고 새 Job을 만들지 않는다. 새 eventId는 현재 설정으로 의미상 Job을 찾는다.
+- 기존 SPEC-004 계획에는 정규화 ID를 자동 백필하지 않는다. 활성 legacy Job이 있으면 충돌 처리하고 수신 전체를 롤백한다. 종료된 legacy Job은 보존하고 새 정규화 연결 계획을 만든다.
+- 실패한 입력은 성공 offset을 커밋하지 않고 같은 파티션에서 재시도한다. 자동 DLQ/skip은 이번 범위에 없고 잘못된 입력·충돌은 운영자가 수정·해소해야 한다.
+- 후속 AI 입력·output·프로필/모델·오류·timeout·requestId 중복 제어 협의는 실행 기능의 선행 조건이다. 이번 intake를 차단하지 않는다.
