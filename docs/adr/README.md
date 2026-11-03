@@ -10,3 +10,4 @@
 | [ADR-0004](0004-browser-token-storage.md) | 브라우저에서 접근 토큰은 메모리에, 재발급 토큰은 HttpOnly 쿠키에 둔다 | Accepted | 2026-11-02 |
 | [ADR-0005](0005-search-and-event-paths.md) | 분석을 검색 경로와 이벤트 경로로 나누고 17개 배포 단위를 다시 구성한다 | Accepted | 2026-11-02 |
 | [ADR-0006](0006-local-s3-seaweedfs.md) | 로컬 개발과 테스트의 S3 대체 저장소로 SeaweedFS를 쓴다 | Accepted | 2026-11-03 |
+| [ADR-0007](0007-independent-pr-merge.md) | 팀원 Approve 대기 없이 검증 후 PR을 직접 머지한다 | Accepted | 2026-11-03 |
