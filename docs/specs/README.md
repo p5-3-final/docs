@@ -14,6 +14,6 @@
 | [SPEC-008](SPEC-008-normalized-intake/spec.md) | 정규화 완료 수신과 계획 저장 | Implementing | backend | backend 담당자 | 2026-11-03 |
 | [SPEC-009](SPEC-009-ai-gateway-analyze/spec.md) | ai-gateway 분석 호출 | Implementing | ai, docs | | 2026-11-03 |
 | [SPEC-010](SPEC-010-chunk-dispatch/spec.md) | Pipeline 공정 배정과 실행 슬롯·요청 발행 | Approved | backend, docs | backend 담당자 | 2026-11-03 |
-| [SPEC-011](SPEC-011-ai-gateway-embed/spec.md) | ai-gateway 벡터 생성 | Approved | ai, docs | | 2026-11-03 |
+| [SPEC-011](SPEC-011-ai-gateway-embed/spec.md) | ai-gateway 벡터 생성 | Implementing | ai, docs | | 2026-11-03 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)

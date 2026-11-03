@@ -95,15 +95,18 @@ services:
         limits:
           memory: 384M
 
-  # 영상 버킷을 만들고 끝나는 일회성 컨테이너. weed shell은 이미 있는 버킷을 만들면 실패하므로 목록에 없을 때만 만든다.
+  # 영상 버킷과 모델 버킷(SPEC-011 인코더 가중치)을 만들고 끝나는 일회성 컨테이너.
+  # weed shell은 이미 있는 버킷을 만들면 실패하므로 목록에 없을 때만 만든다.
   seaweedfs-init:
     image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
     entrypoint:
       - sh
       - -c
       - >-
-        echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 | grep -qw vlm-media
-        || echo 's3.bucket.create -name vlm-media' | weed shell -master=seaweedfs:9333
+        for b in vlm-media vlm-models; do
+        echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 | grep -qw "$$b"
+        || echo "s3.bucket.create -name $$b" | weed shell -master=seaweedfs:9333;
+        done
     depends_on:
       seaweedfs:
         condition: service_healthy
@@ -282,6 +285,11 @@ services:
       # seaweedfs/s3.json과 같은 로컬 전용 샘플 키(읽기 전용). 운영은 IRSA로 받는다.
       AWS_ACCESS_KEY_ID: local-ai-gateway-key
       AWS_SECRET_ACCESS_KEY: local-ai-gateway-secret
+      # 인코더 가중치를 받는 버킷(SPEC-011). 가중치는 local/scripts/upload-models.sh로 한 번 올린다.
+      AI_GATEWAY_MODELS_BUCKET: vlm-models
+    # 받은 가중치를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
+    volumes:
+      - ai-gateway-models:/var/cache/vlm-models
     # 프로필(local.toml)은 호스트의 Ollama를 host.docker.internal로 부른다. Mac의 Docker는 GPU를
     # 못 써서 Ollama는 호스트에서 Metal로 돌린다. Linux에도 같은 이름이 생기도록 연결해 둔다.
     extra_hosts:
@@ -330,3 +338,4 @@ services:
 volumes:
   postgres-data:
   seaweedfs-data:
+  ai-gateway-models:
