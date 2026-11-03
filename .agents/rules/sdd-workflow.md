@@ -22,8 +22,8 @@ globs: "docs/specs/**, **/specs/**"
 `Draft` → `Review` → `Approved` → `Implementing` → `Done`. 대체되면 `Superseded`가 된다.
 
 - `Draft`: 작성 중. `[NEEDS CLARIFICATION]`이 남아 있어도 된다.
-- `Review`: docs 레포에 PR을 연 상태. 미결 사항이 없어야 한다.
-- `Approved`: 리뷰 승인을 받은 상태. 승인 후 머지하기 전에 같은 PR에서 status를 `Approved`로 바꾸고 머지한다. 머지된 뒤부터 plan을 작성할 수 있다.
+- `Review`: docs 레포에 PR을 열어 자체 검토·검사 중인 상태. 미결 사항이 없어야 한다. 별도 팀원 Approve 대기 단계는 아니다.
+- `Approved`: 미결 사항 없이 요구사항·범위·검사 결과를 자체 검토해 확정한 상태. 같은 PR에서 status를 `Approved`로 바꾸고 필수 CI와 GitHub 머지 조건 충족 후 직접 머지한다. 팀원 Approve는 기다리지 않으며 승인 리뷰가 있었다고 기록하지 않는다. 머지된 뒤부터 plan을 작성할 수 있다.
 - `Implementing`: 첫 구현 PR이 열린 상태
 - `Done`: 모든 요구사항의 테스트가 통과하고 배포까지 끝난 상태
 - 상태를 바꿀 때마다 frontmatter의 `updated`와 `docs/specs/README.md` 목록을 같이 갱신한다.
@@ -38,7 +38,7 @@ globs: "docs/specs/**, **/specs/**"
 
 ## plan 작성 원칙
 
-- 시작하기 전에 spec이 `Approved`인지 확인한다. 아니면 멈추고 사용자에게 알린다.
+- 시작하기 전에 머지된 spec이 `Approved`이고 미결 사항이 없는지 확인한다. 단순 상태 누락은 확정 내용과 검증을 확인해 문서 PR로 바로잡고 직접 머지한다. 요구사항이 충돌하거나 결정이 필요하면 해당 내용만 사용자에게 알린다.
 - `원칙 점검` 섹션에서 `docs/principles.md`의 각 원칙을 지켰는지 확인한다. 위반이 있으면 그 이유를 쓰거나 설계를 바꾼다.
 - 이 레포가 맡는 요구사항 ID를 전부 나열하고, 각 요구사항을 어떤 테스트로 검증할지 매핑한다.
 - 대안을 비교해서 결정한 것 중 다른 레포에 영향을 주거나 되돌리기 어려운 것은 ADR로 승격한다.

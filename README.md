@@ -64,7 +64,7 @@ docker compose -f local/docker-compose.yml up -d --build
 
 ## 작업 흐름
 
-`main`은 보호되어 있어 직접 push할 수 없습니다. 브랜치를 만들어 PR로 반영하고, squash merge만 허용합니다.
+`main`은 보호되어 있어 직접 push할 수 없습니다. 브랜치를 만들어 PR로 반영하고, squash merge만 허용합니다. 명세·구현 PR은 필수 검사와 GitHub 머지 조건을 충족하면 팀원 Approve 대기 없이 직접 머지합니다.
 
 ```bash
 cd repos/<레포>                          # docs 레포 작업이면 project/에서
@@ -78,7 +78,7 @@ git push -u origin HEAD
 
 기능 개발은 SDD 순서를 따릅니다. 자세한 규칙은 [AGENTS.md](AGENTS.md)에 있습니다.
 
-1. `sdd-spec`: `docs/specs/`에 spec 작성 → PR 리뷰·승인
+1. `sdd-spec`: `docs/specs/`에 spec 작성 → PR 자체 검토·필수 검사 → 명세 확정·머지
 2. API·이벤트가 바뀌면 `docs/contracts/` 수정
 3. 각 레포에서 `sdd-plan`: `specs/SPEC-NNN-*/plan.md`, `tasks.md` 작성
 4. `sdd-implement`: 태스크마다 테스트 먼저(Red → Green → Refactor)
