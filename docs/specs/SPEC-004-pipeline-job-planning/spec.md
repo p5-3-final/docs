@@ -1,7 +1,7 @@
 ---
 id: SPEC-004
 title: Pipeline 청크 구간 계산과 작업 계획 저장
-status: Approved
+status: Implementing
 owner: backend 담당자
 repos: [backend]
 created: 2026-11-02
@@ -134,3 +134,5 @@ backend 개발자로서 계획 생성을 재시도해도 중복 Job을 만들지
 - PR #29는 초안 그대로 머지되었으며 승인 리뷰·댓글·인라인 댓글이 없었다. 이번 정책이 기존 리뷰에서 승인됐다고 기록하지 않는다.
 - R-12~R-17, 활성 상태 구분, 동일 입력 기준과 구간·입력 검증은 사용자와 확정했다. PR #36 머지 후 사용자 지시로 구현을 진행했으며, ADR-0007 정책에 따라 상태를 Approved로 정리한다. GitHub 승인 리뷰 이력은 추가하지 않는다.
 - SPEC-003은 영상 업로드이며 Pipeline 계획은 SPEC-004다. 구현 추적은 backend #32를 재사용한다.
+
+- backend PR #33의 내부 계획 구현은 머지됐다. 필수 CI와 로컬 전체 309개 테스트(IDE DEBUG 환경변수 제거)가 통과했다. 운영 배포는 범위 밖이므로 Done이 아닌 Implementing으로 추적한다.
