@@ -1,14 +1,19 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, auth-service, api-gateway, frontend가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend가 들어 있고, 서비스 구현이 시작되면 추가한다.
 
 | 컨테이너 | 호스트 포트 | 메모리 상한 |
 | --- | --- | --- |
 | frontend (nginx) | 3000 | 64M |
 | api-gateway | 8080 | 512M |
 | auth-service | 8081 | 768M |
-| postgres (auth_db) | 5432 | 512M |
+| media-service | 8082 | 768M |
+| postgres (auth_db, media_db) | 5432 | 512M |
 | redis | 6379 | 128M |
+| kafka (KRaft 단일 노드) | 9092 | 512M |
+| seaweedfs (S3 API, 버킷 `vlm-media`) | 8333 | 384M |
+
+`seaweedfs-init`은 버킷을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service 설정과 같다.
 
 ## 준비
 
@@ -38,6 +43,30 @@ TOKEN=$(curl -s -X POST localhost:8080/api/v1/auth/login -H 'Content-Type: appli
 curl -s localhost:8080/api/v1/auth/me -H "Authorization: Bearer $TOKEN"
 ```
 
+### 영상 업로드 (SPEC-003)
+
+위에서 받은 `TOKEN`으로 업로드 자리를 받고, 응답의 주소로 저장소(localhost:8333)에 직접 올린 뒤 완료를 요청한다. 100MB 이하는 POST 폼(`SINGLE`), 넘으면 조각별 PUT(`MULTIPART`)이다.
+
+```bash
+head -c 1000000 /dev/urandom > /tmp/small.mp4
+C=$(curl -s -X POST localhost:8080/api/v1/media/videos -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"fileName":"small.mp4","sizeBytes":1000000,"contentType":"video/mp4"}')
+ID=$(jq -r .video.id <<<"$C")
+# 응답의 fields를 모두 폼 필드로 넣고 마지막에 file을 넣는다.
+FORM=(); for k in $(jq -r '.upload.fields|keys[]' <<<"$C"); do FORM+=(-F "$k=$(jq -r --arg k "$k" '.upload.fields[$k]' <<<"$C")"); done
+curl -s -o /dev/null -w '%{http_code}\n' "${FORM[@]}" -F file=@/tmp/small.mp4 "$(jq -r .upload.url <<<"$C")"   # 204
+curl -s -X POST localhost:8080/api/v1/media/videos/$ID/complete -H "Authorization: Bearer $TOKEN" | jq .status   # "UPLOADED"
+```
+
+멀티파트는 `upload.parts[].url`마다 `partSizeBytes`만큼 잘라 PUT하고, 응답의 `ETag` 헤더를 모아 `{"parts":[{"partNumber":1,"eTag":"..."}]}`로 완료를 요청한다. 발행된 이벤트는 Kafka 콘솔 도구로 본다.
+
+```bash
+docker compose -f local/docker-compose.yml exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 --topic video.uploaded --from-beginning
+```
+
+브라우저(frontend)에서 저장소로 바로 올리는 CORS 설정은 frontend 업로드 화면 spec에서 다룬다.
+
 ## 자주 쓰는 명령
 
 ```bash
@@ -48,3 +77,10 @@ docker compose -f local/docker-compose.yml down -v                  # 중지하�
 ```
 
 - `postgres/init`의 스크립트는 DB 볼륨을 처음 만들 때만 실행된다. 비밀번호를 바꿨거나 서비스 DB를 추가했다면 `down -v`로 볼륨을 지우고 다시 띄운다.
+  - 데이터를 남긴 채 새 서비스 DB만 추가하려면, `local/.env`에 새 비밀번호 변수(예: `MEDIA_DB_PASSWORD`)를 넣고 postgres를 다시 띄운 뒤 그 스크립트만 실행한다.
+
+    ```bash
+    docker compose -f local/docker-compose.yml up -d postgres
+    docker compose -f local/docker-compose.yml exec -e POSTGRES_USER=postgres postgres \
+      sh /docker-entrypoint-initdb.d/20-media-db.sh
+    ```

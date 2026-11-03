@@ -10,6 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?local/.env에 POSTGRES_PASSWORD를 넣는다}
       # postgres/init 스크립트가 서비스 계정을 만들 때 쓴다.
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?local/.env에 AUTH_DB_PASSWORD를 넣는다}
+      MEDIA_DB_PASSWORD: ${MEDIA_DB_PASSWORD:?local/.env에 MEDIA_DB_PASSWORD를 넣는다}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -39,6 +40,66 @@ services:
       resources:
         limits:
           memory: 128M
+
+  # 서비스 간 이벤트(ADR-0002). 브로커와 컨트롤러를 한 노드에서 돌리는 KRaft 단일 노드다.
+  kafka:
+    image: apache/kafka:4.3.2@sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # 컨테이너끼리는 kafka:19092, 호스트(bootRun, 콘솔 도구)는 localhost:9092로 붙는다.
+      KAFKA_LISTENERS: INTERNAL://:19092,HOST://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # 노드가 하나라 내부 토픽 복제본도 하나다.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx256m
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # S3 대체 저장소(ADR-0006). 브라우저가 서명된 주소로 localhost:8333에 직접 올린다.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    # POST 정책 서명을 검증하려면 접근 키 설정이 있어야 한다. 키는 로컬 전용 샘플값이다.
+    command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json", "-dir=/data"]
+    volumes:
+      - seaweedfs-data:/data
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    ports:
+      - "8333:8333"
+    healthcheck:
+      # SeaweedFS는 localhost가 아닌 컨테이너 IP로 열린다.
+      test: ["CMD-SHELL", "nc -z \"$$(hostname -i)\" 8333"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  # 영상 버킷을 만들고 끝나는 일회성 컨테이너. 버킷이 이미 있어도 성공으로 끝난다.
+  seaweedfs-init:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    entrypoint: ["sh", "-c", "echo 's3.bucket.create -name vlm-media' | weed shell -master=seaweedfs:9333"]
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    restart: "no"
 
   auth-service:
     build:
@@ -79,6 +140,7 @@ services:
       GATEWAY_REDIS_HOST: redis
       GATEWAY_REDIS_PORT: "6379"
       AUTH_SERVICE_URI: http://auth-service:8080
+      MEDIA_SERVICE_URI: http://media-service:8080
     ports:
       - "8080:8080"
     # 공개키 목록은 첫 토큰 검증 때 읽으므로 auth-service가 준비될 때까지 기다리지 않는다.
@@ -91,6 +153,40 @@ services:
       resources:
         limits:
           memory: 512M
+
+  media-service:
+    build:
+      context: ../repos/backend
+      args:
+        SERVICE: media-service
+    image: vlm/media-service:local
+    environment:
+      MEDIA_DB_URL: jdbc:postgresql://postgres:5432/media_db
+      MEDIA_DB_USERNAME: media
+      MEDIA_DB_PASSWORD: ${MEDIA_DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      MEDIA_S3_BUCKET: vlm-media
+      MEDIA_S3_REGION: us-east-1
+      MEDIA_S3_ENDPOINT: http://seaweedfs:8333
+      # 업로드 주소는 브라우저가 부르므로 호스트에서 보이는 주소로 서명한다.
+      MEDIA_S3_PUBLIC_ENDPOINT: http://localhost:8333
+      MEDIA_S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-media-key
+      AWS_SECRET_ACCESS_KEY: local-media-secret
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      seaweedfs-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 768M
 
   frontend:
     build:
@@ -114,3 +210,4 @@ services:
 
 volumes:
   postgres-data:
+  seaweedfs-data:
