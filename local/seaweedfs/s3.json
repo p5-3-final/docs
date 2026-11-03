@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "media-service",
+      "credentials": [{ "accessKey": "local-media-key", "secretKey": "local-media-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
