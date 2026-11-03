@@ -12,3 +12,4 @@
 | [ADR-0006](0006-local-s3-seaweedfs.md) | 로컬 개발과 테스트의 S3 대체 저장소로 SeaweedFS를 쓴다 | Accepted | 2026-11-03 |
 | [ADR-0007](0007-independent-pr-merge.md) | 팀원 Approve 대기 없이 검증 후 PR을 직접 머지한다 | Accepted | 2026-11-03 |
 | [ADR-0008](0008-industrial-safety-v3.md) | 산업안전 v3 구조(19개 배포 단위)를 채택하고 모델·플랫폼을 설정으로 교체할 수 있게 한다 | Accepted | 2026-11-03 |
+| [ADR-0009](0009-pipeline-dispatch-boundary.md) | 영상 처리 책임과 계획·배정·추론 경계를 분리한다 | Accepted | 2026-11-03 |

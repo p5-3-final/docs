@@ -36,6 +36,8 @@ shellcheck scripts/*.sh                                # 스크립트를 바꿨�
 
 ## 아키텍처 요약
 
+- ADR-0009: normalize·chunk-processor를 포함한 영상 처리·Kafka·계획·배정은 backend 담당, AI팀은 추론 기능 담당이다. 기존 Python 레포 경로는 담당을 결정하지 않는다. 계획은 Job·Chunk만 저장하고 실행·슬롯·chunk.requested Outbox는 배정 시 함께 저장한다. 기존 AI Gateway를 임의 교체하지 않는다.
+
 - 흐름: 클라이언트 → `api-gateway` → 각 서비스. 서비스 간 동기 호출은 REST, 상태 변경은 Kafka 이벤트로 전달한다(ADR-0002).
 - 서비스마다 자기 DB를 소유한다. 다른 서비스의 DB에 직접 접근하지 않고 API나 이벤트로만 통신한다.
 - 로컬은 루트 `local/`의 docker-compose, 운영은 AWS EKS 클러스터 하나에 환경을 namespace로 나눠 운영한다.
