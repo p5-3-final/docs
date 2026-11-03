@@ -1,5 +1,5 @@
 ---
-id: SPEC-009
+id: SPEC-010
 title: Pipeline 공정 배정과 실행 슬롯·요청 발행
 status: Approved
 owner: backend 담당자
@@ -9,7 +9,7 @@ updated: 2026-11-03
 related: [SPEC-004, SPEC-007, SPEC-008, ADR-0002, ADR-0009]
 ---
 
-# SPEC-009 Pipeline 공정 배정과 실행 슬롯·요청 발행
+# SPEC-010 Pipeline 공정 배정과 실행 슬롯·요청 발행
 
 ## 1. 배경과 목적
 
