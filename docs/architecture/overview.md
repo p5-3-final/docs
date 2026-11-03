@@ -4,7 +4,7 @@ updated: 2026-11-03
 
 # 아키텍처 개요
 
-> 영상 처리 책임·계획/배정·정수 밀리초 규칙은 [ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)가 우선한다. 아래 v3는 목표 설계이며 구현 현황은 backend SPEC-007 plan의 비교표로 확인한다. 새 추론 endpoint·실행 저장소는 아직 구현되지 않았다.
+> 영상 처리 책임·계획/배정·정수 밀리초 규칙은 [ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)가 우선한다. 아래 v3는 목표 설계이며 구현 현황은 backend SPEC-008 plan의 비교표로 확인한다. 새 추론 endpoint·실행 저장소는 아직 구현되지 않았다.
 >
 > 서비스 목록과 책임은 [service-catalog.md](service-catalog.md)에 있다. 서비스를 바꾸면 둘을 함께 갱신한다. 이 구조의 근거는 [ADR-0008](../adr/0008-industrial-safety-v3.md)이고, 설계 원본은 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`(내용은 v3)다.
 
@@ -607,6 +607,6 @@ sequenceDiagram
 
 ## 영상 처리 책임과 실행 경계 (ADR-0009)
 
-normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행·슬롯·재시도·결과 반영의 상세 단일 설명은 backend `specs/SPEC-007-normalized-intake/plan.md`에 둔다. 완료/실패 이벤트의 executionId·결과 참조·오류 코드는 후속 계약 대상이며 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
+normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행·슬롯·재시도·결과 반영의 상세 단일 설명은 backend `specs/SPEC-008-normalized-intake/plan.md`에 둔다. 완료/실패 이벤트의 executionId·결과 참조·오류 코드는 후속 계약 대상이며 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
 
 기존 AI Gateway의 /v1/analyze·/v1/embed·/v1/parse와 블러 사본·모델 Adapter 정책은 유지한다. /v1/inferences는 문서 초안으로, 준비된 입력 객체 읽기 권한과 requestId별 실행 제어를 추가해야 한다. AI 출력의 실제 검출/설명/임베딩 구조를 이 문서로 확정하지 않는다.

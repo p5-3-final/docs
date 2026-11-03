@@ -37,4 +37,4 @@ oasdiff breaking <main의 계약 파일> <바뀐 계약 파일> --fail-on ERR
 
 ## Pipeline 연동 초안의 위치
 
-[ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)와 [SPEC-007](../specs/SPEC-007-normalized-intake/spec.md)은 backend 소유 메시지의 의미 초안이다. video.normalized·chunk.requested 및 실행 완료/실패·POST /v1/inferences의 스키마는 아직 없다. 공통 envelope·sourceId Kafka 키·traceparent를 재사용하고, 정수 밀리초·객체 참조·실행 식별자는 후속 계약 PR로 확정한다. 이전 아키텍처의 다른 파티션 키 표기를 구현된 계약으로 취급하지 않는다.
+[ADR-0009](../adr/0009-pipeline-dispatch-boundary.md)와 [SPEC-008](../specs/SPEC-008-normalized-intake/spec.md)은 backend 소유 메시지의 의미 초안이다. video.normalized·chunk.requested 및 실행 완료/실패·POST /v1/inferences의 스키마는 아직 없다. 공통 envelope·sourceId Kafka 키·traceparent를 재사용하고, 정수 밀리초·객체 참조·실행 식별자는 후속 계약 PR로 확정한다. 이전 아키텍처의 다른 파티션 키 표기를 구현된 계약으로 취급하지 않는다.

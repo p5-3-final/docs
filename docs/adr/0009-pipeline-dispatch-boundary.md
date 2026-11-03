@@ -4,14 +4,14 @@ title: 영상 처리 책임과 계획·배정·추론 경계를 분리한다
 status: Accepted
 date: 2026-11-03
 deciders: [사용자]
-related: [ADR-0002, ADR-0008, SPEC-004, SPEC-007]
+related: [ADR-0002, ADR-0008, SPEC-004, SPEC-008]
 ---
 
 # ADR-0009 영상 처리 책임과 계획·배정·추론 경계를 분리한다
 
 ## 맥락
 
-사용자가 backend는 normalize·chunk-processor를 포함한 영상 처리를, AI팀은 추론을 담당하도록 확정했다. 기존 SPEC-006 Pipeline 초안(PR #40)은 영상 재생 SPEC-006과 번호가 충돌하여 SPEC-007로 이동했다.
+사용자가 backend는 normalize·chunk-processor를 포함한 영상 처리를, AI팀은 추론을 담당하도록 확정했다. 기존 SPEC-006 Pipeline 초안(PR #40)은 영상 재생 SPEC-006과 번호가 충돌하여 SPEC-008로 이동했다.
 
 ADR-0008은 산업안전 v3·19개 배포 단위·모델 교체 원칙을 채택했다. 이 결정은 그 검색·이벤트 알고리즘을 대체하지 않는다. 책임 분담·시간 표현·배정 경계는 이번 결정이 우선한다. 기존 Accepted ADR 본문은 이력으로 보존한다.
 
@@ -55,5 +55,5 @@ ADR-0008은 산업안전 v3·19개 배포 단위·모델 교체 원칙을 채택
 ## 참고
 
 - [아키텍처](../architecture/overview.md)
-- [SPEC-007](../specs/SPEC-007-normalized-intake/spec.md)
-- backend specs/SPEC-007-normalized-intake/plan.md
+- [SPEC-008](../specs/SPEC-008-normalized-intake/spec.md)
+- backend specs/SPEC-008-normalized-intake/plan.md

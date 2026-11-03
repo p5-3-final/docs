@@ -1,5 +1,5 @@
 ---
-id: SPEC-007
+id: SPEC-008
 title: 정규화 완료 수신과 계획 저장
 status: Draft
 owner: backend 담당자
@@ -9,13 +9,13 @@ updated: 2026-11-03
 related: [SPEC-004, ADR-0002, ADR-0008, ADR-0009]
 ---
 
-# SPEC-007 정규화 완료 수신과 계획 저장
+# SPEC-008 정규화 완료 수신과 계획 저장
 
 ## 1. 배경과 목적
 
-SPEC-004의 청크 계산·Job/Chunk 저장을 video.normalized 수신에 연결한다. normalize와 chunk-processor를 포함한 영상 처리 파이프라인은 backend가 담당하고 AI팀은 모델 추론을 담당한다. 기존 초안의 전체 청크 요청 Outbox 선기록은 폐기한다. 책임·배정 경계는 [ADR-0009](../../adr/0009-pipeline-dispatch-boundary.md), 상세 설계는 backend의 specs/SPEC-007-normalized-intake/plan.md에 둔다.
+SPEC-004의 청크 계산·Job/Chunk 저장을 video.normalized 수신에 연결한다. normalize와 chunk-processor를 포함한 영상 처리 파이프라인은 backend가 담당하고 AI팀은 모델 추론을 담당한다. 기존 초안의 전체 청크 요청 Outbox 선기록은 폐기한다. 책임·배정 경계는 [ADR-0009](../../adr/0009-pipeline-dispatch-boundary.md), 상세 설계는 backend의 specs/SPEC-008-normalized-intake/plan.md에 둔다.
 
-원격 main의 SPEC-006은 원본 영상 재생이다. PR #40의 Pipeline 초안을 SPEC-007로 이동했으며 기존 재생 명세는 수정하지 않는다.
+원격 main의 SPEC-006은 원본 영상 재생이다. PR #40의 Pipeline 초안을 SPEC-008로 이동했으며 기존 재생 명세는 수정하지 않는다.
 
 ## 2. 범위
 
