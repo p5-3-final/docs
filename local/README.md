@@ -86,7 +86,15 @@ docker compose -f local/docker-compose.yml exec postgres psql -U postgres -d ai_
   -c 'SELECT caller, model_id, status, latency_ms FROM ai.ai_call_log ORDER BY created_at DESC LIMIT 5'
 ```
 
-- 로컬 Ollama(Qwen3-VL)를 쓰려면 `local/.env`에 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`을 넣고, 같은 compose 네트워크에 `ollama`라는 이름으로 Ollama를 띄운 뒤 ai-gateway를 다시 띄운다.
+- 로컬 Ollama(Qwen3-VL)로 실제 모델을 부르려면 호스트에서 Ollama를 띄운다. Mac의 Docker는 GPU를 쓰지 못해 컨테이너보다 호스트가 훨씬 빠르다. ai-gateway는 `host.docker.internal`로 호스트의 Ollama에 붙는다. Ollama는 DNS rebinding 방지로 그 밖의 호스트 이름 요청을 403으로 거절한다.
+
+  ```bash
+  ollama serve &                 # 이미 떠 있으면 생략
+  ollama pull qwen3-vl:4b-instruct   # 프로필 local.toml의 모델. 생각 단계가 없는 판이라 출력 상한 안에 답한다
+  AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
+  ```
+
+  계속 쓰려면 `local/.env`에 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`을 넣는다. 첫 호출은 모델을 메모리에 올리느라 더 오래 걸린다.
 - 기존 DB 볼륨에 ai_db를 더하려면 아래 "자주 쓰는 명령"의 postgres/init 안내처럼 `30-ai-db.sh`만 실행한다.
 
 ## 자주 쓰는 명령
