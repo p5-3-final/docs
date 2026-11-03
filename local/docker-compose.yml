@@ -247,8 +247,8 @@ services:
           memory: 768M
 
   # ai-gateway(SPEC-009). 마이그레이션을 먼저 한 번 실행하고 서버를 띄운다.
-  # 기본은 모델 없이 흐름만 보는 mock 프로필이다. Ollama를 쓰려면 AI_GATEWAY_PROFILE_PATH를
-  # /app/profiles/local.toml로 바꾸고 ollama 서비스(호스트 이름 ollama)를 같은 네트워크에 띄운다.
+  # 기본은 모델 없이 흐름만 보는 mock 프로필이다. Ollama를 쓰려면 호스트에서 Ollama를 띄우고
+  # AI_GATEWAY_PROFILE_PATH를 /app/profiles/local.toml로 바꾼다(local/README.md).
   ai-gateway-migrate:
     build: &ai-gateway-build
       context: ../repos/ai
@@ -282,6 +282,10 @@ services:
       # seaweedfs/s3.json과 같은 로컬 전용 샘플 키(읽기 전용). 운영은 IRSA로 받는다.
       AWS_ACCESS_KEY_ID: local-ai-gateway-key
       AWS_SECRET_ACCESS_KEY: local-ai-gateway-secret
+    # 프로필(local.toml)은 호스트의 Ollama를 host.docker.internal로 부른다. Mac의 Docker는 GPU를
+    # 못 써서 Ollama는 호스트에서 Metal로 돌린다. Linux에도 같은 이름이 생기도록 연결해 둔다.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # 내부 전용 서비스지만 로컬에서 직접 불러 보려고 호스트에 연다(docs 서비스 카탈로그 로컬 포트).
     ports:
       - "8000:8000"
