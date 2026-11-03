@@ -1,7 +1,7 @@
 ---
 id: SPEC-007
 title: 영상 정규화
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, backend, frontend, docs]
 created: 2026-11-03
