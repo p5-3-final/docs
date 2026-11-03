@@ -1,38 +1,66 @@
 asyncapi: 3.0.0
 info:
   title: normalize events
-  version: 1.0.0
-  description: 불변 정규화 결과. 최소 한 번 전달이며 소비자는 eventId와 정규화 결과의 불변성을 검증한다. SPEC-007·SPEC-008.
+  version: 1.1.0
+  description: |
+    normalize 워커가 발행하는 이벤트 (SPEC-007).
+    최소 한 번 전달이다. v1의 기존 의미는 유지한다. v2는 같은 정규화 결과 재전달에 같은 eventId를 쓰고 재정규화에는 새 normalizationId·eventId·경로를 쓴다. Pipeline intake는 v2만 처리한다.
+    두 토픽 사이에는 순서 보장이 없다. 소비자는 조건부 상태 전이로 늦게 온 이벤트를 무시한다.
+    payload의 원본은 `../events/*.schema.json`이다.
 defaultContentType: application/json
 servers:
   local:
     host: localhost:9092
     protocol: kafka
+    description: 로컬 compose의 Kafka
 channels:
+  videoNormalizing:
+    address: video.normalizing
+    description: 영상 정규화 시작. 메시지 키는 sourceId다.
+    messages:
+      videoNormalizing:
+        $ref: '#/components/messages/VideoNormalizing'
   videoNormalized:
     address: video.normalized
+    description: 영상 정규화 결과(READY 또는 REJECTED). 메시지 키는 sourceId다.
     messages:
       videoNormalized:
         $ref: '#/components/messages/VideoNormalized'
 operations:
+  publishVideoNormalizing:
+    action: send
+    summary: video.uploaded를 받아 원본 검증을 시작하기 전에 발행 (SPEC-007 R-1)
+    channel:
+      $ref: '#/channels/videoNormalizing'
+    messages:
+      - $ref: '#/channels/videoNormalizing/messages/videoNormalizing'
   publishVideoNormalized:
     action: send
-    summary: 정규화 READY 또는 REJECTED 결과 발행
+    summary: 정규화 사본·HLS를 저장했거나 원본을 거절하면 발행 (SPEC-007 R-6~R-12)
     channel:
       $ref: '#/channels/videoNormalized'
     messages:
       - $ref: '#/channels/videoNormalized/messages/videoNormalized'
 components:
   messages:
+    VideoNormalizing:
+      name: video.normalizing
+      title: 영상 정규화 시작
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/video.normalizing.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
     VideoNormalized:
       name: video.normalized
-      title: 정규화 결과
+      title: 영상 정규화 결과
       headers:
-        type: object
-        properties:
-          traceparent:
-            type: string
-            description: W3C Trace Context
+        $ref: '#/components/schemas/KafkaHeaders'
       payload:
         $ref: '../events/video.normalized.schema.json'
       bindings:
@@ -40,4 +68,11 @@ components:
           key:
             type: string
             format: uuid
-            description: sourceId. 이 키와 payload sourceId가 같아야 한다.
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. video.uploaded의 trace를 이어 간다(원칙 VI).

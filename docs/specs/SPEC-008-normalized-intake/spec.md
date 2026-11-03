@@ -120,6 +120,8 @@ backend 개발자로서 유효한 정규화 결과로 미배정 계획을 만들
 
 ## 8. 확정 정책과 후속 사항
 
+- 동시 작업으로 기존 video.normalized v1 계약이 먼저 머지되어 v1은 그대로 보존한다. v2 스키마와 기존 토픽의 버전 합집합으로 추가한다. Pipeline은 v2만 수신 처리하고 v1은 성공 처리하지 않는다. 생산자는 v2 발행으로 전환해야 이 경로와 연결된다.
+
 - 이번 수신·계획 범위의 미결 사항은 없다. 영상 정규화 SPEC-007과 사용자 확인으로 호환 보완했다.
 - READY만 계획한다. REJECTED는 수신 기록·정규화 결과만 저장하며 Job은 없다.
 - normalizationId는 UUID, 객체 참조는 기존 normalizedKey/hlsPlaylistKey이며 `sources/<sourceId>/normalizations/<normalizationId>/` 아래의 불변 key다. URL·바이트는 받지 않는다.

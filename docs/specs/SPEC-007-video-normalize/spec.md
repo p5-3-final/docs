@@ -162,3 +162,5 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 ### Pipeline 수신과의 호환 보완 (사용자 확정)
 
 SPEC-008과 공유하는 video.normalized는 READY/REJECTED와 기존 메타데이터를 유지한다. READY는 normalizationId(UUID), normalizationVersion, normalizedKey·hlsPlaylistKey, 정수 durationMs와 정확히 일치하는 durationSec를 담는다. 객체 경로는 `sources/<sourceId>/normalizations/<normalizationId>/` 아래의 불변 참조다. REJECTED는 결과 식별자·버전·rejectReason을 담고 성공 메타데이터는 생략 또는 null이다. Pipeline은 이를 기록만 하고 계획하지 않는다. 구문상 같은 eventId의 변경 payload 및 같은 normalizationId의 다른 결과는 충돌이다. 변경은 아직 normalize 런타임 구현을 완료했다는 뜻이 아니다.
+
+기존 v1 계약은 그대로 보존하고 위 보완은 schemaVersion=2로 발행한다. video.normalized.schema.json은 v1/v2 합집합, video.normalized.v2.schema.json은 Pipeline용 v2 원본이다. 신규 producer의 v2 전환은 구현 작업에서 반영하며 이번 수신 구현이 producer를 자동 교체하지 않는다.
