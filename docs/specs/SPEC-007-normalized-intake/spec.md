@@ -1,5 +1,5 @@
 ---
-id: SPEC-006
+id: SPEC-007
 title: 정규화 완료 수신과 청크 요청 Outbox 기록
 status: Draft
 owner: backend 담당자
@@ -9,7 +9,7 @@ updated: 2026-11-03
 related: [SPEC-003, SPEC-004, ADR-0002, ADR-0005, ADR-0007]
 ---
 
-# SPEC-006 정규화 완료 수신과 청크 요청 Outbox 기록
+# SPEC-007 정규화 완료 수신과 청크 요청 Outbox 기록
 
 ## 1. 배경과 목적
 

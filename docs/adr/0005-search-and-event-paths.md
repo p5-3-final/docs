@@ -1,7 +1,7 @@
 ---
 id: ADR-0005
 title: 분석을 검색 경로와 이벤트 경로로 나누고 17개 배포 단위를 다시 구성한다
-status: Accepted
+status: Superseded by ADR-0008
 date: 2026-11-02
 deciders: [팀]
 related: [ADR-0001, ADR-0002, ADR-0003]

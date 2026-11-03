@@ -80,7 +80,9 @@ services:
       - seaweedfs-data:/data
       - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     ports:
-      - "8333:8333"
+      - "8333:8333"  # S3 API 게이트웨이
+      - "9333:9333"  # Master 대시보드 (클러스터/볼륨 상태 확인)
+      - "8888:8888"  # Filer 웹 UI (디렉터리/파일 브라우저)
     healthcheck:
       # SeaweedFS는 localhost가 아닌 컨테이너 IP로 열린다.
       test: ["CMD-SHELL", "nc -z \"$$(hostname -i)\" 8333"]
