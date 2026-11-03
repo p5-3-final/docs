@@ -13,11 +13,14 @@ contracts/
 │   └── access-token.md       # 접근 토큰 형식, 공개키 목록, 키 교체 규칙 (auth-service ↔ api-gateway)
 ├── events/
 │   └── <topic>.schema.json   # 이벤트 payload JSON Schema (Spring·Python 계약 테스트의 원본)
-└── taxonomy/
-    └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
+├── taxonomy/
+│   └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
+└── prompts/
+    ├── _prefix.md            # 모든 taskType 공통 고정 접두부
+    └── <taskType>/           # prompt.md, 입력 스키마, 출력 스키마. ai-gateway Prompt Registry의 원본
 ```
 
-프롬프트는 ai-gateway만 쓰므로 ai 레포 `services/ai-gateway/prompts/`에 둔다.
+프롬프트는 ai-gateway만 쓰지만 이력을 계약과 같이 관리하려고 여기에 둔다. 버전 ID는 사람이 정하지 않고 ai-gateway가 내용 해시로 계산한다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md) R-13).
 
 ## 생산자와 소비자의 역할
 

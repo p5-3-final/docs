@@ -55,8 +55,8 @@ event-analyzer 같은 호출자로서 이벤트 후보와 근거 프레임을 �
 #### 인수 조건
 
 - Given 허용된 호출자와 블러 사본 경로, When `event_judge`를 요청하면, Then `VLMAnalysis` 결과와 사용한 모델·프롬프트 버전을 받는다.
-- Given 모델이 출력 스키마에 맞지 않는 답을 하면, When 응답을 받으면, Then `verification_status`가 `unknown`인 결과를 받고 원문은 호출 로그에 남는다.
-- Given 프로필에 `event_judge` 모델이 없으면, When 요청하면, Then 모델을 부르지 않고 `verification_status`가 `unverified`인 결과를 받는다.
+- Given 모델이 출력 스키마에 맞지 않는 답을 하면, When 응답을 받으면, Then `verificationStatus`가 `unknown`인 결과를 받고 원문은 호출 로그에 남는다.
+- Given 프로필에 `event_judge` 모델이 없으면, When 요청하면, Then 모델을 부르지 않고 `verificationStatus`가 `unverified`인 결과를 받는다.
 
 ### US-2 원본 영상이 외부로 나가지 않음 (P1)
 
@@ -112,9 +112,9 @@ event-analyzer 같은 호출자로서 이벤트 후보와 근거 프레임을 �
 | R-3 | IF 모르는 taskType이면, THEN THE ai-gateway SHALL 요청 오류로 거절한다. | US-1 |
 | R-4 | IF 이미지 수가 그 taskType의 상한(프로필 값)을 넘으면, THEN THE ai-gateway SHALL 요청 오류로 거절한다. | US-1 |
 | R-5 | WHEN 모델 응답을 받으면, THE ai-gateway SHALL 응답에서 JSON 객체를 꺼내 그 taskType의 출력 스키마(키·타입·분류 체계 enum)로 검증한다. | US-1 |
-| R-6 | IF 모델 응답에서 JSON을 찾지 못하거나 출력 스키마 검증에 실패하면, THEN THE ai-gateway SHALL `verification_status`를 `unknown`으로 둔 결과를 반환하고 상태 `invalid_output`과 원문을 호출 로그에 남긴다. | US-1 |
-| R-7 | IF `risk_detected`가 `true`인데 `risk_type`이나 `risk_reason`이 없으면, THEN THE ai-gateway SHALL 출력 스키마 검증 실패로 처리한다(R-6). | US-1 |
-| R-8 | IF 프로필에 그 taskType의 모델이 없으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 `verification_status`를 `unverified`로 둔 결과를 반환한다. | US-1 |
+| R-6 | IF 모델 응답에서 JSON을 찾지 못하거나 출력 스키마 검증에 실패하면, THEN THE ai-gateway SHALL `verificationStatus`를 `unknown`으로 둔 결과를 반환하고 상태 `invalid_output`과 원문을 호출 로그에 남긴다. | US-1 |
+| R-7 | IF `riskDetected`가 `true`인데 `riskType`이나 `riskReason`이 없으면, THEN THE ai-gateway SHALL 출력 스키마 검증 실패로 처리한다(R-6). | US-1 |
+| R-8 | IF 프로필에 그 taskType의 모델이 없으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 `verificationStatus`를 `unverified`로 둔 결과를 반환하며, 호출 로그에는 상태 `unavailable`과 빈 모델 이름을 남긴다. | US-1 |
 | R-9 | IF 이미지 경로가 허용 패턴(설정)에 맞지 않으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 경로 거부 오류로 거절한다. | US-2 |
 | R-10 | IF 이미지 경로가 요청한 영상 ID의 폴더(`sources/<sourceId>/`) 밖이면, THEN THE ai-gateway SHALL 경로 거부 오류로 거절한다. | US-2 |
 | R-11 | IF 이미지 경로의 객체가 저장소에 없으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 요청 오류로 거절한다. | US-1 |
