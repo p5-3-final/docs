@@ -1,7 +1,7 @@
 ---
 id: SPEC-009
 title: ai-gateway 분석 호출
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-03
