@@ -15,10 +15,15 @@ contracts/
 │   └── <topic>.schema.json   # 이벤트 payload JSON Schema (Spring·Python 계약 테스트의 원본)
 ├── taxonomy/
 │   └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
+│       ├── taxonomy.schema.json          # v2부터 이벤트 유형 8종 + other
+│       ├── class-mapping.schema.json     # v2: 외부 데이터셋 라벨 ↔ 트리거 클래스 ↔ 이벤트 유형 대응표 형식
+│       └── detector-profile.schema.json  # v2: 탐지 프로필(탐지기 manifest·클래스·supported_events) 형식
 └── prompts/
     ├── _prefix.md            # 모든 taskType 공통 고정 접두부
     └── <taskType>/           # prompt.md, 입력 스키마, 출력 스키마. ai-gateway Prompt Registry의 원본
 ```
+
+분류 체계는 버전 폴더를 새로 만들어 올리고 이전 버전은 지우지 않는다. 값이 늘면 그 값을 받는 소비자가 거부할 수 있으므로, 계약은 쓸 버전을 경로로 직접 가리킨다(예: `event_judge`는 v1). 대응표와 탐지 프로필의 내용은 AI 담당자가 채우고, 여기서는 형식만 정한다([ADR-0010](../adr/0010-v4-evaluation-readiness.md) ①).
 
 프롬프트는 ai-gateway만 쓰지만 이력을 계약과 같이 관리하려고 여기에 둔다. 버전 ID는 사람이 정하지 않고 ai-gateway가 내용 해시로 계산한다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md) R-13).
 

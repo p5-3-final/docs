@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/taxonomy/v2/detector-profile.schema.json",
+  "title": "Detector profile v2",
+  "description": "탐지 프로필(ADR-0010 ①②). 탐지기 구성과 능력 선언(supported_events)을 담는다. 탐지기를 쓰는 서비스는 기동할 때 이 형식으로 검증하고, 결과마다 profileId@version을 기록한다. 가중치 파일의 체크섬·클래스·차원은 각 탐지기 manifest에 있고, 프로필은 manifest 경로와 manifest 파일의 체크섬으로 고정한다.",
+  "type": "object",
+  "required": ["profileId", "version", "taxonomyVersion", "detectors", "supportedEvents"],
+  "additionalProperties": false,
+  "properties": {
+    "profileId": {
+      "description": "프로필 이름(예: default-industrial)",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "maxLength": 64
+    },
+    "version": {
+      "description": "프로필 버전. 탐지기·클래스·선언이 바뀌면 올린다.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "taxonomyVersion": {"const": "v2"},
+    "detectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/detector"}
+    },
+    "supportedEvents": {
+      "description": "이 프로필이 후보를 낼 수 있다고 선언하는 유형. 선언하지 않은 유형은 결과의 unsupported_events에 이유와 함께 남는다. 선언은 Golden Set 후보 재현율이 기준값을 넘을 때만 한다.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "taxonomy.schema.json#/$defs/detectableEventType"}
+    }
+  },
+  "$defs": {
+    "detector": {
+      "type": "object",
+      "required": ["name", "kind", "manifest", "manifestSha256", "classes"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "프로필 안에서 탐지기를 가리키는 이름(예: yolo26n, pose, yoloe-ppe)",
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "maxLength": 64
+        },
+        "kind": {
+          "description": "탐지기 종류. detection(일반 탐지), pose(자세 키포인트), open_vocabulary(텍스트 클래스), custom(파인튜닝)",
+          "enum": ["detection", "pose", "open_vocabulary", "custom"]
+        },
+        "manifest": {
+          "description": "모델 저장소의 manifest 경로(ADR-0010 ② models/<종류>/<버전>/manifest.json)",
+          "type": "string",
+          "pattern": "^models/[a-z0-9][a-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9._-]*/manifest\\.json$"
+        },
+        "manifestSha256": {
+          "description": "manifest 파일의 SHA-256(소문자 16진수). 같은 경로의 manifest가 바뀌면 기동에 실패한다.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "classes": {
+          "description": "이 탐지기가 내는 클래스. open_vocabulary면 텍스트 클래스 목록이다.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "taxonomy.schema.json#/$defs/className"}
+        },
+        "source": {
+          "description": "학습 출처. 파인튜닝·재학습한 가중치는 필수로 채운다.",
+          "type": "object",
+          "required": ["dataset"],
+          "additionalProperties": false,
+          "properties": {
+            "dataset": {"type": "string", "minLength": 1, "maxLength": 128},
+            "runId": {"type": "string", "minLength": 1, "maxLength": 128}
+          }
+        }
+      }
+    }
+  }
+}
