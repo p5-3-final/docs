@@ -16,8 +16,8 @@ import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# 원본을 루트 service-contracts/로 옮기면 여기만 바꾼다. 묶음 안 최상위 폴더 이름은 그대로다.
-SOURCE = ROOT / "docs" / "contracts"
+# 묶음 안 최상위 폴더 이름(ARCHIVE_ROOT)은 원본 위치와 상관없이 고정이다. 받는 쪽 경로가 여기에 묶여 있다.
+SOURCE = ROOT / "service-contracts"
 ARCHIVE_ROOT = "service-contracts"
 
 

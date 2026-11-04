@@ -1,6 +1,7 @@
 ---
 paths:
   - "docs/**/*.md"
+  - "service-contracts/**/*.md"
 ---
 
 # 문서 작성 규칙
@@ -42,8 +43,8 @@ paths:
 - 문서를 고친 뒤에는 아래를 실행한다. CI도 같은 검사를 한다.
 
   ```bash
-  npx markdownlint-cli2 "docs/**/*.md" "*.md"
-  lychee --offline "docs/**/*.md" "*.md"     # 내부 링크 확인
+  npx markdownlint-cli2 "docs/**/*.md" "service-contracts/**/*.md" "*.md"
+  lychee --offline "docs/**/*.md" "service-contracts/**/*.md" "*.md"     # 내부 링크 확인
   ```
 
 - markdownlint 설정은 루트 `.markdownlint-cli2.jsonc`에 있다. 기본 규칙 세트에서 아래만 바꾼다. 새로 바꾸려면 이 목록을 같은 PR에서 고친다.

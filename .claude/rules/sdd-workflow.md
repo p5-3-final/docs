@@ -12,7 +12,7 @@ paths:
 | --- | --- | --- |
 | 프로젝트 원칙, PRD, 아키텍처, ADR | 루트 `docs/` | 전 레포 공통 |
 | spec.md (무엇·왜) | 루트 `docs/specs/SPEC-NNN-<slug>/` | 한 기능이 여러 레포에 걸치므로 원본은 한 곳에 둔다 |
-| OpenAPI / AsyncAPI 계약 | 루트 `docs/contracts/` | 생산자와 소비자가 같은 원본을 본다 |
+| OpenAPI / AsyncAPI 계약 | 루트 `service-contracts/` | 생산자와 소비자가 같은 원본을 본다 |
 | plan.md, tasks.md (어떻게) | 각 레포 `specs/SPEC-NNN-<slug>/` | 구현 세부는 코드와 같은 PR에서 리뷰한다 |
 
 한 SPEC이 backend와 frontend에 걸치면 plan과 tasks는 각 레포에 하나씩 만들고, spec은 루트에 하나만 둔다.

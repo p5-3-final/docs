@@ -26,9 +26,9 @@
 docs 레포에서 작업을 끝내기 전에 바꾼 대상에 해당하는 명령을 실행한다. 세부 규칙은 `docs-writing.md`, `contracts.md`, `ci-common.md`에 있다.
 
 ```bash
-npx markdownlint-cli2 "docs/**/*.md" "*.md"             # 문서 형식
-lychee --offline "docs/**/*.md" "*.md"                 # 내부 링크
-npx @redocly/cli lint docs/contracts/openapi/*.yaml     # 계약을 바꿨을 때
+npx markdownlint-cli2 "docs/**/*.md" "service-contracts/**/*.md" "*.md"             # 문서 형식
+lychee --offline "docs/**/*.md" "service-contracts/**/*.md" "*.md"                 # 내부 링크
+npx @redocly/cli lint service-contracts/openapi/*.yaml     # 계약을 바꿨을 때
 oasdiff breaking <main의 계약> <바뀐 계약> --fail-on ERR  # 계약을 바꿨을 때
 shellcheck scripts/*.sh                                # 스크립트를 바꿨을 때
 scripts/check-service-contracts-version.sh origin/main # 계약을 바꿨을 때(VERSION을 올렸는지)
@@ -53,7 +53,7 @@ scripts/check-service-contracts-version.sh origin/main # 계약을 바꿨을 때
 | 단계 | 산출물 | 위치 | 스킬 |
 | --- | --- | --- | --- |
 | 1. Specify (무엇·왜) | `spec.md` (EARS 요구사항) | 루트 `docs/specs/SPEC-NNN-<slug>/` | `sdd-spec` |
-| 2. Contract | OpenAPI / AsyncAPI | 루트 `docs/contracts/` | — |
+| 2. Contract | OpenAPI / AsyncAPI | 루트 `service-contracts/` | — |
 | 3. Plan (어떻게) | `plan.md` | 각 레포 `specs/SPEC-NNN-<slug>/` | `sdd-plan` |
 | 4. Tasks | `tasks.md` | 각 레포 `specs/SPEC-NNN-<slug>/` | `sdd-plan` |
 | 5. Implement | 코드 + 테스트 | 각 레포 | `sdd-implement` |
@@ -153,7 +153,7 @@ Claude Code와 Antigravity는 해당 경로의 파일을 다룰 때 아래 규�
 | --- | --- |
 | `docs/specs/**`, 각 레포 `specs/**` (spec·plan·tasks 작성, 상태 전이) | `.claude/rules/sdd-workflow.md` |
 | `docs/**/*.md` (문서 작성, EARS 문법, ADR) | `.claude/rules/docs-writing.md` |
-| `docs/contracts/**` (OpenAPI·AsyncAPI) | `.claude/rules/contracts.md` |
+| `service-contracts/**` (OpenAPI·AsyncAPI) | `.claude/rules/contracts.md` |
 | `.github/workflows/**`, `Dockerfile`, `*.sh`, `.editorconfig`, `lefthook.yml` | `.claude/rules/ci-common.md` |
 
 - 규칙과 스킬의 원본은 `.claude/rules/`와 `.claude/skills/`다. `.agents/`는 `./scripts/sync-agent-config.sh`가 만드는 생성본이므로 직접 수정하지 않는다.

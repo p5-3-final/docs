@@ -252,7 +252,7 @@ sequenceDiagram
 
 ## 이벤트 경로
 
-이벤트 정의 목록(분류 체계의 일부, `docs/contracts/taxonomy/`에서 버전 관리)에 이벤트 유형마다 트리거 클래스, 최소 관측 수, 전제 조건, VLM 확인 필요 여부, 기본 severity, 쿨다운을 적는다. chunk-processor가 이 목록에 맞고 **탐지기가 지원을 선언한** 순간만 후보로 내고, VLM은 후보에만 호출한다.
+이벤트 정의 목록(분류 체계의 일부, `service-contracts/taxonomy/`에서 버전 관리)에 이벤트 유형마다 트리거 클래스, 최소 관측 수, 전제 조건, VLM 확인 필요 여부, 기본 severity, 쿨다운을 적는다. chunk-processor가 이 목록에 맞고 **탐지기가 지원을 선언한** 순간만 후보로 내고, VLM은 후보에만 호출한다.
 
 ### 이벤트 정의 목록 (산업안전, v1 6종 → v2 8종)
 
@@ -378,7 +378,7 @@ sequenceDiagram
 
 ## API 경로 (api-gateway 라우팅)
 
-외부 API는 모두 `/api/v1/<서비스>/**` 아래에 둔다. 경로와 필드의 원본은 `docs/contracts/openapi/`의 계약 파일이고, 아래는 MVP 범위의 목록이다. 계약이 아직 없는 경로는 기능 spec에서 계약을 먼저 쓰며 이름이 바뀔 수 있다.
+외부 API는 모두 `/api/v1/<서비스>/**` 아래에 둔다. 경로와 필드의 원본은 `service-contracts/openapi/`의 계약 파일이고, 아래는 MVP 범위의 목록이다. 계약이 아직 없는 경로는 기능 spec에서 계약을 먼저 쓰며 이름이 바뀔 수 있다.
 
 | 경로 | 서비스 · 역할 |
 | --- | --- |
@@ -418,7 +418,7 @@ sequenceDiagram
 | `stage.timing` (v4) | sourceId | 모든 소비자(공통 메시징 라이브러리) → quality-service (핸들러당 1건, `StageTiming` 묶음. 보존 7일) |
 | `{토픽}.{그룹}.retry` · `{그룹}.dlq` | sourceId | 지터 재시도, 운영자 재처리 |
 
-Kafka 보존 기간은 30일이다(`stage.timing`만 7일). 모든 이벤트 봉투에는 발행 시각 `producedAt`을 싣는다(v4 ⑩, 하위호환 추가). 토픽별 파티션 수는 소비 그룹의 최대 Pod 수 이상으로 잡는다. 이벤트 계약 원본은 `docs/contracts/events/`에 기능 spec과 함께 추가한다.
+Kafka 보존 기간은 30일이다(`stage.timing`만 7일). 모든 이벤트 봉투에는 발행 시각 `producedAt`을 싣는다(v4 ⑩, 하위호환 추가). 토픽별 파티션 수는 소비 그룹의 최대 Pod 수 이상으로 잡는다. 이벤트 계약 원본은 `service-contracts/events/`에 기능 spec과 함께 추가한다.
 
 ## 상태 전이
 
@@ -494,11 +494,11 @@ Kafka 보존 기간은 30일이다(`stage.timing`만 7일). 모든 이벤트 봉
 | `state_compare` (v4) | `gpt-6.1-terra` | 전후 구간 대표 프레임 2장 + 구역·기대 객체 목록 → 변화 목록(제거·이동·추가·복구 여부). aggregator 재고 비교 후보에만 |
 | `risk_forecast` (v4) | `predictor` Adapter | 활성 위험 상태 + 최근 트랙 흐름 특징 → 구간별 노출 확률·근거 특징. 1단계는 규칙 점수(활성 위험 지속 시간 × 구역 통행량), 학습 모델은 데이터가 쌓인 뒤 교체 |
 
-모든 출력 스키마의 유형·속성 값은 분류 체계 enum을 쓴다. 분류 체계(이벤트 유형 8종 + `other`, 객체 종류, 속성, severity, 위험 유형, 이벤트 정의 목록, 질의 사전, v4 탐지 프로필 스키마)는 `docs/contracts/taxonomy/`의 버전 파일로 관리하고, 결과마다 `taxonomy_version`을 기록한다. 라벨은 팀이 정의한 데이터셋에서 이 분류 체계의 클래스 이름으로 바로 달기 때문에 외부 데이터셋 라벨 대응표는 두지 않는다.
+모든 출력 스키마의 유형·속성 값은 분류 체계 enum을 쓴다. 분류 체계(이벤트 유형 8종 + `other`, 객체 종류, 속성, severity, 위험 유형, 이벤트 정의 목록, 질의 사전, v4 탐지 프로필 스키마)는 `service-contracts/taxonomy/`의 버전 파일로 관리하고, 결과마다 `taxonomy_version`을 기록한다. 라벨은 팀이 정의한 데이터셋에서 이 분류 체계의 클래스 이름으로 바로 달기 때문에 외부 데이터셋 라벨 대응표는 두지 않는다.
 
 ## 인증
 
-auth-service가 로그인과 토큰 발급을, api-gateway가 모든 요청의 토큰 검증을 맡는다. 상세는 [SPEC-001](../specs/SPEC-001-auth-and-gateway/spec.md), 토큰 형식은 [접근 토큰 계약](../contracts/auth/access-token.md), 브라우저 보관 방식은 [ADR-0004](../adr/0004-browser-token-storage.md)에 있다.
+auth-service가 로그인과 토큰 발급을, api-gateway가 모든 요청의 토큰 검증을 맡는다. 상세는 [SPEC-001](../specs/SPEC-001-auth-and-gateway/spec.md), 토큰 형식은 [접근 토큰 계약](../../service-contracts/auth/access-token.md), 브라우저 보관 방식은 [ADR-0004](../adr/0004-browser-token-storage.md)에 있다.
 
 - 접근 토큰: JWT(ES256), 15분. 브라우저는 메모리에만 둔다.
 - 재발급 토큰: 임의 문자열, 14일. HttpOnly·Secure·SameSite 쿠키, DB에는 해시만 저장. 재발급마다 회전하고, 이미 쓴 토큰이 다시 오면 같은 계열 전체를 폐기한다.
@@ -550,7 +550,7 @@ analysis와 search 테이블은 모두 source_id를 포함해, 나중에 같은 
 
 | 항목 | 내용 |
 | --- | --- |
-| 단계 ID | `<서비스>.<동작>` 형식(예: `normalize.transcode`, `chunk.detect`, `encoder.segments`, `event.judge`, `aggregate.inventory`, `search.parse`). 목록은 `docs/contracts/stages/`의 버전 파일이고, 라이브러리와 리포트는 목록을 읽기만 한다. |
+| 단계 ID | `<서비스>.<동작>` 형식(예: `normalize.transcode`, `chunk.detect`, `encoder.segments`, `event.judge`, `aggregate.inventory`, `search.parse`). 목록은 `service-contracts/stages/`의 버전 파일이고, 라이브러리와 리포트는 목록을 읽기만 한다. |
 | 자동 측정 | 공통 메시징 라이브러리(ai `libs/messaging`, backend `libs/common-messaging`)가 소비 핸들러마다 `<group>.queue_wait`(소비 시각 − 봉투 `producedAt`, 브로커 LogAppendTime 우선)와 `<group>.handle`을 잰다. 핸들러 안의 세부 단계는 `stage()` 블록으로 잰다. |
 | 기록 형식 `StageTiming` | timingId(`uuid5(stageId + subject + attempt)`), stageId·path, subject(sourceId·chunkId·candidateId·queryId), service·pod·attempt, startedAt·endedAt·durationMs(단조 시계), queueWaitMs, count·unit, versions(taxonomy·detectorProfile·embeddingModel·modelId·promptVersion·analysisVersion), status, traceId·spanId, aiCallIds |
 | 수집 | 핸들러 하나가 끝나면 그 안의 기록을 한 메시지로 묶어 `stage.timing`에 보낸다. 실패해도 측정은 남긴다. quality-service가 timingId로 upsert하고 영상별 단계 분해, 단계별 p50·p95 추이, 프로필·모델 버전별 비교 리포트를 낸다. 로컬은 같은 라이브러리가 JSON 로그로만 남긴다. |

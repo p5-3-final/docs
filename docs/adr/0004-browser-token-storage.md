@@ -66,4 +66,4 @@ SPEC-001은 로그인 응답으로 15분짜리 접근 토큰을 본문에, 14일
 
 - [SPEC-001 회원가입·로그인과 인증된 요청](../specs/SPEC-001-auth-and-gateway/spec.md)
 - [SPEC-002 인증 화면과 앱 기본 레이아웃](../specs/SPEC-002-frontend-auth-shell/spec.md)
-- [접근 토큰 계약](../contracts/auth/access-token.md)
+- [접근 토큰 계약](../../service-contracts/auth/access-token.md)

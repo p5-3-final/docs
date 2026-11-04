@@ -63,7 +63,7 @@ related: []              # ADR-NNNN, SPEC-NNN
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/<service>.yaml` | `POST /api/v1/...` 추가 | 예 |
+| `service-contracts/openapi/<service>.yaml` | `POST /api/v1/...` 추가 | 예 |
 
 ## 7. 성공 지표
 

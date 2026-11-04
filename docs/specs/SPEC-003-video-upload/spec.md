@@ -141,9 +141,9 @@ related: [SPEC-001, ADR-0002, ADR-0005]
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/media-service.yaml` | 신규: 업로드 자리 발급, 업로드 완료, 목록, 상세, 삭제 (`/api/v1/media/videos/**`) | 해당 없음 (신규) |
-| `docs/contracts/asyncapi/media-service.yaml` | 신규: `video.uploaded`, `video.deleted` 발행 | 해당 없음 (신규) |
-| `docs/contracts/events/video.uploaded.schema.json`, `video.deleted.schema.json` | 신규: 이벤트 payload JSON Schema | 해당 없음 (신규) |
+| `service-contracts/openapi/media-service.yaml` | 신규: 업로드 자리 발급, 업로드 완료, 목록, 상세, 삭제 (`/api/v1/media/videos/**`) | 해당 없음 (신규) |
+| `service-contracts/asyncapi/media-service.yaml` | 신규: `video.uploaded`, `video.deleted` 발행 | 해당 없음 (신규) |
+| `service-contracts/events/video.uploaded.schema.json`, `video.deleted.schema.json` | 신규: 이벤트 payload JSON Schema | 해당 없음 (신규) |
 
 ## 7. 성공 지표
 
