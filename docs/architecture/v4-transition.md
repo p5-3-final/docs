@@ -58,7 +58,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 | A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로와 manifest SHA-256을 가리키고, 파일 체크섬은 manifest에서 읽는다. 프로필의 모델 ID·차원은 기대값으로 두고 manifest와 다르면 기동에 실패한다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 완료 | ai #27, docs #78 |
 | A-2 | taskType을 Prompt Registry 등록만으로 추가: 출력 검증 실패 시 대체 결과(`output.py` `_FALLBACKS`)와 mock Adapter 출력을 taskType 코드에서 떼어 낸다. 프롬프트·프로필 전달 방식은 7절 결정 4 | ⑦ | 완료 | ai #28, docs #81 |
 | A-3 | 결과에 분류 체계 버전 기록: `/v1/analyze` 응답과 호출 로그에 `taxonomy_version` | ① | 완료 | ai #29, docs #83 |
-| A-4 | `libs/messaging` 처리 시간 측정: 큐 대기·핸들러 시간 자동 측정, `stage()` 블록, `stage.timing` 발행, 발행 시 `producedAt`. normalize에 `normalize.probe`·`transcode`·`hls`·`store` 블록([SPEC-013](../specs/SPEC-013-stage-timing/spec.md)) | ⑩ | 진행 | |
+| A-4 | `libs/messaging` 처리 시간 측정: 큐 대기·핸들러 시간 자동 측정, `stage()` 블록, `stage.timing` 발행, 발행 시 `producedAt`. normalize에 `normalize.probe`·`transcode`·`hls`·`store` 블록([SPEC-013](../specs/SPEC-013-stage-timing/spec.md)) | ⑩ | 완료 | ai #30, docs #85 |
 | A-5 | `predictor` Adapter(ONNX 등 CPU 실행). 새 의존성이라 실제 예측 모델이 생길 때 한다. | ⑦ | 보류 | |
 
 바꿀 필요 없는 것: `video.uploaded`·`video.deleted`의 새 필드는 이벤트 모델이 모르는 필드를 무시해 그대로 받는다. ai-gateway가 지우는 모델 원문은 보존 등급 (a)라 삭제 동작도 같다.
