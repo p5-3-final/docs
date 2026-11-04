@@ -9,6 +9,8 @@ related: [ADR-0008, ADR-0006, SPEC-009, SPEC-011]
 
 # ADR-0010 v3 구조를 유지하고 평가·상태 변화·예측을 받칠 확장 자리(v4)를 더한다
 
+> ⑦의 Prompt Registry 원본 위치와 ①의 클래스 대응표는 [ADR-0012](0012-prompt-registry-source.md)로 바뀌었다.
+
 ## 맥락
 
 [ADR-0008](0008-industrial-safety-v3.md)이 산업안전 v3 구조(19개 배포 단위, 검색·이벤트 두 경로)를 정했다. 이후 팀이 단계 목표를 정했다.

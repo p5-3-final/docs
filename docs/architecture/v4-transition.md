@@ -44,6 +44,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
+| A-0 | Prompt Registry 원본을 ai 레포 `services/ai-gateway/registry/`로 이전([ADR-0012](../adr/0012-prompt-registry-source.md)): 프롬프트 이동, 분류 체계 사본·동기화 스크립트·CI 검사, 빌드·테스트의 docs 의존 제거, 이전 뒤 `docs/contracts/prompts/` 삭제 | ⑦ | 진행 | |
 | A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로를 가리키고 체크섬·차원을 manifest에서 읽는다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 대기 | |
 | A-2 | taskType을 Prompt Registry 등록만으로 추가: 출력 검증 실패 시 대체 결과(`output.py` `_FALLBACKS`)와 mock Adapter 출력을 taskType 코드에서 떼어 낸다. 프롬프트·프로필 전달 방식은 7절 결정 4 | ⑦ | 대기 | |
 | A-3 | 결과에 분류 체계 버전 기록: `/v1/analyze` 응답과 호출 로그에 `taxonomy_version` | ① | 대기 | |
@@ -95,3 +96,4 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 | 5 | pipeline-service도 쓰는 `common-messaging` 변경(B-5, F-4)을 이 작업 공간에서 할지 | 진행 중인 다른 담당자 코드가 머지된 뒤 이 작업 공간에서 한다(그때까지 보류). |
 | 6 | 개발 단계에서 계약의 이전 버전을 남길지 | 남기지 않는다. 분류 체계는 v2로 바로 옮긴다(2026-11-04). |
 | 7 | 외부 데이터셋 라벨 대응표(ADR-0010 ①)를 둘지 | 두지 않는다. 팀이 정의한 데이터셋을 이 분류 체계의 클래스 이름으로 라벨링한다(2026-11-04). |
+| 8 | Prompt Registry 원본 위치 | ai 레포. 분류 체계만 docs 원본의 사본(ADR-0012) |
