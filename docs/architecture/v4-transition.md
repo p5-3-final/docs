@@ -17,13 +17,13 @@ updated: 2026-11-04
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
-| D-1 | ADR: v4 채택 1건([ADR-0010](../adr/0010-v4-evaluation-readiness.md), ①~⑦·⑨·⑩)과 파생 데이터 보존 등급 1건(⑧) | 전체 | 진행 | |
+| D-1 | ADR: v4 채택 1건([ADR-0010](../adr/0010-v4-evaluation-readiness.md), ①~⑦·⑨·⑩)과 파생 데이터 보존 등급 1건([ADR-0011](../adr/0011-derived-data-retention.md), ⑧) | 전체 | 완료 | #65, #66 |
 | D-2 | `overview.md` v4 반영: 새 토픽 `stage.timing`·`event.candidate.vector`, `chunk.manifest`·`source.completed`·`video.uploaded`·`video.deleted` 확장, AI Gateway 확장점(taskType 등록, `predictor` Adapter, `state_compare`·`risk_forecast`), 이벤트 유형 8종, Quality 확장, 보존 등급. 모델 원문은 지금처럼 호출 로그 DB에 둔다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md)). | 전체 | 대기 | |
 | D-3 | `service-catalog.md` 갱신: 토픽 발행·구독, Quality 역할 | 전체 | 대기 | |
 | D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 클래스 대응표 형식, 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`) | ① | 대기 | |
 | D-5 | 모델 산출물 규약: `models/<종류>/<버전>/manifest.json` 스키마(체크섬·클래스·차원·학습 출처) | ② | 대기 | |
 | D-6 | 처리 단계 계약: 단계 ID 목록(`contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가) | ⑩ | 대기 | |
-| D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급 | ④⑧ | 대기 | |
+| D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 대기 | |
 
 ## 2. backend 구조 정리 (동작 불변 리팩터링)
 
@@ -57,7 +57,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
 | F-1 | media 작업 세션: `work_session` 테이블·API, `video.uploaded`에 `sessionId`·`role` | ④ | 대기 | |
-| F-2 | media 보존 등급: 영상별 학습용 보존 동의 저장, `video.deleted`에 등급 | ⑧ | 대기 | |
+| F-2 | media 보존 등급(ADR-0011): 영상별 동의·계정 기본값 저장, 삭제 영상 최소 기록(1년), 보존 키 계산, `video.deleted`에 등급·보존 키, 동의 철회 이벤트 | ⑧ | 대기 | |
 | F-3 | media 외부 데이터셋 가져오기: Quality의 매니페스트 대량 등록 경로, 데이터셋 영상은 삭제 전파 제외 | ⑨ | 대기 | |
 | F-4 | `common-messaging` 처리 시간 측정: 발행 시 `producedAt`, 공통 소비 래퍼로 큐 대기·처리 시간, `stage.timing` 발행. media `media.upload` 단계. 7절 결정 5 | ⑩ | 보류 | |
 | F-5 | api-gateway Quality 라우트와 `OPERATOR` 제한(Quality를 만들 때) | ⑨ | 보류 | |

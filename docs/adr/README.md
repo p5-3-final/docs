@@ -14,3 +14,4 @@
 | [ADR-0008](0008-industrial-safety-v3.md) | 산업안전 v3 구조(19개 배포 단위)를 채택하고 모델·플랫폼을 설정으로 교체할 수 있게 한다 | Accepted | 2026-11-03 |
 | [ADR-0009](0009-pipeline-dispatch-boundary.md) | 영상 처리 책임과 계획·배정·추론 경계를 분리한다 | Accepted | 2026-11-03 |
 | [ADR-0010](0010-v4-evaluation-readiness.md) | v3 구조를 유지하고 평가·상태 변화·예측을 받칠 확장 자리(v4)를 더한다 | Accepted | 2026-11-04 |
+| [ADR-0011](0011-derived-data-retention.md) | 영상 삭제 시 비식별 파생 데이터는 동의를 받아 1년 동안 학습용으로 보존한다 | Accepted | 2026-11-04 |
