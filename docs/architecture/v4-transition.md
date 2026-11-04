@@ -41,10 +41,10 @@ v4 기능을 넣기 전에 한다. 옮길 파일이 적을 때 정리해야 비�
 
 | ID | 작업 | 상태 | PR |
 | --- | --- | --- | --- |
-| B-1 | 패키지 규칙 변경: 최상위를 기능으로 나누고 그 안에 `api`·`application`·`domain`·`infra`를 둔다. 기능끼리는 `application`을 통해서만 부른다(ArchUnit). backend `AGENTS.md`와 아키텍처 테스트 갱신. 적용 범위는 7절 결정 1 | 대기 | |
-| B-2 | media-service를 기능 패키지로 재배치: `video`(업로드·완료·조회·삭제), `normalization`, `playback`, `shared`. Kafka 소비자(`NormalizationEventListener` 등)를 `api`에서 `infra/messaging`으로 옮긴다. | 대기 | |
-| B-3 | auth-service를 기능 패키지로 재배치: `account`(가입·내 정보), `session`(로그인·재발급·로그아웃·감사), `token`(JWT·JWKS·알림 연결 티켓) | 대기 | |
-| B-4 | 중복 공통화: 사용자 헤더 읽기(auth `UserIdHeader`, media `UserHeaders`), `TimeConfig`, 오류 응답 작성(gateway `ProblemResponseWriter`)을 `libs/common-web`로 모은다. | 대기 | |
+| B-1 | 패키지 규칙 변경: 최상위를 기능으로 나누고 그 안에 `api`·`application`·`domain`·`infra`를 둔다. 기능끼리는 `application`을 통해서만 부른다(ArchUnit). backend `AGENTS.md`와 아키텍처 테스트 갱신. 적용 범위는 7절 결정 1 | 완료 | backend #43 |
+| B-2 | media-service를 기능 패키지로 재배치: `video`(업로드·완료·조회·삭제), `normalization`, `playback`, `shared`. Kafka 소비자(`NormalizationEventListener` 등)를 `api`에서 `infra/messaging`으로 옮긴다. | 완료 | backend #43 |
+| B-3 | auth-service를 기능 패키지로 재배치: `account`(가입·내 정보), `session`(로그인·재발급·로그아웃·감사), `token`(JWT·JWKS·알림 연결 티켓) | 완료 | backend #44 |
+| B-4 | 중복 공통화: 사용자 헤더 읽기(auth `UserIdHeader`, media `UserHeaders`)와 `TimeConfig`를 `libs/common-web`(`UserHeaders`, `ClockAutoConfiguration`)으로 모은다. gateway `ProblemResponseWriter`는 WebFlux라 서블릿용 `common-web`에 넣지 않고 그대로 둔다(겹치는 부분은 `code` 필드 몇 줄). | 완료 | backend #45 |
 | B-5 | 이벤트 봉투를 `common-messaging`이 채우게 바꾼다. 서비스는 payload만 정의한다(4절 F-4의 `producedAt` 선행 작업). 7절 결정 5 | 보류 | |
 | B-6 | (선택) docs JSON Schema에서 이벤트 record 생성. 새 빌드 도구라 7절 결정 3 | 보류 | |
 
