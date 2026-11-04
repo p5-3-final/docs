@@ -21,7 +21,7 @@ updated: 2026-11-04
 | D-2 | `overview.md` v4 반영: 새 토픽 `stage.timing`·`event.candidate.vector`, `chunk.manifest`·`source.completed`·`video.uploaded`·`video.deleted` 확장, AI Gateway 확장점(taskType 등록, `predictor` Adapter, `state_compare`·`risk_forecast`), 이벤트 유형 8종, Quality 확장, 보존 등급. 모델 원문은 지금처럼 호출 로그 DB에 둔다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md)). | 전체 | 완료 | #68 |
 | D-3 | `service-catalog.md` 갱신: 토픽 발행·구독, Quality 역할 | 전체 | 완료 | #68 |
 | D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`). v1과 클래스 대응표는 지우고 `event_judge`를 v2로 옮긴다(7절 결정 6·7) | ① | 완료 | #69, #70 |
-| D-5 | 모델 산출물 규약: `models/<종류>/<버전>/manifest.json` 스키마(체크섬·클래스·차원·학습 출처) | ② | 대기 | |
+| D-5 | 모델 산출물 규약: `models/<종류>/<버전>/manifest.json` 스키마(`service-contracts/models/manifest.schema.json`, 파일 체크섬·크기, 차원·클래스, 학습 출처, 라이선스). SPEC-011 R-15·R-16·R-18 갱신, 로컬 업로드 스크립트가 manifest를 올림 | ② | 진행 | |
 | D-6 | 처리 단계 계약: 단계 ID 목록(`contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가) | ⑩ | 대기 | |
 | D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 대기 | |
 
@@ -55,7 +55,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
 | A-0 | Prompt Registry 원본을 ai 레포 `services/ai-gateway/registry/`로 이전([ADR-0012](../adr/0012-prompt-registry-source.md)): 프롬프트 이동, 분류 체계는 잠금 파일 버전에서 받음(C-2), 이전 뒤 `service-contracts/prompts/` 삭제 | ⑦ | 완료 | ai #25, docs #74 |
-| A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로를 가리키고 체크섬·차원을 manifest에서 읽는다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 대기 | |
+| A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로와 manifest SHA-256을 가리키고, 파일 체크섬은 manifest에서 읽는다. 프로필의 모델 ID·차원은 기대값으로 두고 manifest와 다르면 기동에 실패한다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 대기 | |
 | A-2 | taskType을 Prompt Registry 등록만으로 추가: 출력 검증 실패 시 대체 결과(`output.py` `_FALLBACKS`)와 mock Adapter 출력을 taskType 코드에서 떼어 낸다. 프롬프트·프로필 전달 방식은 7절 결정 4 | ⑦ | 대기 | |
 | A-3 | 결과에 분류 체계 버전 기록: `/v1/analyze` 응답과 호출 로그에 `taxonomy_version` | ① | 대기 | |
 | A-4 | `libs/messaging` 처리 시간 측정: 큐 대기·핸들러 시간 자동 측정, `stage()` 블록, `stage.timing` 발행, 발행 시 `producedAt`. normalize에 `normalize.probe`·`transcode`·`hls`·`store` 블록 | ⑩ | 대기 | |

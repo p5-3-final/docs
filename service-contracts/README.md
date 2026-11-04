@@ -3,7 +3,7 @@
 레포 경계를 넘는 인터페이스의 **원본(single source of truth)**이다. 규칙은 [`.claude/rules/contracts.md`](../.claude/rules/contracts.md)에 있다.
 
 ```text
-contracts/
+service-contracts/
 ├── openapi/
 │   ├── _common.yaml          # 공통 스키마 (ProblemDetail, 페이지네이션)
 │   └── <service>.yaml        # 서비스별 REST 계약 (OpenAPI 3.1)
@@ -17,10 +17,12 @@ contracts/
 │   └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
 │       ├── taxonomy.schema.json          # 이벤트 유형 8종 + other, severity, 클래스 이름 형식
 │       └── detector-profile.schema.json  # 탐지 프로필(탐지기 manifest·클래스·supported_events) 형식
+├── models/
+│   └── manifest.schema.json  # 모델 산출물 manifest(파일 체크섬·차원·클래스·출처·라이선스) 형식
 └── VERSION                   # 계약 묶음 버전(SemVer, ADR-0013)
 ```
 
-분류 체계는 버전 폴더(`taxonomy/v2/`)로 두고 계약은 쓸 버전을 경로로 가리킨다. 개발 단계라 이전 버전은 남기지 않고 새 버전으로 바로 옮긴다. 탐지 프로필의 내용은 AI 담당자가 채우고, 여기서는 형식만 정한다([ADR-0010](../docs/adr/0010-v4-evaluation-readiness.md) ①). 라벨은 팀이 정의한 데이터셋에서 이 분류 체계의 클래스 이름으로 바로 달기 때문에 외부 데이터셋 라벨 대응표는 두지 않는다.
+분류 체계는 버전 폴더(`taxonomy/v2/`)로 두고 계약은 쓸 버전을 경로로 가리킨다. 개발 단계라 이전 버전은 남기지 않고 새 버전으로 바로 옮긴다. 탐지 프로필의 내용은 AI 담당자가 채우고, 여기서는 형식만 정한다([ADR-0010](../docs/adr/0010-v4-evaluation-readiness.md) ①). 모델 가중치는 모델 저장소 `models/<종류>/<버전>/`에 `manifest.json`과 함께 두고, 프로필은 manifest 경로와 manifest의 SHA-256을 가리킨다([ADR-0010](../docs/adr/0010-v4-evaluation-readiness.md) ②). 라벨은 팀이 정의한 데이터셋에서 이 분류 체계의 클래스 이름으로 바로 달기 때문에 외부 데이터셋 라벨 대응표는 두지 않는다.
 
 ## 버전과 릴리스
 
