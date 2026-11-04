@@ -50,7 +50,7 @@ flowchart LR
 | 모델 가중치 (인코더·탐지기·파인튜닝·예측 모델) | 레포 밖(공개 가중치, 학습 작업) | AI 담당자가 업로드 | 모델 버킷 `models/<종류>/<버전>/` + `manifest.json`(파일별 SHA-256·크기, 모델 ID, 차원·클래스, 학습 출처, 라이선스) | 프로필이 manifest 경로와 manifest SHA-256을 가리킨다. 받은 뒤 파일 체크섬 확인 | ai-gateway, frame-encoder, chunk-processor, grounding-worker | 예정(ADR-0010 ②, A-1) |
 | ↳ 현재 방식 | 위와 같음 | `local/scripts/upload-models.sh` | 로컬 `vlm-models` 버킷 `open_clip/MobileCLIP2-S0/dfndr2b/open_clip_model.safetensors` | 프로필에 가중치 키와 SHA-256을 직접 적는다. 캐시 `/var/cache/vlm-models/<sha256>/` | ai-gateway | 로컬 |
 | Prompt Registry 묶음 (프롬프트, 입력·출력 스키마, 질의 사전, 분류 체계) | ai 레포 `services/ai-gateway/registry/`, 분류 체계는 잠금 파일 버전의 계약 묶음 | ai CI가 main 머지 시 묶음 생성 | 저장소 `registry/<버전>/` + manifest(파일별 체크섬) | 운영 설정(gitops)이 묶음 버전을 가리킨다. 결과에 프롬프트 버전 ID(내용 해시)와 묶음 버전 기록 | ai-gateway | 예정(ADR-0012, A-0·A-2) |
-| ↳ 현재 방식 | docs `docs/contracts/prompts/`·`taxonomy/` | ai CI·로컬 빌드가 docs main을 이미지에 복사 | 이미지 `/app/contracts` | 프롬프트 버전 ID만 기록 | ai-gateway | 구현(이전 중) |
+| ↳ 현재 방식 | 위와 같음 | ai CI는 잠금 버전, 로컬은 작업 공간의 계약에서 분류 체계를 가져와 프롬프트와 함께 이미지에 넣음 | 이미지 `/app/registry` | 프롬프트 버전 ID만 기록 | ai-gateway | 구현 |
 | ai-gateway 프로필 (taskType별 Adapter·모델·상한, 인코더, 허용 경로·호출자) | ai 레포 `services/ai-gateway/profiles/` | Prompt Registry 묶음과 함께 | 묶음 안 | 묶음 버전 | ai-gateway | 예정(A-2). 지금은 이미지 `/app/profiles`에 넣고 `AI_GATEWAY_PROFILE_PATH`로 고른다 |
 | 탐지 프로필 (탐지기 manifest·클래스·`supported_events`) | 형식은 docs `taxonomy/v2/detector-profile.schema.json`, 내용은 AI 담당자 | 사용하는 서비스 spec에서 정함 | 미정 | 프로필 ID·버전, manifest SHA-256 | chunk-processor, grounding-worker | 예정 |
 
