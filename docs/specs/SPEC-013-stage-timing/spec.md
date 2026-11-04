@@ -1,7 +1,7 @@
 ---
 id: SPEC-013
 title: 처리 단계 측정
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-04

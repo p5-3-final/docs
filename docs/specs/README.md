@@ -15,6 +15,6 @@
 | [SPEC-009](SPEC-009-ai-gateway-analyze/spec.md) | ai-gateway 분석 호출 | Implementing | ai, docs | | 2026-11-03 |
 | [SPEC-010](SPEC-010-chunk-dispatch/spec.md) | Pipeline 공정 배정과 실행 슬롯·요청 발행 | Approved | backend, docs | backend 담당자 | 2026-11-03 |
 | [SPEC-011](SPEC-011-ai-gateway-embed/spec.md) | ai-gateway 벡터 생성 | Implementing | ai, docs | | 2026-11-03 |
-| [SPEC-013](SPEC-013-stage-timing/spec.md) | 처리 단계 측정 | Approved | ai, docs | | 2026-11-04 |
+| [SPEC-013](SPEC-013-stage-timing/spec.md) | 처리 단계 측정 | Implementing | ai, docs | | 2026-11-04 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
