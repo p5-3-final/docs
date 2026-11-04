@@ -22,7 +22,7 @@ updated: 2026-11-04
 | D-3 | `service-catalog.md` 갱신: 토픽 발행·구독, Quality 역할 | 전체 | 완료 | #68 |
 | D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`). v1과 클래스 대응표는 지우고 `event_judge`를 v2로 옮긴다(7절 결정 6·7) | ① | 완료 | #69, #70 |
 | D-5 | 모델 산출물 규약: `models/<종류>/<버전>/manifest.json` 스키마(`service-contracts/models/manifest.schema.json`, 파일 체크섬·크기, 차원·클래스, 학습 출처, 라이선스). SPEC-011 R-15·R-16·R-18 갱신, 로컬 업로드 스크립트가 manifest를 올림 | ② | 완료 | #78 |
-| D-6 | 처리 단계 계약: 단계 ID 목록(`contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가) | ⑩ | 대기 | |
+| D-6 | 처리 단계 계약: 단계 ID 목록(`service-contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가). 요구사항은 [SPEC-013](../specs/SPEC-013-stage-timing/spec.md) | ⑩ | 완료 | #85 |
 | D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 대기 | |
 
 ## 1-1. 서비스 간 계약 배포 ([ADR-0013](../adr/0013-service-contracts-release.md))
@@ -58,7 +58,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 | A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로와 manifest SHA-256을 가리키고, 파일 체크섬은 manifest에서 읽는다. 프로필의 모델 ID·차원은 기대값으로 두고 manifest와 다르면 기동에 실패한다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 완료 | ai #27, docs #78 |
 | A-2 | taskType을 Prompt Registry 등록만으로 추가: 출력 검증 실패 시 대체 결과(`output.py` `_FALLBACKS`)와 mock Adapter 출력을 taskType 코드에서 떼어 낸다. 프롬프트·프로필 전달 방식은 7절 결정 4 | ⑦ | 완료 | ai #28, docs #81 |
 | A-3 | 결과에 분류 체계 버전 기록: `/v1/analyze` 응답과 호출 로그에 `taxonomy_version` | ① | 완료 | ai #29, docs #83 |
-| A-4 | `libs/messaging` 처리 시간 측정: 큐 대기·핸들러 시간 자동 측정, `stage()` 블록, `stage.timing` 발행, 발행 시 `producedAt`. normalize에 `normalize.probe`·`transcode`·`hls`·`store` 블록 | ⑩ | 대기 | |
+| A-4 | `libs/messaging` 처리 시간 측정: 큐 대기·핸들러 시간 자동 측정, `stage()` 블록, `stage.timing` 발행, 발행 시 `producedAt`. normalize에 `normalize.probe`·`transcode`·`hls`·`store` 블록([SPEC-013](../specs/SPEC-013-stage-timing/spec.md)) | ⑩ | 진행 | |
 | A-5 | `predictor` Adapter(ONNX 등 CPU 실행). 새 의존성이라 실제 예측 모델이 생길 때 한다. | ⑦ | 보류 | |
 
 바꿀 필요 없는 것: `video.uploaded`·`video.deleted`의 새 필드는 이벤트 모델이 모르는 필드를 무시해 그대로 받는다. ai-gateway가 지우는 모델 원문은 보존 등급 (a)라 삭제 동작도 같다.
@@ -93,7 +93,7 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 | 작업 | 재개 조건 |
 | --- | --- |
 | SPEC-012 ai-gateway 질의 해석(초안 작성 중) | D-4 이후. 사전에 새 유형 2종 표현 추가, 응답에 분류 체계 버전 |
-| SPEC-013 결과 캐시·예산·토큰 버킷·단계 상향 | SPEC-012 이후 |
+| SPEC-014 결과 캐시·예산·토큰 버킷·단계 상향(SPEC-013 번호는 처리 단계 측정에 썼다) | SPEC-012 이후 |
 
 ## 7. 결정할 것
 

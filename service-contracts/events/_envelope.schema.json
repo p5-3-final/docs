@@ -34,6 +34,11 @@
       "type": "string",
       "format": "uuid",
       "description": "영상 소유자의 사용자 ID(JWT sub). 소비자의 권한 필터 기준이다."
+    },
+    "producedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "발행 라이브러리가 브로커에 보낸 시각(UTC). 소비자가 큐 대기 시간을 재는 데 쓴다(ADR-0010 ⑩, SPEC-013 R-8). 아직 채우지 않는 생산자가 있어 필수가 아니다."
     }
   }
 }

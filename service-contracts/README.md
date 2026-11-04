@@ -17,6 +17,8 @@ service-contracts/
 │   └── <version>/            # 분류 체계 (이벤트 유형, 객체 종류, 속성, 위험도). 출력 스키마 enum의 원본
 │       ├── taxonomy.schema.json          # 이벤트 유형 8종 + other, severity, 클래스 이름 형식
 │       └── detector-profile.schema.json  # 탐지 프로필(탐지기 manifest·클래스·supported_events) 형식
+├── stages/
+│   └── <version>/            # 처리 단계 ID 목록(stages.schema.json)과 측정 기록 형식(stage-timing.schema.json)
 ├── models/
 │   └── manifest.schema.json  # 모델 산출물 manifest(파일 체크섬·차원·클래스·출처·라이선스) 형식
 └── VERSION                   # 계약 묶음 버전(SemVer, ADR-0013)
