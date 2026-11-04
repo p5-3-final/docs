@@ -25,6 +25,16 @@ updated: 2026-11-04
 | D-6 | 처리 단계 계약: 단계 ID 목록(`contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가) | ⑩ | 대기 | |
 | D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 대기 | |
 
+## 1-1. 서비스 간 계약 배포 ([ADR-0013](../adr/0013-service-contracts-release.md))
+
+| ID | 작업 | 상태 | PR |
+| --- | --- | --- | --- |
+| C-1 | docs: `VERSION`, 묶음 스크립트, PR 버전 검사·main 릴리스 워크플로, 첫 릴리스 `service-contracts-v1.0.0` | 진행 | |
+| C-2 | ai: `service-contracts.lock`·받기 스크립트, CI가 잠금 버전 사용(A-0과 함께) | 대기 | |
+| C-3 | frontend: 잠금 파일과 CI 전환 | 대기 | |
+| C-4 | backend: 잠금 파일과 CI 전환(공유 CI 파일만, 서비스 코드는 그대로) | 대기 | |
+| C-5 | docs: `docs/contracts/` → 루트 `service-contracts/` 이동, 링크·규칙 파일·각 레포 로컬 기본 경로 갱신 | 보류 | |
+
 ## 2. backend 구조 정리 (동작 불변 리팩터링)
 
 v4 기능을 넣기 전에 한다. 옮길 파일이 적을 때 정리해야 비용이 작다.
@@ -44,7 +54,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
-| A-0 | Prompt Registry 원본을 ai 레포 `services/ai-gateway/registry/`로 이전([ADR-0012](../adr/0012-prompt-registry-source.md)): 프롬프트 이동, 분류 체계 사본·동기화 스크립트·CI 검사, 빌드·테스트의 docs 의존 제거, 이전 뒤 `docs/contracts/prompts/` 삭제 | ⑦ | 진행 | |
+| A-0 | Prompt Registry 원본을 ai 레포 `services/ai-gateway/registry/`로 이전([ADR-0012](../adr/0012-prompt-registry-source.md)): 프롬프트 이동, 분류 체계는 잠금 파일 버전에서 받음(C-2), 이전 뒤 `docs/contracts/prompts/` 삭제 | ⑦ | 진행 | |
 | A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로를 가리키고 체크섬·차원을 manifest에서 읽는다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 대기 | |
 | A-2 | taskType을 Prompt Registry 등록만으로 추가: 출력 검증 실패 시 대체 결과(`output.py` `_FALLBACKS`)와 mock Adapter 출력을 taskType 코드에서 떼어 낸다. 프롬프트·프로필 전달 방식은 7절 결정 4 | ⑦ | 대기 | |
 | A-3 | 결과에 분류 체계 버전 기록: `/v1/analyze` 응답과 호출 로그에 `taxonomy_version` | ① | 대기 | |
@@ -96,4 +106,5 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 | 5 | pipeline-service도 쓰는 `common-messaging` 변경(B-5, F-4)을 이 작업 공간에서 할지 | 진행 중인 다른 담당자 코드가 머지된 뒤 이 작업 공간에서 한다(그때까지 보류). |
 | 6 | 개발 단계에서 계약의 이전 버전을 남길지 | 남기지 않는다. 분류 체계는 v2로 바로 옮긴다(2026-11-04). |
 | 7 | 외부 데이터셋 라벨 대응표(ADR-0010 ①)를 둘지 | 두지 않는다. 팀이 정의한 데이터셋을 이 분류 체계의 클래스 이름으로 라벨링한다(2026-11-04). |
-| 8 | Prompt Registry 원본 위치 | ai 레포. 분류 체계만 docs 원본의 사본(ADR-0012) |
+| 8 | Prompt Registry 원본 위치 | ai 레포(ADR-0012). 분류 체계는 잠금 파일 버전에서 받는다(ADR-0013) |
+| 9 | 서비스 간 계약 관리 방식과 위치 | 버전 릴리스 + 잠금 파일, 폴더는 루트 `service-contracts/`(ADR-0013). 이번에는 C-1~C-4까지 하고 C-5는 따로 한다. |

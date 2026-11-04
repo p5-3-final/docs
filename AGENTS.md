@@ -31,6 +31,7 @@ lychee --offline "docs/**/*.md" "*.md"                 # 내부 링크
 npx @redocly/cli lint docs/contracts/openapi/*.yaml     # 계약을 바꿨을 때
 oasdiff breaking <main의 계약> <바뀐 계약> --fail-on ERR  # 계약을 바꿨을 때
 shellcheck scripts/*.sh                                # 스크립트를 바꿨을 때
+scripts/check-service-contracts-version.sh origin/main # 계약을 바꿨을 때(VERSION을 올렸는지)
 ./scripts/sync-agent-config.sh --check                 # .claude/rules·skills를 바꿨을 때
 ```
 
