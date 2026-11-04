@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/stages/v1/stage-timing.schema.json",
+  "title": "StageTiming",
+  "description": "처리 단계 하나의 측정 기록(ADR-0010 ⑩, SPEC-013). 같은 메시지를 같은 시도 번호로 다시 처리하면 같은 timingId가 나와 적재 쪽이 upsert로 흡수한다. 영상 내용·소유자 같은 개인정보는 싣지 않는다.",
+  "type": "object",
+  "required": ["timingId", "stageId", "path", "subject", "attempt", "startedAt", "endedAt", "durationMs", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "timingId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "uuid5(단계 경로, 측정 대상, 시도 번호, 핸들러 안 순번). 재처리해도 같은 값이다."
+    },
+    "stageId": { "$ref": "stages.schema.json#/$defs/stageId" },
+    "path": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+\\.[a-z0-9_]+(/[a-z0-9-]+\\.[a-z0-9_]+)*$",
+      "description": "바깥 단계부터 `/`로 이은 단계 경로. 예: `normalize.handle/normalize.transcode`"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "측정 대상. 소비한 이벤트의 sourceId가 기본이고, 서비스가 청크·후보·질의 ID를 더한다.",
+      "properties": {
+        "sourceId": { "type": ["string", "null"], "format": "uuid" },
+        "chunkId": { "type": ["string", "null"] },
+        "candidateId": { "type": ["string", "null"] },
+        "queryId": { "type": ["string", "null"] }
+      }
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "메시지 시도 번호(첫 시도는 1)"
+    },
+    "startedAt": { "type": "string", "format": "date-time", "description": "시작 시각(UTC)" },
+    "endedAt": { "type": "string", "format": "date-time", "description": "끝난 시각(UTC)" },
+    "durationMs": {
+      "type": "number",
+      "description": "걸린 시간(밀리초). 단계 블록은 단조 시계로 잰다. queue_wait은 다른 Pod의 시계를 비교하므로 음수일 수 있고, 그대로 남겨 지표에서 거른다."
+    },
+    "count": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "이 단계에서 처리한 개수(예: 올린 파일 수)"
+    },
+    "unit": {
+      "type": ["string", "null"],
+      "description": "count의 단위(예: files, frames)"
+    },
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "결과에 영향을 준 모델·설정 버전. 버전별 속도 비교에 쓴다.",
+      "properties": {
+        "taxonomy": { "type": "string" },
+        "detectorProfile": { "type": "string" },
+        "embeddingModel": { "type": "string" },
+        "modelId": { "type": "string" },
+        "promptVersion": { "type": "string" },
+        "analysisVersion": { "type": "string" }
+      }
+    },
+    "status": {
+      "enum": ["ok", "error"],
+      "description": "단계가 예외 없이 끝났으면 ok, 예외로 끝났으면 error"
+    },
+    "traceId": { "type": ["string", "null"], "pattern": "^[0-9a-f]{32}$" },
+    "spanId": { "type": ["string", "null"], "pattern": "^[0-9a-f]{16}$" },
+    "aiCallIds": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "description": "이 단계에서 부른 ai-gateway 호출 ID"
+    }
+  }
+}

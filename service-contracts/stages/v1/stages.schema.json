@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/stages/v1/stages.schema.json",
+  "title": "Stages v1",
+  "description": "처리 단계 ID 목록 v1(ADR-0010 ⑩, SPEC-013). 형식은 `<서비스 또는 소비 그룹>.<동작>`이다. 공통 메시징 라이브러리가 소비 그룹마다 `<group>.queue_wait`·`<group>.handle`을 자동으로 남기고, 핸들러 안의 세부 단계는 서비스가 단계 블록으로 남긴다. 새 단계는 그 단계를 만드는 기능 spec과 함께 더한다.",
+  "$defs": {
+    "stageId": {
+      "description": "처리 단계 ID",
+      "oneOf": [
+        { "const": "normalize.queue_wait", "description": "normalize 소비 그룹: 발행부터 소비까지 기다린 시간" },
+        { "const": "normalize.handle", "description": "normalize 소비 그룹: video.uploaded 핸들러 전체" },
+        { "const": "normalize.probe", "description": "원본 메타데이터 읽기(ffprobe)" },
+        { "const": "normalize.transcode", "description": "정규화 사본 만들기(재인코딩 또는 복사)" },
+        { "const": "normalize.hls", "description": "HLS 조각 만들기" },
+        { "const": "normalize.store", "description": "정규화 사본·HLS 저장소 업로드" },
+        { "const": "ai-gateway.queue_wait", "description": "ai-gateway 소비 그룹(video.deleted): 발행부터 소비까지 기다린 시간" },
+        { "const": "ai-gateway.handle", "description": "ai-gateway 소비 그룹: video.deleted 핸들러 전체" }
+      ]
+    }
+  }
+}
