@@ -7,6 +7,7 @@
 | [product/glossary.md](product/glossary.md) | 도메인 용어가 헷갈릴 때 | 누구나 |
 | [architecture/overview.md](architecture/overview.md) | 전체 구조 파악 | 아키텍처 변경 시 |
 | [architecture/service-catalog.md](architecture/service-catalog.md) | 서비스 담당자, 포트, DB 확인 | 서비스 추가·변경 시 |
+| [architecture/delivery-and-data.md](architecture/delivery-and-data.md) | 무엇을 어디에 올리고 어떻게 배포·보관·삭제하는지 확인 | 배포 흐름이나 저장 위치가 바뀔 때 |
 | [architecture/v4-transition.md](architecture/v4-transition.md) | 아키텍처 v4 전환 작업의 진행 상황 확인 | 작업을 끝낼 때마다 |
 | [specs/](specs/README.md) | 기능 구현 전 | 기능 담당자 |
 | [contracts/](contracts/README.md) | API·이벤트 연동 시 | 생산자 서비스 담당자 |

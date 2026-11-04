@@ -558,6 +558,8 @@ analysis와 search 테이블은 모두 source_id를 포함해, 나중에 같은 
 
 ## 환경
 
+배포 흐름과 데이터별 저장 위치·관리 방식은 [배포와 데이터 관리](delivery-and-data.md)에 모았다.
+
 EKS 클러스터는 하나이고, 환경은 namespace로 나눈다. 처음에는 dev만 두고, 환경은 infra·gitops 레포의 `_template` 폴더를 복사해 추가한다.
 
 | 환경 | 구성 | 배포 방식 |
