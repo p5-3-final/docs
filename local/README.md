@@ -103,12 +103,12 @@ docker compose -f local/docker-compose.yml exec postgres psql -U postgres -d ai_
 `/v1/embed`는 문장·검색용 이미지·텍스트를 벡터로 바꾼다. mock 프로필은 의미 없는 결정적 벡터를 돌려준다. 실제 인코더(MobileCLIP2-S0)와 텍스트 임베딩(Ollama `bge-m3`)을 쓰려면 아래를 한 번 한다.
 
 ```bash
-local/scripts/upload-models.sh   # Hugging Face에서 가중치(약 300MB)를 받아 sha256 확인 후 vlm-models 버킷에 올린다
+local/scripts/upload-models.sh   # Hugging Face에서 가중치(약 300MB)를 받아 sha256 확인 후 manifest와 함께 vlm-models 버킷에 올린다
 ollama pull bge-m3               # 텍스트 임베딩(한국어 포함, 1024차원)
 AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
 ```
 
-- 가중치는 이미지에 넣지 않는다. ai-gateway가 기동할 때 모델 버킷에서 받아 프로필의 sha256과 맞춰 보고, `ai-gateway-models` 볼륨에 남겨 재시작 때 다시 받지 않는다. 해시가 다르면 뜨지 않는다.
+- 가중치는 이미지에 넣지 않는다. 버킷의 `models/mobileclip2-s0/dfndr2b/`에 가중치와 `manifest.json`(파일 sha256·차원·출처)을 둔다. ai-gateway가 기동할 때 프로필이 가리키는 manifest를 받아 프로필의 sha256과 맞춰 보고, manifest에 적힌 가중치를 받아 sha256을 확인한다. 받은 파일은 `ai-gateway-models` 볼륨에 남겨 재시작 때 다시 받지 않는다. 해시가 다르면 뜨지 않는다.
 - 가중치(Apple AMLR)는 비상용 시연·학습 목적으로만 쓴다(docs overview "모델과 플랫폼 교체").
 - 검색용 이미지는 `queries/<질의 ID>/` 아래 경로만 받는다. 영상 폴더의 경로는 거부한다.
 

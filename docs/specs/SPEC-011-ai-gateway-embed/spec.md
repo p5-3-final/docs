@@ -5,8 +5,8 @@ status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-03
-updated: 2026-11-03
-related: [ADR-0008, SPEC-009]
+updated: 2026-11-04
+related: [ADR-0008, ADR-0010, SPEC-009]
 ---
 
 # SPEC-011 ai-gateway 벡터 생성
@@ -125,10 +125,10 @@ embedding-worker와 search-service로서 이벤트 설명문이나 검색 문장
 | R-12 | IF 이미지를 디코딩할 수 없으면, THEN THE ai-gateway SHALL 이미지 해석 불가 오류로 거절한다. | US-2 |
 | R-13 | IF 호출자 이름 헤더가 없거나 허용 호출자 목록에 없으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 호출자 거부 오류로 거절한다(SPEC-009 R-16과 같은 목록). | US-6 |
 | R-14 | IF 프로필에 그 taskType의 모델이 없으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 모델 미설정 오류를 반환하며, 호출 로그에는 상태 `unavailable`을 남긴다. | US-4 |
-| R-15 | WHEN 기동하면, THE ai-gateway SHALL 프로필의 인코더 모델 ID·차원·가중치 경로·가중치 해시를 검증하고, 가중치를 모델 저장소에서 내려받아 해시를 확인한 뒤 인코더를 한 번 로드한다. | US-4 |
-| R-16 | IF 가중치를 내려받을 수 없거나 해시가 프로필과 다르거나 로드에 실패하면, THEN THE ai-gateway SHALL 기동에 실패한다. | US-4 |
+| R-15 | WHEN 기동하면, THE ai-gateway SHALL 프로필의 인코더 모델 ID·차원·manifest 경로·manifest 해시를 검증하고, 모델 저장소에서 manifest와 manifest에 적힌 가중치 파일을 내려받아 각 해시를 확인한 뒤 인코더를 한 번 로드한다(ADR-0010 ②). | US-4 |
+| R-16 | IF manifest나 가중치를 내려받을 수 없거나, manifest 해시가 프로필과 다르거나, 가중치 해시가 manifest와 다르거나, manifest의 모델 종류·모델 ID·차원이 프로필과 맞지 않거나, 로드에 실패하면, THEN THE ai-gateway SHALL 기동에 실패한다. | US-4 |
 | R-17 | IF 로드한 인코더의 텍스트 쪽이나 이미지 쪽 출력 차원이 프로필 차원과 다르면, THEN THE ai-gateway SHALL 기동에 실패한다. | US-4 |
-| R-18 | WHERE 로컬 캐시에 해시가 같은 가중치가 이미 있으면, THE ai-gateway SHALL 다시 내려받지 않고 그 파일을 쓴다. | US-4 |
+| R-18 | WHERE 로컬 캐시에 해시가 같은 manifest와 manifest의 해시와 맞는 가중치가 이미 있으면, THE ai-gateway SHALL 다시 내려받지 않고 그 파일을 쓴다. | US-4 |
 | R-19 | IF 텍스트 임베딩 공급자가 돌려준 벡터의 차원이 프로필 차원과 다르거나 벡터 개수가 입력 개수와 다르면, THEN THE ai-gateway SHALL 벡터를 반환하지 않고 상태 `invalid_output`으로 기록한 뒤 공급자 오류를 반환한다. | US-3, US-4 |
 | R-20 | IF 텍스트 임베딩 공급자가 제한 시간(프로필 값) 안에 응답하지 않거나 연결할 수 없거나 일시 오류(429, 5xx)를 돌려주면, THEN THE ai-gateway SHALL 상태 `unavailable`로 기록하고 "일시적으로 사용할 수 없음" 오류를 반환한다. | US-3 |
 | R-21 | IF 텍스트 임베딩 공급자가 요청 자체를 거부하면(429 외 4xx), THEN THE ai-gateway SHALL 상태 `failed`로 기록하고 공급자 오류를 반환한다. | US-3 |
@@ -154,7 +154,7 @@ embedding-worker와 search-service로서 이벤트 설명문이나 검색 문장
 | 레포 / 서비스 | 변경 개요 | 담당 요구사항 |
 | --- | --- | --- |
 | ai / ai-gateway | `/v1/embed`, 텍스트 임베딩 Adapter, 입력 상한·경로 검사, 호출 로그 확장, 인코더 로드와 `/ready` 조건, 프로필(로컬·mock) | R-1~R-26, NFR-1~NFR-3, NFR-5, NFR-6 |
-| ai / libs | 이미지·질의 인코더 공용 인터페이스와 구현, 가중치 내려받기·해시 확인 | R-4~R-6, R-15~R-18, R-24, NFR-4 |
+| ai / libs | 이미지·질의 인코더 공용 인터페이스와 구현, manifest·가중치 내려받기·해시 확인 | R-4~R-6, R-15~R-18, R-24, NFR-4 |
 | docs | ai-gateway API 계약에 `/v1/embed` 추가, 로컬 compose에 가중치 올리기 절차와 Ollama `bge-m3` 안내 | — |
 | gitops·infra | (이후) 모델 저장소 경로 읽기 권한, 가중치 캐시용 디스크. 사용자 지시 시 진행한다. | — |
 
@@ -163,6 +163,7 @@ embedding-worker와 search-service로서 이벤트 설명문이나 검색 문장
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
 | `service-contracts/openapi/ai-gateway.yaml` | `POST /v1/embed` 추가(요청: taskType, 문장 목록 또는 이미지 경로 목록 / 응답: 호출 ID, 모델 ID, 차원, 벡터 목록). 오류 코드 추가: 입력 개수 초과, 이미지 해석 불가, 모델 미설정. 버전 0.1.0 → 0.2.0 | 예(경로·코드 추가) |
+| `service-contracts/models/manifest.schema.json` | 모델 산출물 manifest 형식 추가(ADR-0010 ②, v4 전환 D-5). 인코더 가중치는 이 manifest로 받는다(R-15~R-18). 계약 묶음 2.1.0 | 예(파일 추가) |
 | `docs/architecture/overview.md` | 변경 없음. "AI Gateway"·"모델과 플랫폼 교체"에 적힌 내용을 따른다. | 해당 없음 |
 
 ## 7. 성공 지표
