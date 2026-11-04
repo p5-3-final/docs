@@ -33,7 +33,7 @@ updated: 2026-11-04
 | C-2 | ai: `service-contracts.lock`·받기 스크립트, CI가 잠금 버전 사용(A-0과 함께) | 완료 | ai #25 |
 | C-3 | frontend: 잠금 파일과 CI 전환 | 완료 | frontend #32 |
 | C-4 | backend: 잠금 파일과 CI 전환(공유 CI 파일만, 서비스 코드는 그대로) | 완료 | backend #41 |
-| C-5 | docs: `docs/contracts/` → 루트 `service-contracts/` 이동, 링크·규칙 파일·각 레포 로컬 기본 경로 갱신 | 진행 | |
+| C-5 | docs: `docs/contracts/` → 루트 `service-contracts/` 이동, 링크·규칙 파일·각 레포 로컬 기본 경로 갱신 | 완료 | docs #75, ai #26, frontend #33, backend #42 |
 
 ## 2. backend 구조 정리 (동작 불변 리팩터링)
 
@@ -107,4 +107,4 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 | 6 | 개발 단계에서 계약의 이전 버전을 남길지 | 남기지 않는다. 분류 체계는 v2로 바로 옮긴다(2026-11-04). |
 | 7 | 외부 데이터셋 라벨 대응표(ADR-0010 ①)를 둘지 | 두지 않는다. 팀이 정의한 데이터셋을 이 분류 체계의 클래스 이름으로 라벨링한다(2026-11-04). |
 | 8 | Prompt Registry 원본 위치 | ai 레포(ADR-0012). 분류 체계는 잠금 파일 버전에서 받는다(ADR-0013) |
-| 9 | 서비스 간 계약 관리 방식과 위치 | 버전 릴리스 + 잠금 파일, 폴더는 루트 `service-contracts/`(ADR-0013). 이번에는 C-1~C-4까지 하고 C-5는 따로 한다. |
+| 9 | 서비스 간 계약 관리 방식과 위치 | 버전 릴리스 + 잠금 파일, 폴더는 루트 `service-contracts/`(ADR-0013). C-1~C-4 다음에 C-5로 폴더를 옮겼다. |
