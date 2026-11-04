@@ -162,7 +162,7 @@ embedding-worker와 search-service로서 이벤트 설명문이나 검색 문장
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/ai-gateway.yaml` | `POST /v1/embed` 추가(요청: taskType, 문장 목록 또는 이미지 경로 목록 / 응답: 호출 ID, 모델 ID, 차원, 벡터 목록). 오류 코드 추가: 입력 개수 초과, 이미지 해석 불가, 모델 미설정. 버전 0.1.0 → 0.2.0 | 예(경로·코드 추가) |
+| `service-contracts/openapi/ai-gateway.yaml` | `POST /v1/embed` 추가(요청: taskType, 문장 목록 또는 이미지 경로 목록 / 응답: 호출 ID, 모델 ID, 차원, 벡터 목록). 오류 코드 추가: 입력 개수 초과, 이미지 해석 불가, 모델 미설정. 버전 0.1.0 → 0.2.0 | 예(경로·코드 추가) |
 | `docs/architecture/overview.md` | 변경 없음. "AI Gateway"·"모델과 플랫폼 교체"에 적힌 내용을 따른다. | 해당 없음 |
 
 ## 7. 성공 지표

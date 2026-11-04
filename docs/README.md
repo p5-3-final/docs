@@ -10,9 +10,9 @@
 | [architecture/delivery-and-data.md](architecture/delivery-and-data.md) | 무엇을 어디에 올리고 어떻게 배포·보관·삭제하는지 확인 | 배포 흐름이나 저장 위치가 바뀔 때 |
 | [architecture/v4-transition.md](architecture/v4-transition.md) | 아키텍처 v4 전환 작업의 진행 상황 확인 | 작업을 끝낼 때마다 |
 | [specs/](specs/README.md) | 기능 구현 전 | 기능 담당자 |
-| [contracts/](contracts/README.md) | API·이벤트 연동 시 | 생산자 서비스 담당자 |
+| [contracts/](../service-contracts/README.md) | API·이벤트 연동 시 | 생산자 서비스 담당자 |
 | [adr/](adr/README.md) | "왜 이렇게 했지?"가 궁금할 때 | 결정한 사람 |
-| [templates/](templates/) | 새 문서를 만들 때 | 거의 안 바뀜 |
+| [templates/](templates) | 새 문서를 만들 때 | 거의 안 바뀜 |
 
 ## SDD 산출물 흐름
 

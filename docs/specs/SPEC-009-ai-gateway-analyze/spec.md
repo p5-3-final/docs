@@ -155,10 +155,10 @@ event-analyzer 같은 호출자로서 이벤트 후보와 근거 프레임을 �
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/ai-gateway.yaml` | 새 내부 API: `POST /v1/analyze`, 오류 코드(요청 오류, 경로 거부, 호출자 거부, 일시적 사용 불가, 공급자 오류) | 예(새 파일) |
+| `service-contracts/openapi/ai-gateway.yaml` | 새 내부 API: `POST /v1/analyze`, 오류 코드(요청 오류, 경로 거부, 호출자 거부, 일시적 사용 불가, 공급자 오류) | 예(새 파일) |
 | ai 레포 `services/ai-gateway/registry/prompts/event_judge/` (처음에는 `docs/contracts/prompts/`에 두었다가 ADR-0012로 옮김) | 새 프롬프트, 입력 스키마, 출력 스키마(`VLMAnalysis`) | 예(새 파일) |
-| `docs/contracts/taxonomy/` | 새 분류 체계 v1 일부: 이벤트 유형 6종 + `other`, severity | 예(새 파일) |
-| `docs/contracts/events/video.deleted.schema.json` | 변경 없음. ai-gateway가 소비자로 추가된다. | 예 |
+| `service-contracts/taxonomy/` | 새 분류 체계 v1 일부: 이벤트 유형 6종 + `other`, severity | 예(새 파일) |
+| `service-contracts/events/video.deleted.schema.json` | 변경 없음. ai-gateway가 소비자로 추가된다. | 예 |
 | `docs/architecture/overview.md` | 호출 로그의 "원문 S3 경로"를 "원문(ai_db, 영상 삭제 시 삭제)"으로 고친다. | 해당 없음 |
 
 ## 7. 성공 지표

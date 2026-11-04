@@ -79,7 +79,7 @@ git push -u origin HEAD
 기능 개발은 SDD 순서를 따릅니다. 자세한 규칙은 [AGENTS.md](AGENTS.md)에 있습니다.
 
 1. `sdd-spec`: `docs/specs/`에 spec 작성 → PR 자체 검토·필수 검사 → 명세 확정·머지
-2. API·이벤트가 바뀌면 `docs/contracts/` 수정
+2. API·이벤트가 바뀌면 `service-contracts/` 수정
 3. 각 레포에서 `sdd-plan`: `specs/SPEC-NNN-*/plan.md`, `tasks.md` 작성
 4. `sdd-implement`: 태스크마다 테스트 먼저(Red → Green → Refactor)
 5. 요구사항별 테스트 통과, 배포 후 spec 상태를 `Done`으로 변경

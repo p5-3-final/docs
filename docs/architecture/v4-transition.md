@@ -33,7 +33,7 @@ updated: 2026-11-04
 | C-2 | ai: `service-contracts.lock`·받기 스크립트, CI가 잠금 버전 사용(A-0과 함께) | 완료 | ai #25 |
 | C-3 | frontend: 잠금 파일과 CI 전환 | 완료 | frontend #32 |
 | C-4 | backend: 잠금 파일과 CI 전환(공유 CI 파일만, 서비스 코드는 그대로) | 완료 | backend #41 |
-| C-5 | docs: `docs/contracts/` → 루트 `service-contracts/` 이동, 링크·규칙 파일·각 레포 로컬 기본 경로 갱신 | 보류 | |
+| C-5 | docs: `docs/contracts/` → 루트 `service-contracts/` 이동, 링크·규칙 파일·각 레포 로컬 기본 경로 갱신 | 진행 | |
 
 ## 2. backend 구조 정리 (동작 불변 리팩터링)
 
@@ -54,7 +54,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
-| A-0 | Prompt Registry 원본을 ai 레포 `services/ai-gateway/registry/`로 이전([ADR-0012](../adr/0012-prompt-registry-source.md)): 프롬프트 이동, 분류 체계는 잠금 파일 버전에서 받음(C-2), 이전 뒤 `docs/contracts/prompts/` 삭제 | ⑦ | 완료 | ai #25, docs #74 |
+| A-0 | Prompt Registry 원본을 ai 레포 `services/ai-gateway/registry/`로 이전([ADR-0012](../adr/0012-prompt-registry-source.md)): 프롬프트 이동, 분류 체계는 잠금 파일 버전에서 받음(C-2), 이전 뒤 `service-contracts/prompts/` 삭제 | ⑦ | 완료 | ai #25, docs #74 |
 | A-1 | 가중치 전달을 manifest 규약으로: 프로필이 manifest 경로를 가리키고 체크섬·차원을 manifest에서 읽는다. `libs/encoders`, ai-gateway 프로필, 로컬 업로드 스크립트·버킷 경로, SPEC-011 R-15·R-16·R-18 갱신. frame-encoder보다 먼저 한다. | ② | 대기 | |
 | A-2 | taskType을 Prompt Registry 등록만으로 추가: 출력 검증 실패 시 대체 결과(`output.py` `_FALLBACKS`)와 mock Adapter 출력을 taskType 코드에서 떼어 낸다. 프롬프트·프로필 전달 방식은 7절 결정 4 | ⑦ | 대기 | |
 | A-3 | 결과에 분류 체계 버전 기록: `/v1/analyze` 응답과 호출 로그에 `taxonomy_version` | ① | 대기 | |

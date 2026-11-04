@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 0.2.0
+  version: 0.2.1
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
-    taskType별 입력 변수·출력 형식의 원본은 `../prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다.
+    taskType별 입력 변수·출력 형식의 원본은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다(docs ADR-0012).
     이미지는 저장소 경로로만 넘기며, 허용 패턴에 맞는 블러 사본 경로만 받는다. (SPEC-009 R-9, R-10)
     `/v1/embed`는 질의·텍스트·이미지 벡터를 만든다. 검색용 이미지는 taskType별 허용 패턴(질의 전용 폴더)의 경로만 받는다. (SPEC-011)
 servers:
@@ -322,7 +322,7 @@ components:
             $ref: '#/components/schemas/ImageRef'
         variables:
           type: object
-          description: taskType의 입력 변수. 형식은 `../prompts/<taskType>/input.schema.json`이다. (R-2)
+          description: taskType의 입력 변수. 형식은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/input.schema.json`이다. (R-2)
     ImageRef:
       type: object
       additionalProperties: false
@@ -356,4 +356,4 @@ components:
           pattern: '^[a-z_]+@[0-9a-f]{12}$'
         output:
           type: object
-          description: 검증된 결과. 형식은 `../prompts/<taskType>/output.schema.json`이다(event_judge는 VLMAnalysis). (R-5~R-8)
+          description: 검증된 결과. 형식은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/output.schema.json`이다(event_judge는 VLMAnalysis). (R-5~R-8)

@@ -5,8 +5,7 @@
 set -euo pipefail
 
 base="${1:?base 커밋을 넘긴다}"
-# 원본을 루트 service-contracts/로 옮기면 여기만 바꾼다.
-source_dir="docs/contracts"
+source_dir="service-contracts"
 
 changed="$(git diff --name-only "${base}...HEAD" -- "${source_dir}" ":(exclude)${source_dir}/README.md")"
 if [[ -z "${changed}" ]]; then

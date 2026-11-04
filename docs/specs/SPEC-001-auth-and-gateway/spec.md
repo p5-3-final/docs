@@ -157,9 +157,9 @@ related: []
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/auth-service.yaml` | 신규: `/api/v1/auth` 아래 가입, 로그인, 재발급, 로그아웃, 내 정보, 알림 티켓. 내부 공개키 목록 경로 | 해당 없음 (신규) |
-| `docs/contracts/openapi/_common.yaml` | 게이트웨이가 붙이는 사용자 정보 헤더 정의, 게이트웨이 오류 코드 추가 | 예 (추가) |
-| `docs/contracts/auth/access-token.md` | 신규: 접근 토큰 클레임(`sub`, `roles`, `iss`, `aud`, `exp`, `jti`), 서명 방식, 공개키 목록 경로, 키 교체 규칙 | 해당 없음 (신규) |
+| `service-contracts/openapi/auth-service.yaml` | 신규: `/api/v1/auth` 아래 가입, 로그인, 재발급, 로그아웃, 내 정보, 알림 티켓. 내부 공개키 목록 경로 | 해당 없음 (신규) |
+| `service-contracts/openapi/_common.yaml` | 게이트웨이가 붙이는 사용자 정보 헤더 정의, 게이트웨이 오류 코드 추가 | 예 (추가) |
+| `service-contracts/auth/access-token.md` | 신규: 접근 토큰 클레임(`sub`, `roles`, `iss`, `aud`, `exp`, `jti`), 서명 방식, 공개키 목록 경로, 키 교체 규칙 | 해당 없음 (신규) |
 
 ## 7. 성공 지표
 

@@ -6,14 +6,14 @@ name: service-contracts
 on:
   pull_request:
     paths:
-      - "docs/contracts/**"
+      - "service-contracts/**"
       - "scripts/package-service-contracts.py"
       - "scripts/check-service-contracts-version.sh"
       - ".github/workflows/service-contracts.yml"
   push:
     branches: [main]
     paths:
-      - "docs/contracts/**"
+      - "service-contracts/**"
       - "scripts/package-service-contracts.py"
       - ".github/workflows/service-contracts.yml"
 
@@ -50,7 +50,7 @@ jobs:
         run: python3 scripts/package-service-contracts.py dist
       - name: publish
         run: |
-          version="$(tr -d '[:space:]' < docs/contracts/VERSION)"
+          version="$(tr -d '[:space:]' < service-contracts/VERSION)"
           tag="service-contracts-v${version}"
           # 한 번 올린 버전은 바꾸지 않는다. 계약을 바꾼 PR은 check job이 버전을 올리게 한다.
           if gh release view "${tag}" >/dev/null 2>&1; then

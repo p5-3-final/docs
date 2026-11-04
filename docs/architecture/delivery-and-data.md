@@ -65,7 +65,7 @@ flowchart LR
 
 ## 4. 빌드할 때만 쓰는 계약
 
-실행 중에는 읽지 않고 CI의 계약 테스트·코드 생성에 쓴다. 원본은 docs `docs/contracts/`(이후 루트 `service-contracts/`)이고, main에 머지되면 GitHub Release `service-contracts-v<버전>`으로 묶음이 올라간다. 각 레포 CI는 `service-contracts.lock`의 버전을 받아 체크섬을 확인한 뒤 쓴다. 로컬은 작업 공간의 원본을 바로 읽는다([ADR-0013](../adr/0013-service-contracts-release.md)). 지금 docs main을 checkout하는 CI는 잠금 파일로 옮기는 중이다.
+실행 중에는 읽지 않고 CI의 계약 테스트·코드 생성에 쓴다. 원본은 docs 레포 루트 `service-contracts/`이고, main에 머지되면 GitHub Release `service-contracts-v<버전>`으로 묶음이 올라간다. 각 레포 CI는 `service-contracts.lock`의 버전을 받아 체크섬을 확인한 뒤 쓴다. 로컬은 작업 공간의 원본을 바로 읽는다([ADR-0013](../adr/0013-service-contracts-release.md)). 지금 docs main을 checkout하는 CI는 잠금 파일로 옮기는 중이다.
 
 | 계약 | 쓰는 곳 |
 | --- | --- |

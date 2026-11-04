@@ -258,7 +258,7 @@ services:
       dockerfile: services/ai-gateway/Dockerfile
       # 프롬프트·분류 체계는 docs 계약에서 이미지로 넣는다.
       additional_contexts:
-        vlm-contracts:docs: ../docs/contracts
+        vlm-contracts:docs: ../service-contracts
     image: vlm/ai-gateway:local
     command: ["python", "-m", "ai_gateway.db.migrate"]
     environment:
