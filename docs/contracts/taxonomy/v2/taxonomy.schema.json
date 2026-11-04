@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/taxonomy/v2/taxonomy.schema.json",
   "title": "Taxonomy v2",
-  "description": "분류 체계 v2(산업안전, ADR-0010 ①). v1에 이벤트 유형 equipment_abandoned·object_moved를 더했다. v1 값은 이름과 의미가 같다. 객체 종류·속성·위험 유형은 해당 기능 spec에서 추가한다.",
+  "description": "분류 체계 v2(산업안전, ADR-0010 ①). 출력 스키마의 enum은 여기를 참조한다. v1 6종에 equipment_abandoned·object_moved를 더했다. 객체 종류·속성·위험 유형은 해당 기능 spec에서 추가한다.",
   "$defs": {
     "eventType": {
       "description": "이벤트 유형 8종과 other. fall(쓰러짐), fire_or_smoke(화재·연기), ppe_missing(보호구 미착용), object_removed(물건 제거), barrier_not_restored(방호 미복구), hazard_zone_access(위험구역 접근), equipment_abandoned(장비 방치: 장비 트랙이 사람 없이 정해진 시간 이상 정지), object_moved(안전시설 이동: 같은 클래스의 제거와 등장이 시간 창 안에서 짝지어짐), other(목록 밖)",
@@ -25,7 +25,7 @@
       "enum": ["low", "medium", "high"]
     },
     "detectableEventType": {
-      "description": "탐지기가 supported_events로 선언하거나 클래스 대응표가 가리킬 수 있는 유형. other는 목록 밖 사건을 받는 값이라 선언 대상이 아니다.",
+      "description": "탐지기가 supported_events로 선언할 수 있는 유형. other는 목록 밖 사건을 받는 값이라 선언 대상이 아니다.",
       "allOf": [
         {"$ref": "#/$defs/eventType"},
         {"not": {"const": "other"}}

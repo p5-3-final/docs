@@ -20,7 +20,7 @@ updated: 2026-11-04
 | D-1 | ADR: v4 채택 1건([ADR-0010](../adr/0010-v4-evaluation-readiness.md), ①~⑦·⑨·⑩)과 파생 데이터 보존 등급 1건([ADR-0011](../adr/0011-derived-data-retention.md), ⑧) | 전체 | 완료 | #65, #66 |
 | D-2 | `overview.md` v4 반영: 새 토픽 `stage.timing`·`event.candidate.vector`, `chunk.manifest`·`source.completed`·`video.uploaded`·`video.deleted` 확장, AI Gateway 확장점(taskType 등록, `predictor` Adapter, `state_compare`·`risk_forecast`), 이벤트 유형 8종, Quality 확장, 보존 등급. 모델 원문은 지금처럼 호출 로그 DB에 둔다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md)). | 전체 | 완료 | #68 |
 | D-3 | `service-catalog.md` 갱신: 토픽 발행·구독, Quality 역할 | 전체 | 완료 | #68 |
-| D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 클래스 대응표 형식, 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`) | ① | 완료 | #69 |
+| D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`). v1과 클래스 대응표는 지우고 `event_judge`를 v2로 옮긴다(7절 결정 6·7) | ① | 진행 | #69 |
 | D-5 | 모델 산출물 규약: `models/<종류>/<버전>/manifest.json` 스키마(체크섬·클래스·차원·학습 출처) | ② | 대기 | |
 | D-6 | 처리 단계 계약: 단계 ID 목록(`contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가) | ⑩ | 대기 | |
 | D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 대기 | |
@@ -93,3 +93,5 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 | 3 | 이벤트 계약 코드 생성(B-6)을 할지 | 미정(B-6 보류) |
 | 4 | 프롬프트·프로필을 이미지에 넣는 지금 방식을 실행 중 읽기(S3 버전 경로 또는 gitops ConfigMap)로 바꿀지 | 저장소 버전 경로에서 기동 시 받는다(ADR-0010 ⑦). |
 | 5 | pipeline-service도 쓰는 `common-messaging` 변경(B-5, F-4)을 이 작업 공간에서 할지 | 진행 중인 다른 담당자 코드가 머지된 뒤 이 작업 공간에서 한다(그때까지 보류). |
+| 6 | 개발 단계에서 계약의 이전 버전을 남길지 | 남기지 않는다. 분류 체계는 v2로 바로 옮긴다(2026-11-04). |
+| 7 | 외부 데이터셋 라벨 대응표(ADR-0010 ①)를 둘지 | 두지 않는다. 팀이 정의한 데이터셋을 이 분류 체계의 클래스 이름으로 라벨링한다(2026-11-04). |
