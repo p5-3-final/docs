@@ -8,7 +8,7 @@
   "required": ["eventType", "startSec", "endSec"],
   "properties": {
     "eventType": {
-      "$ref": "../../taxonomy/v1/taxonomy.schema.json#/$defs/eventType",
+      "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType",
       "description": "후보의 이벤트 유형"
     },
     "startSec": {

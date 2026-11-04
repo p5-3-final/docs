@@ -21,7 +21,7 @@
     "evidenceEnd"
   ],
   "properties": {
-    "eventType": {"$ref": "../../taxonomy/v1/taxonomy.schema.json#/$defs/eventType"},
+    "eventType": {"$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"},
     "eventDetected": {"type": ["boolean", "null"], "description": "null이면 판단할 수 없음"},
     "verificationStatus": {
       "type": "string",
@@ -36,7 +36,7 @@
     "riskReason": {"type": ["string", "null"], "maxLength": 500},
     "solution": {"type": ["string", "null"], "maxLength": 500, "description": "조치 제안. 화면에는 \"안전관리자 확인 필요\"와 함께 보인다"},
     "severity": {
-      "anyOf": [{"$ref": "../../taxonomy/v1/taxonomy.schema.json#/$defs/severity"}, {"type": "null"}],
+      "anyOf": [{"$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/severity"}, {"type": "null"}],
       "description": "ai-gateway가 만든 결과는 null"
     },
     "evidenceStart": {"type": ["number", "null"], "minimum": 0, "description": "정규화 사본 기준 초"},
