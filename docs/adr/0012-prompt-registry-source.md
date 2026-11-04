@@ -9,6 +9,8 @@ related: [ADR-0010, SPEC-009, SPEC-012]
 
 # ADR-0012 Prompt Registry 원본을 ai 레포에 두고 버전을 고정한 묶음으로 배포한다
 
+> 분류 체계를 ai 레포 사본으로 두고 docs main과 비교하는 방식은 [ADR-0013](0013-service-contracts-release.md)의 버전 릴리스·잠금 파일로 바뀌었다.
+
 ## 맥락
 
 ai-gateway는 실행 중에 Prompt Registry(프롬프트, 입력·출력 스키마, 분류 체계)를 읽어 요청과 모델 응답을 검증한다. 지금은 원본이 docs 레포(`docs/contracts/prompts/`, `docs/contracts/taxonomy/`)에 있고, ai CI가 빌드하는 순간의 docs main을 받아 이미지에 복사한다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md)).

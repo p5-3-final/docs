@@ -24,6 +24,10 @@ contracts/
 
 분류 체계는 버전 폴더(`taxonomy/v2/`)로 두고 계약은 쓸 버전을 경로로 가리킨다. 개발 단계라 이전 버전은 남기지 않고 새 버전으로 바로 옮긴다. 탐지 프로필의 내용은 AI 담당자가 채우고, 여기서는 형식만 정한다([ADR-0010](../adr/0010-v4-evaluation-readiness.md) ①). 라벨은 팀이 정의한 데이터셋에서 이 분류 체계의 클래스 이름으로 바로 달기 때문에 외부 데이터셋 라벨 대응표는 두지 않는다.
 
+## 버전과 릴리스
+
+계약은 묶음 하나로 버전을 매긴다([ADR-0013](../adr/0013-service-contracts-release.md)). 이 폴더의 파일을 바꾼 PR은 [`VERSION`](VERSION)을 올리고(추가 minor, 설명 patch, 하위호환 파괴 major), main에 머지되면 CI가 GitHub Release `service-contracts-v<버전>`에 `service-contracts-<버전>.tar.gz`와 SHA-256을 올린다. 다른 레포는 루트의 `service-contracts.lock`에 버전과 SHA-256을 적고 CI에서 그 버전을 받아 쓴다. 로컬은 작업 공간의 이 폴더를 바로 읽는다. 이 폴더는 루트 `service-contracts/`로 옮길 예정이다.
+
 프롬프트는 ai-gateway만 쓰지만 이력을 계약과 같이 관리하려고 여기에 둔다. 버전 ID는 사람이 정하지 않고 ai-gateway가 내용 해시로 계산한다([SPEC-009](../specs/SPEC-009-ai-gateway-analyze/spec.md) R-13).
 
 ## 생산자와 소비자의 역할

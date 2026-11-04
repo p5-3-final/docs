@@ -14,6 +14,7 @@ paths:
 - 하위호환을 깨는 변경은 ADR이 필요하고, 경로 버전을 올려야 한다(`/api/v1` → `/api/v2`). 기존 버전은 소비자가 이전할 때까지 유지한다.
   - 하위호환 파괴의 예: 필드 삭제나 이름 변경, 타입 변경, 필수 필드 추가, 상태 코드 의미 변경
 - 경로 규칙: `/api/v{n}/<복수형-리소스>`, kebab-case. JSON 필드는 camelCase로 쓴다.
+- 계약 묶음 버전(ADR-0013): `docs/contracts/` 아래 파일을 바꾼 PR은 `docs/contracts/VERSION`(SemVer)도 같은 기준(추가 minor, 설명 patch, 하위호환 파괴 major)으로 올린다. README만 바꾼 경우는 예외다. PR CI가 검사하고, main에 머지되면 GitHub Release `service-contracts-v<버전>`이 만들어진다. 다른 레포는 `service-contracts.lock`으로 버전을 고정해 쓴다.
   - 예외: api-gateway를 거치지 않는 내부 전용 서비스(ai-gateway)는 `/v{n}/<동작>`을 쓴다(예: `/v1/analyze`). AI 서빙 API의 관례를 따르고, operation에 `tags: [internal]`을 단다.
 - 오류 응답은 RFC 9457 `application/problem+json`을 쓴다. 공통 스키마는 `docs/contracts/openapi/_common.yaml`의 `ProblemDetail`이다. 서비스별 오류 코드는 `code` 확장 필드에 `<DOMAIN>_<REASON>` 형식으로 넣는다.
 - 모든 operation에 `operationId`(camelCase), `summary`, `tags`, 성공 응답과 오류 응답 예시를 둔다.
