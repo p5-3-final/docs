@@ -25,7 +25,7 @@ related: [ADR-0003, ADR-0008, ADR-0009, SPEC-003]
 
 - `/v1/analyze`: taskType, 영상 ID(sourceId), 이미지 저장 경로 목록, 입력 변수를 받아 모델을 부르고 검증된 결과를 돌려준다.
 - 첫 taskType `event_judge`: 이벤트 후보와 근거 프레임 → `VLMAnalysis`
-- Prompt Registry: 프롬프트·입력 스키마·출력 스키마를 docs 계약(`docs/contracts/prompts/`)에서 관리하고, 버전 ID는 내용 해시로 자동으로 정한다.
+- Prompt Registry: 프롬프트·입력 스키마·출력 스키마를 ai 레포 `services/ai-gateway/registry/`에서 관리하고(분류 체계는 docs 원본의 사본, [ADR-0012](../../adr/0012-prompt-registry-source.md)), 버전 ID는 내용 해시로 자동으로 정한다.
 - 분류 체계 v1 중 `VLMAnalysis`에 필요한 부분(이벤트 유형 6종 + `other`, severity)을 계약으로 만든다.
 - 모델 Adapter: `openai`, `openai_compatible`(로컬 Ollama 등), `mock`. taskType별 Adapter·모델 이름·출력 상한은 프로필(설정)로 정한다.
 - 이미지 경로 검사: 허용 패턴(설정)에 맞는 블러 사본 경로만 받고, 그 영상 폴더 밖이거나 패턴에 맞지 않는 경로(원본·정규화 사본·HLS 포함)는 거부한다.
@@ -156,7 +156,7 @@ event-analyzer 같은 호출자로서 이벤트 후보와 근거 프레임을 �
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
 | `docs/contracts/openapi/ai-gateway.yaml` | 새 내부 API: `POST /v1/analyze`, 오류 코드(요청 오류, 경로 거부, 호출자 거부, 일시적 사용 불가, 공급자 오류) | 예(새 파일) |
-| `docs/contracts/prompts/event_judge/` | 새 프롬프트, 입력 스키마, 출력 스키마(`VLMAnalysis`) | 예(새 파일) |
+| ai 레포 `services/ai-gateway/registry/prompts/event_judge/` (처음에는 `docs/contracts/prompts/`에 두었다가 ADR-0012로 옮김) | 새 프롬프트, 입력 스키마, 출력 스키마(`VLMAnalysis`) | 예(새 파일) |
 | `docs/contracts/taxonomy/` | 새 분류 체계 v1 일부: 이벤트 유형 6종 + `other`, severity | 예(새 파일) |
 | `docs/contracts/events/video.deleted.schema.json` | 변경 없음. ai-gateway가 소비자로 추가된다. | 예 |
 | `docs/architecture/overview.md` | 호출 로그의 "원문 S3 경로"를 "원문(ai_db, 영상 삭제 시 삭제)"으로 고친다. | 해당 없음 |
