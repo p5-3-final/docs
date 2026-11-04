@@ -552,8 +552,8 @@ analysis와 search 테이블은 모두 source_id를 포함해, 나중에 같은 
 | --- | --- |
 | 단계 ID | `<서비스>.<동작>` 형식(예: `normalize.transcode`, `chunk.detect`, `encoder.segments`, `event.judge`, `aggregate.inventory`, `search.parse`). 목록은 `service-contracts/stages/`의 버전 파일이고, 라이브러리와 리포트는 목록을 읽기만 한다. |
 | 자동 측정 | 공통 메시징 라이브러리(ai `libs/messaging`, backend `libs/common-messaging`)가 소비 핸들러마다 `<group>.queue_wait`(소비 시각 − 봉투 `producedAt`, 브로커 LogAppendTime 우선)와 `<group>.handle`을 잰다. 핸들러 안의 세부 단계는 `stage()` 블록으로 잰다. |
-| 기록 형식 `StageTiming` | timingId(`uuid5(stageId + subject + attempt)`), stageId·path, subject(sourceId·chunkId·candidateId·queryId), service·pod·attempt, startedAt·endedAt·durationMs(단조 시계), queueWaitMs, count·unit, versions(taxonomy·detectorProfile·embeddingModel·modelId·promptVersion·analysisVersion), status, traceId·spanId, aiCallIds |
-| 수집 | 핸들러 하나가 끝나면 그 안의 기록을 한 메시지로 묶어 `stage.timing`에 보낸다. 실패해도 측정은 남긴다. quality-service가 timingId로 upsert하고 영상별 단계 분해, 단계별 p50·p95 추이, 프로필·모델 버전별 비교 리포트를 낸다. 로컬은 같은 라이브러리가 JSON 로그로만 남긴다. |
+| 기록 형식 `StageTiming` | timingId(`uuid5(단계 경로 + subject + attempt + 순번)`), stageId·path, subject(sourceId·chunkId·candidateId·queryId), attempt, startedAt·endedAt·durationMs(단조 시계, queue_wait은 큐 대기 시간), count·unit, versions(taxonomy·detectorProfile·embeddingModel·modelId·promptVersion·analysisVersion), status, traceId·spanId, aiCallIds. service·pod는 묶음(`stage.timing` 메시지)에 한 번 싣는다. 형식은 `service-contracts/stages/v1/`과 `events/stage.timing.schema.json`([SPEC-013](../specs/SPEC-013-stage-timing/spec.md)) |
+| 수집 | 핸들러 하나가 끝나면 그 안의 기록을 한 메시지로 묶어 `stage.timing`에 보낸다(발행 설정을 켠 서비스). 실패해도 측정은 남기고, 측정을 보내지 못해도 메시지 처리 결과는 바뀌지 않는다. quality-service가 timingId로 upsert하고 영상별 단계 분해, 단계별 p50·p95 추이, 프로필·모델 버전별 비교 리포트를 낸다. 로컬은 같은 라이브러리가 JSON 로그로만 남긴다. |
 | 시계 차이 | 큐 대기는 다른 Pod의 시계를 비교하므로 브로커 timestamp를 기준으로 하고, 음수는 그대로 남겨 지표에서 거른다. |
 
 ## 환경
