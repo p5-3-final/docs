@@ -98,6 +98,18 @@ docker compose -f local/docker-compose.yml exec postgres psql -U postgres -d ai_
   계속 쓰려면 `local/.env`에 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`을 넣는다. 첫 호출은 모델을 메모리에 올리느라 더 오래 걸린다.
 - 기존 DB 볼륨에 ai_db를 더하려면 아래 "자주 쓰는 명령"의 postgres/init 안내처럼 `30-ai-db.sh`만 실행한다.
 
+### ai-gateway Registry 묶음 (SPEC-009 R-26)
+
+기본은 이미지에 넣은 Prompt Registry와 프로필을 쓴다. 운영처럼 모델 버킷의 묶음으로 띄워 보려면 아래를 한다.
+
+```bash
+local/scripts/upload-registry.sh   # 이미지의 Registry·프로필로 묶음을 만들어 vlm-models에 올리고 설정 세 줄을 출력한다
+```
+
+- 출력한 `AI_GATEWAY_REGISTRY_BUNDLE`·`AI_GATEWAY_REGISTRY_BUNDLE_SHA256`·`AI_GATEWAY_PROFILE_PATH`(묶음 안 상대 경로)를 `local/.env`에 넣고 ai-gateway를 다시 띄운다. 지우면 이미지의 것으로 돌아간다.
+- 프롬프트나 프로필을 바꾸면 이미지를 다시 빌드하고 스크립트를 다시 실행한다. 내용이 바뀌면 해시와 경로가 함께 바뀐다.
+- 새 taskType은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`(프롬프트, 입력·출력 스키마와 예시, `fallback.json`)와 프로필의 `[tasks.<taskType>]`만 더한다(R-24).
+
 ### ai-gateway 벡터 생성 (SPEC-011)
 
 `/v1/embed`는 문장·검색용 이미지·텍스트를 벡터로 바꾼다. mock 프로필은 의미 없는 결정적 벡터를 돌려준다. 실제 인코더(MobileCLIP2-S0)와 텍스트 임베딩(Ollama `bge-m3`)을 쓰려면 아래를 한 번 한다.

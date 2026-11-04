@@ -287,6 +287,10 @@ services:
       AWS_SECRET_ACCESS_KEY: local-ai-gateway-secret
       # 인코더 가중치를 받는 버킷(SPEC-011). 가중치는 local/scripts/upload-models.sh로 한 번 올린다.
       AI_GATEWAY_MODELS_BUCKET: vlm-models
+      # 비우면 이미지의 Registry·프로필을 쓴다. local/scripts/upload-registry.sh가 출력한 값을 .env에 넣으면
+      # 모델 버킷의 묶음을 받아 쓴다(SPEC-009 R-26). 그때 AI_GATEWAY_PROFILE_PATH는 묶음 안 상대 경로다.
+      AI_GATEWAY_REGISTRY_BUNDLE: ${AI_GATEWAY_REGISTRY_BUNDLE:-}
+      AI_GATEWAY_REGISTRY_BUNDLE_SHA256: ${AI_GATEWAY_REGISTRY_BUNDLE_SHA256:-}
     # 받은 가중치를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
     volumes:
       - ai-gateway-models:/var/cache/vlm-models

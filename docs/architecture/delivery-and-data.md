@@ -39,7 +39,7 @@ flowchart LR
 | 되돌리기 | gitops에서 이전 태그로 되돌리는 커밋 | 예정 |
 | 인프라 | infra 레포 PR에서 plan → main 머지 → GitHub Environment 승인 → CI가 apply(overview "인프라 변경 흐름") | 예정 |
 
-이미지에는 코드와 의존성만 넣는다. 모델 가중치, Prompt Registry, 프로필은 넣지 않고 기동할 때 받는다(3절). 지금 ai-gateway는 예외로 Prompt Registry와 프로필을 이미지에 넣고 있다(3절 표의 현재 방식).
+이미지에는 코드와 의존성만 넣는다. 모델 가중치, Prompt Registry, 프로필은 넣지 않고 기동할 때 받는다(3절). ai-gateway는 Prompt Registry와 프로필을 모델 버킷의 묶음으로 받을 수 있다(A-2). 운영 업로드(CI)가 생기기 전까지는 이미지에 넣은 것을 쓴다(3절 표의 현재 방식).
 
 ## 3. 실행 설정과 모델 산출물
 
@@ -49,9 +49,9 @@ flowchart LR
 | --- | --- | --- | --- | --- | --- | --- |
 | 모델 가중치 (인코더·탐지기·파인튜닝·예측 모델) | 레포 밖(공개 가중치, 학습 작업) | AI 담당자가 업로드 | 모델 버킷 `models/<종류>/<버전>/` + `manifest.json`(파일별 SHA-256·크기, 모델 ID, 차원·클래스, 학습 출처, 라이선스) | 프로필이 manifest 경로와 manifest SHA-256을 가리킨다. 받은 뒤 파일 체크섬 확인. 형식은 `service-contracts/models/manifest.schema.json`, 받기는 ai `vlm_storage.artifacts.fetch_model` | ai-gateway(구현), frame-encoder, chunk-processor, grounding-worker | ai-gateway 구현(A-1), 나머지는 각 서비스에서 |
 | ↳ 로컬 | 위와 같음 | `local/scripts/upload-models.sh`(가중치와 manifest를 함께 올림) | 로컬 `vlm-models` 버킷 `models/mobileclip2-s0/dfndr2b/` | `local.toml`이 manifest 경로와 SHA-256을 가리킨다. 캐시 `/var/cache/vlm-models/<manifest sha256>/` | ai-gateway | 구현 |
-| Prompt Registry 묶음 (프롬프트, 입력·출력 스키마, 질의 사전, 분류 체계) | ai 레포 `services/ai-gateway/registry/`, 분류 체계는 잠금 파일 버전의 계약 묶음 | ai CI가 main 머지 시 묶음 생성 | 저장소 `registry/<버전>/` + manifest(파일별 체크섬) | 운영 설정(gitops)이 묶음 버전을 가리킨다. 결과에 프롬프트 버전 ID(내용 해시)와 묶음 버전 기록 | ai-gateway | 예정(ADR-0012, A-0·A-2) |
-| ↳ 현재 방식 | 위와 같음 | ai CI는 잠금 버전, 로컬은 작업 공간의 계약에서 분류 체계를 가져와 프롬프트와 함께 이미지에 넣음 | 이미지 `/app/registry` | 프롬프트 버전 ID만 기록 | ai-gateway | 구현 |
-| ai-gateway 프로필 (taskType별 Adapter·모델·상한, 인코더, 허용 경로·호출자) | ai 레포 `services/ai-gateway/profiles/` | Prompt Registry 묶음과 함께 | 묶음 안 | 묶음 버전 | ai-gateway | 예정(A-2). 지금은 이미지 `/app/profiles`에 넣고 `AI_GATEWAY_PROFILE_PATH`로 고른다 |
+| Prompt Registry 묶음 (프롬프트, 입력·출력 스키마와 예시, 대체 결과, 질의 사전, 분류 체계, 프로필) | ai 레포 `services/ai-gateway/registry/`·`profiles/`, 분류 체계는 잠금 파일 버전의 계약 묶음 | `python -m ai_gateway.registry_bundle`(같은 내용이면 같은 바이트). 운영은 ai CI가 main 머지 시 만들어 올린다 | 모델 버킷 `registry/<해시 앞 12자리>/registry.tar.gz` | 운영 설정 `AI_GATEWAY_REGISTRY_BUNDLE`(키)·`AI_GATEWAY_REGISTRY_BUNDLE_SHA256`(파일 해시)이 가리킨다. 받은 뒤 해시를 확인하고 캐시 `/var/cache/vlm-models/registry/<sha256>/`에 푼다. 결과에는 프롬프트 버전 ID(내용 해시)가 남는다 | ai-gateway | 받기 구현(SPEC-009 R-26~R-28, A-2). ai CI 업로드·읽기 권한·gitops 설정은 infra 작업 때 |
+| ↳ 현재 방식 | 위와 같음 | ai CI는 잠금 버전, 로컬은 작업 공간의 계약에서 분류 체계를 가져와 프롬프트와 함께 이미지에 넣음. 로컬은 `local/scripts/upload-registry.sh`로 묶음을 올려 확인할 수 있다 | 이미지 `/app/registry`, 묶음 설정이 없을 때 | 프롬프트 버전 ID | ai-gateway | 구현 |
+| ai-gateway 프로필 (taskType별 Adapter·모델·상한, 인코더, 허용 경로·호출자) | ai 레포 `services/ai-gateway/profiles/` | Prompt Registry 묶음과 함께 | 묶음 안 `profiles/` | 묶음 해시. `AI_GATEWAY_PROFILE_PATH`는 묶음 안 상대 경로 | ai-gateway | 구현(A-2). 묶음 설정이 없으면 이미지 `/app/profiles`의 절대 경로 |
 | 탐지 프로필 (탐지기 manifest·클래스·`supported_events`) | 형식은 docs `taxonomy/v2/detector-profile.schema.json`, 내용은 AI 담당자 | 사용하는 서비스 spec에서 정함 | 미정 | 프로필 ID·버전, manifest SHA-256 | chunk-processor, grounding-worker | 예정 |
 
 ### 쓰기 권한
@@ -117,6 +117,5 @@ flowchart LR
 | 항목 | 정할 때 |
 | --- | --- |
 | 운영 버킷 이름과 분리(미디어, 모델·registry, Golden Set) | infra 착수 시 |
-| Prompt Registry 묶음 버전 형식과 운영 설정 키 | A-2 |
 | 탐지 프로필 저장 위치 | chunk-processor·grounding-worker spec |
 | 분석 산출물·벡터·주석 클립 경로 규칙 | 각 이벤트 계약 |
