@@ -1,7 +1,7 @@
 ---
 id: SPEC-012
 title: ai-gateway 질의 해석
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-04
