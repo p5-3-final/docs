@@ -200,6 +200,7 @@ services:
           memory: 768M
 
   # 워커가 구독·발행하는 토픽(SPEC-007 normalize, SPEC-009 ai-gateway). 미리 만들어야 재시도 토픽을 바로 구독한다.
+  # stage.timing은 처리 단계 측정 묶음이다(SPEC-013). 보존 7일은 docs overview "처리 단계 측정"과 같다.
   kafka-init:
     image: apache/kafka:4.3.2@sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7
     entrypoint:
@@ -210,7 +211,10 @@ services:
         video.uploaded.normalize.retry normalize.dlq
         video.deleted.ai-gateway.retry ai-gateway.dlq; do
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
-        --topic "$$topic" --partitions 3 --replication-factor 1 || exit 1; done
+        --topic "$$topic" --partitions 3 --replication-factor 1 || exit 1; done &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
+        --topic stage.timing --partitions 3 --replication-factor 1
+        --config retention.ms=604800000
     depends_on:
       kafka:
         condition: service_healthy
@@ -231,6 +235,8 @@ services:
       AWS_ACCESS_KEY_ID: local-normalize-key
       AWS_SECRET_ACCESS_KEY: local-normalize-secret
       NORMALIZE_WORK_DIR: /work
+      # 처리 시간 측정 묶음을 stage.timing에 발행한다. 기본은 JSON 로그(SPEC-013 R-5).
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
     # 원본과 결과를 잠시 두는 폴더. 이미지의 실행 사용자(UID 10001)가 쓸 수 있게 한다.
     tmpfs:
       - /work:uid=10001,gid=10001
@@ -291,6 +297,8 @@ services:
       # 모델 버킷의 묶음을 받아 쓴다(SPEC-009 R-26). 그때 AI_GATEWAY_PROFILE_PATH는 묶음 안 상대 경로다.
       AI_GATEWAY_REGISTRY_BUNDLE: ${AI_GATEWAY_REGISTRY_BUNDLE:-}
       AI_GATEWAY_REGISTRY_BUNDLE_SHA256: ${AI_GATEWAY_REGISTRY_BUNDLE_SHA256:-}
+      # video.deleted 소비의 처리 시간 측정 묶음을 stage.timing에 발행한다(SPEC-013).
+      AI_GATEWAY_STAGE_TIMING_PUBLISH: ${AI_GATEWAY_STAGE_TIMING_PUBLISH:-false}
     # 받은 가중치를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
     volumes:
       - ai-gateway-models:/var/cache/vlm-models

@@ -17,7 +17,7 @@
 
 `seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
 
-`kafka-init`은 normalize·ai-gateway가 쓰는 토픽(재시도·DLQ 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
+`kafka-init`은 normalize·ai-gateway가 쓰는 토픽(재시도·DLQ, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
 
 ## 준비
 
