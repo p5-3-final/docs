@@ -15,7 +15,7 @@
 | [SPEC-009](SPEC-009-ai-gateway-analyze/spec.md) | ai-gateway 분석 호출 | Implementing | ai, docs | | 2026-11-03 |
 | [SPEC-010](SPEC-010-chunk-dispatch/spec.md) | Pipeline 공정 배정과 실행 슬롯·요청 발행 | Implementing | backend, docs | backend 담당자 | 2026-11-05 |
 | [SPEC-011](SPEC-011-ai-gateway-embed/spec.md) | ai-gateway 벡터 생성 | Implementing | ai, docs | | 2026-11-03 |
-| [SPEC-012](SPEC-012-ai-gateway-parse/spec.md) | ai-gateway 질의 해석 | Draft | ai, docs | | 2026-11-04 |
+| [SPEC-012](SPEC-012-ai-gateway-parse/spec.md) | ai-gateway 질의 해석 | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-013](SPEC-013-stage-timing/spec.md) | 처리 단계 측정 | Implementing | ai, docs | | 2026-11-04 |
 | [SPEC-014](SPEC-014-execution-results/spec.md) | 청크 실행 종료 결과와 슬롯 자동 반환 | Implementing | backend, ai, docs | backend 담당자 | 2026-11-05 |
 

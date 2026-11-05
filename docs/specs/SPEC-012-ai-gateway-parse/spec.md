@@ -1,12 +1,12 @@
 ---
 id: SPEC-012
 title: ai-gateway 질의 해석
-status: Draft
+status: Approved
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-04
-updated: 2026-11-04
-related: [ADR-0008, SPEC-009, SPEC-011]
+updated: 2026-11-06
+related: [ADR-0008, ADR-0010, ADR-0012, SPEC-009, SPEC-011]
 ---
 
 # SPEC-012 ai-gateway 질의 해석
@@ -29,14 +29,14 @@ related: [ADR-0008, SPEC-009, SPEC-011]
 
 해석은 **규칙 사전**이 먼저다. 규칙 사전은 결정적이라 같은 문장에 항상 같은 결과를 내고, 수 ms 안에 끝나며 비용이 없다. 사전에 없는 한국어 문장만 LLM(`query_parse`)으로 보조하고, 그래도 안 되면 산업 CCTV 기본 대상인 `person`으로 제한한다. 결과에는 어떤 방법으로 해석했는지(`industrial-rule`·`english-phrase`·`llm`·`safe-fallback`) 표시한다.
 
-규칙 사전과 LLM 프롬프트는 ai-gateway 안에만 있다("AI Gateway" 인터페이스). 표준 질의 문자열도 ai-gateway가 만든다. 정규화 규칙과 사전·프롬프트 버전을 아는 곳이 ai-gateway뿐이고, search-service와 grounding 등 여러 곳이 같은 값을 써야 하기 때문이다. 단계별 재사용 키(sourceId, 분석 버전, 인코더 모델 등을 붙인 키)는 search-service가 이 문자열에 자기 값을 붙여 만든다. PRD의 에픽은 아직 정의되지 않았다.
+규칙 사전과 LLM 프롬프트는 ai-gateway 안에만 있다("AI Gateway" 인터페이스). 둘 다 Prompt Registry의 일부라 원본은 ai 레포 `services/ai-gateway/registry/`이고, 레포 경계를 넘는 분류 체계만 `service-contracts/taxonomy/`를 따른다([ADR-0012](../../adr/0012-prompt-registry-source.md)). 표준 질의 문자열도 ai-gateway가 만든다. 정규화 규칙과 사전·프롬프트 버전을 아는 곳이 ai-gateway뿐이고, search-service와 grounding 등 여러 곳이 같은 값을 써야 하기 때문이다. 단계별 재사용 키(sourceId, 분석 버전, 인코더 모델 등을 붙인 키)는 search-service가 이 문자열에 자기 값을 붙여 만든다. PRD의 에픽은 아직 정의되지 않았다.
 
 ## 2. 범위
 
 ### 포함
 
-- `/v1/parse`: 검색 문장 하나를 받아 표준 질의를 돌려준다. 표준 질의는 route, 대상어 1~3개, 이벤트 유형 목록, 영어 검색 문장, 해석 방법, 해석 근거, 사전 버전, 프롬프트 버전, 표준 질의 문자열로 이루어진다.
-- 질의 사전 v1: 시간·상태 표현 목록, 한국어 표현 → 영어 대상어·이벤트 유형 대응표, 불용 표현, 영어 검색 문장 형식. 분류 체계 폴더(`docs/contracts/taxonomy/`)에 버전 파일로 둔다. 첫 내용은 기존 vlm_project의 규칙(`KOREAN_RULES`, `TEMPORAL_TERMS`)에서 시작하고 이벤트 유형 6종의 표현을 더한다.
+- `/v1/parse`: 검색 문장 하나를 받아 표준 질의를 돌려준다. 표준 질의는 route, 대상어 1~3개, 이벤트 유형 목록, 영어 검색 문장, 해석 방법, 해석 근거, 사전 버전, 프롬프트 버전, 분류 체계 버전, 표준 질의 문자열로 이루어진다.
+- 질의 사전 v1: 시간·상태 표현 목록, 한국어 표현 → 영어 대상어·이벤트 유형 대응표, 불용 표현, 영어 검색 문장 형식. Prompt Registry(ai 레포)에 버전 파일로 두고, Registry 묶음(SPEC-009 R-26)에 함께 들어간다. 첫 내용은 기존 vlm_project의 규칙(`KOREAN_RULES`)에서 시작하고 분류 체계 v2 이벤트 유형 8종의 표현을 더한다.
 - 영어 문장 처리: 사전에 맞는 한국어 표현이 없고 문장이 영어 위주면 불용어를 지운 구문을 대상어로 쓴다.
 - LLM 보조 `query_parse`: Prompt Registry의 프롬프트와 출력 스키마, 프로필의 Adapter·모델(SPEC-009의 Adapter 선택·mock 금지 규칙). 이미지는 보내지 않는다.
 - 안전 대체(`safe-fallback`): LLM이 미설정이거나 실패하면 오류 대신 `person`으로 제한한 표준 질의를 돌려준다.
@@ -132,7 +132,7 @@ search-service로서 표현만 다른 같은 질의("지게차 찾아줘", "지�
 | R-4 | WHEN 정규화한 문장에 사전의 시간·상태 표현이 없으면, THE ai-gateway SHALL route를 `video_retrieval`로 둔다. | US-2 |
 | R-5 | WHEN 정규화한 문장에 사전의 한국어 표현이 하나 이상 있으면, THE ai-gateway SHALL 맞은 표현의 영어 대상어를 사전에 적힌 순서로 중복 없이 최대 3개 대상어로 두고, 해석 방법을 `industrial-rule`로 둔다. | US-1 |
 | R-6 | IF 맞은 사전 표현끼리 문장에서 겹치면(예: "안전모 미착용"과 "안전모"), THEN THE ai-gateway SHALL 더 긴 표현만 적용한다. | US-1 |
-| R-7 | WHEN 맞은 사전 표현에 이벤트 유형이 지정돼 있으면, THE ai-gateway SHALL 그 이벤트 유형(분류 체계 enum, `other` 제외)을 사전에 적힌 순서로 중복 없이 이벤트 유형 목록에 넣는다. 맞은 표현에 이벤트 유형이 없으면 목록은 비어 있다. | US-1 |
+| R-7 | WHEN 맞은 사전 표현에 이벤트 유형이 지정돼 있으면, THE ai-gateway SHALL 그 이벤트 유형(분류 체계 v2 enum, `other` 제외)을 사전에 적힌 순서로 중복 없이 이벤트 유형 목록에 넣는다. 맞은 표현에 이벤트 유형이 없으면 목록은 비어 있다. | US-1 |
 | R-8 | WHEN 사전의 한국어 표현이 맞지 않고 문장이 영어 위주이면(영문자가 공백을 뺀 글자의 절반 이상이고 3자 이상), THE ai-gateway SHALL 사전의 영어 불용어와 영문·숫자·공백·하이픈 밖의 문자를 지운 구문을 대상어 하나로 두고, 해석 방법을 `english-phrase`로 둔다. | US-3 |
 | R-9 | IF R-8에서 불용어를 지운 구문이 비면, THEN THE ai-gateway SHALL 대상어를 `person`으로, 해석 방법을 `safe-fallback`으로 둔다. | US-3 |
 | R-10 | WHEN 사전의 한국어 표현이 맞지 않고 문장이 영어 위주가 아니면, THE ai-gateway SHALL 프로필의 `query_parse` Adapter·모델에 Prompt Registry의 프롬프트로 문장을 보내고(이미지 없음, temperature 0), 출력에서 JSON 객체를 꺼내 출력 스키마(영어 대상어 1~3개, 분류 체계 이벤트 유형)로 검증한다. | US-4 |
@@ -143,17 +143,20 @@ search-service로서 표현만 다른 같은 질의("지게차 찾아줘", "지�
 | R-15 | THE ai-gateway SHALL route 결정(R-3, R-4)을 해석 방법과 상관없이 사전으로만 한다. | US-2, US-4 |
 | R-16 | THE ai-gateway SHALL 영어 검색 문장을 대상어로부터 사전의 영어 검색 문장 형식으로 만든다. 같은 대상어 목록이면 같은 문장이다. | US-1 |
 | R-17 | THE ai-gateway SHALL 해석 근거를 해석 방법과 맞은 사전 표현으로 만든다. LLM 출력의 설명문은 해석 근거에 넣지 않는다. | US-1, US-4 |
-| R-18 | THE ai-gateway SHALL 표준 질의 문자열을 route, 대상어, 이벤트 유형, 해석 방법, 사전 버전으로 만들고, 해석 방법이 `llm`일 때만 프롬프트 버전을 더한다. 같은 값이면 항상 같은 문자열이고, 하나라도 다르면 다른 문자열이다. | US-6 |
+| R-18 | THE ai-gateway SHALL 표준 질의 문자열을 route, 대상어, 이벤트 유형, 해석 방법, 사전 버전, 분류 체계 버전으로 만들고, 해석 방법이 `llm`일 때만 프롬프트 버전을 더한다. 같은 값이면 항상 같은 문자열이고, 하나라도 다르면 다른 문자열이다. | US-6 |
 | R-19 | THE ai-gateway SHALL 해석 방법이 `llm`이 아니면 응답의 프롬프트 버전을 비워 둔다. | US-6 |
 | R-20 | IF 검색 문장이 비었거나 정규화 뒤 비면, THEN THE ai-gateway SHALL 모델을 부르지 않고 요청 오류로 거절한다. | US-1 |
 | R-21 | IF 검색 문장 길이가 상한(프로필 값)을 넘으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 요청 오류로 거절한다. | US-1 |
 | R-22 | IF 호출자 이름 헤더가 없거나 허용 호출자 목록에 없으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 호출자 거부 오류로 거절한다(SPEC-009 R-16과 같은 목록). | US-7 |
-| R-23 | WHEN 기동하면, THE ai-gateway SHALL 질의 사전 파일을 읽어 검증한다(형식, 대상어는 영어 구문, 이벤트 유형은 분류 체계 enum, 표현 중복 없음, 버전 ID 있음). | US-7 |
+| R-23 | WHEN 기동하면, THE ai-gateway SHALL Prompt Registry(설정돼 있으면 Registry 묶음)의 질의 사전 파일을 읽어 검증한다(형식, 대상어는 영어 구문, 이벤트 유형은 분류 체계 enum, 표현 중복 없음, 버전 이름 있음). | US-7 |
 | R-24 | IF 질의 사전 파일이 없거나 검증에 실패하면, THEN THE ai-gateway SHALL 기동에 실패한다. | US-7 |
 | R-25 | THE ai-gateway SHALL `/ready`를 질의 사전 검증(R-23)까지 끝난 뒤에만 200으로 반환한다(SPEC-009 R-23에 조건 추가). | US-7 |
 | R-26 | THE ai-gateway SHALL 사전 해석(R-3~R-9)을 VLM Adapter·텍스트 임베딩 Adapter의 연결 상태와 상관없이 수행한다. | US-5 |
 | R-27 | WHEN 해석 요청 처리가 끝나면(`safe-fallback` 포함, 요청 오류·호출자 거부로 거절한 경우 제외), THE ai-gateway SHALL 호출 ID, 호출자, taskType `query_parse`, 해석 방법, 사전 버전, LLM을 불렀으면 모델 ID·프롬프트 버전·입력 토큰 수, 지연, 상태를 호출 로그에 저장하고, 검색 문장 원문과 모델 원문은 저장하지 않는다. | US-7 |
 | R-28 | IF `query_parse` 프로필이 `mock` Adapter를 쓰는데 mock 허용 설정이 켜져 있지 않으면, THEN THE ai-gateway SHALL 기동에 실패한다(SPEC-009 R-15와 같은 규칙). | US-4 |
+| R-29 | THE ai-gateway SHALL 사전 버전을 사전 파일의 버전 이름과 사전 내용 해시로 만들어, 버전 이름을 그대로 두고 내용만 바꿔도 다른 사전 버전이 되게 한다. | US-6 |
+| R-30 | THE ai-gateway SHALL 응답과 호출 로그에 질의 사전과 `query_parse` 출력 스키마가 참조하는 분류 체계 버전(예: `v2`)을 남긴다(SPEC-009 R-29와 같은 의미). 해석 방법과 상관없이 같은 값이다. | US-6 |
+| R-31 | IF 질의 사전이 참조하는 분류 체계 버전과 `query_parse` 출력 스키마가 참조하는 분류 체계 버전이 다르면, THEN THE ai-gateway SHALL 기동에 실패한다. | US-7 |
 
 ### 비기능 요구사항
 
@@ -162,23 +165,22 @@ search-service로서 표현만 다른 같은 질의("지게차 찾아줘", "지�
 | NFR-1 | THE ai-gateway SHALL LLM을 부르지 않는 해석 요청(`industrial-rule`·`english-phrase`)을 호출 로그 저장을 포함해 p95 30ms 이하로 처리한다(로컬 compose). |
 | NFR-2 | THE ai-gateway SHALL LLM을 부르는 해석 요청을 `query_parse` 제한 시간(프로필 값) + 100ms 안에 끝낸다. |
 | NFR-3 | THE ai-gateway SHALL 애플리케이션 로그에 검색 문장 원문, 모델 원문, 공급자 API 키를 남기지 않는다. |
-| NFR-4 | THE ai-gateway SHALL 질의 사전 v1로 사전 단위 예시 세트(사전 항목마다 1개 이상, 이벤트 유형 6종마다 1개 이상, 시간·상태 표현 5개 이상)를 기대한 route·대상어·이벤트 유형으로 모두 해석한다. |
+| NFR-4 | THE ai-gateway SHALL 질의 사전 v1로 사전 단위 예시 세트(사전 항목마다 1개 이상, 이벤트 유형 8종마다 1개 이상, 시간·상태 표현 5개 이상)를 기대한 route·대상어·이벤트 유형으로 모두 해석한다. |
 
 ## 5. 영향 범위
 
 | 레포 / 서비스 | 변경 개요 | 담당 요구사항 |
 | --- | --- | --- |
-| ai / ai-gateway | `/v1/parse`, 정규화·사전 해석·영어 구문 처리, `query_parse` 호출과 안전 대체, 표준 질의 문자열, 사전 로드·검증과 `/ready` 조건, 호출 로그, 프로필(로컬·mock) | R-1~R-28, NFR-1~NFR-4 |
-| docs | ai-gateway API 계약에 `/v1/parse` 추가, 질의 사전 v1과 스키마, `query_parse` 프롬프트·입출력 스키마 | R-10, R-23, NFR-4 |
+| ai / ai-gateway | `/v1/parse`, 정규화·사전 해석·영어 구문 처리, `query_parse` 호출과 안전 대체, 표준 질의 문자열, 사전 로드·검증과 `/ready` 조건, 호출 로그, 프로필(로컬·mock), Prompt Registry에 질의 사전 v1·스키마와 `query_parse` 프롬프트·입출력 스키마 | R-1~R-31, NFR-1~NFR-4 |
+| docs | ai-gateway API 계약에 `/v1/parse` 추가 | R-1 |
 | backend / search-service | (이후, 다른 담당자) `/v1/parse`를 불러 route·영어 검색 문장·표준 질의 문자열을 쓴다. 이 spec에서는 바꾸지 않는다. | — |
 
 ## 6. 계약 변경
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/ai-gateway.yaml` | `POST /v1/parse` 추가(요청: 검색 문장 / 응답: 호출 ID, route, 대상어, 이벤트 유형, 영어 검색 문장, 해석 방법, 해석 근거, 사전 버전, 프롬프트 버전, 표준 질의 문자열). 표준 질의 문자열은 해석하지 않고 그대로 쓰는 값이라고 설명에 적는다. 버전 0.2.0 → 0.3.0 | 예(경로 추가) |
-| `docs/contracts/taxonomy/` | 질의 사전 v1 파일과 그 스키마 추가(시간·상태 표현, 한국어 표현 → 대상어·이벤트 유형, 불용 표현, 영어 검색 문장 형식, 버전 ID) | 예(파일 추가) |
-| `docs/contracts/prompts/query_parse/` | `query_parse` 프롬프트와 입력·출력 스키마 추가 | 예(파일 추가) |
+| `service-contracts/openapi/ai-gateway.yaml` | `POST /v1/parse` 추가(요청: 검색 문장 / 응답: 호출 ID, route, 대상어, 이벤트 유형, 영어 검색 문장, 해석 방법, 해석 근거, 사전 버전, 프롬프트 버전, 분류 체계 버전, 표준 질의 문자열). 표준 질의 문자열은 해석하지 않고 그대로 쓰는 값이라고 설명에 적는다. 버전 0.2.1 → 0.3.0, 계약 묶음 2.6.0 → 2.7.0 | 예(경로 추가) |
+| 질의 사전 v1·스키마, `query_parse` 프롬프트·입출력 스키마 | 계약이 아니다. ai 레포 Prompt Registry에 둔다([ADR-0012](../../adr/0012-prompt-registry-source.md)). 분류 체계는 기존 v2를 참조만 한다. | 해당 없음 |
 | `docs/architecture/overview.md` | 변경 없음. "검색 경로" 1단계와 "AI Gateway"에 적힌 내용을 따른다. 속성·시간 조건은 이후 spec에서 더한다. | 해당 없음 |
 
 ## 7. 성공 지표
