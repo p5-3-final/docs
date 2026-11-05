@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/chunk.execution.finished.schema.json",
+  "title": "ChunkExecutionFinished",
+  "description": "SPEC-014. 실제 실행 종료를 확인한 결과만 발행한다. timeout/불명 상태는 종료가 아니다. 최초 payload를 보존해 재발행한다. requestId=executionId.",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "eventType",
+    "schemaVersion",
+    "jobId",
+    "chunkId",
+    "executionId",
+    "requestId",
+    "normalizationId",
+    "outcome",
+    "resultKey",
+    "errorCode"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "chunk.execution.finished"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "outcome": {
+      "enum": [
+        "SUCCEEDED",
+        "FAILED"
+      ]
+    },
+    "resultKey": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/result[.]json$"
+    },
+    "errorCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z][A-Z0-9_]{0,99}$"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "outcome": {
+          "const": "SUCCEEDED"
+        },
+        "resultKey": {
+          "type": "string"
+        },
+        "errorCode": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "outcome": {
+          "const": "FAILED"
+        },
+        "resultKey": {
+          "type": "null"
+        },
+        "errorCode": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "examples": [
+    {
+      "eventId": "44444444-4444-4444-8444-444444444444",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-03T06:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "22222222-2222-4222-8222-222222222222",
+      "chunkId": "55555555-5555-4555-8555-555555555555",
+      "executionId": "33333333-3333-4333-8333-333333333333",
+      "requestId": "33333333-3333-4333-8333-333333333333",
+      "normalizationId": "11111111-1111-4111-8111-111111111111",
+      "eventType": "chunk.execution.finished",
+      "outcome": "SUCCEEDED",
+      "errorCode": null,
+      "resultKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/22222222-2222-4222-8222-222222222222/chunks/55555555-5555-4555-8555-555555555555/executions/33333333-3333-4333-8333-333333333333/result.json"
+    },
+    {
+      "eventId": "66666666-6666-4666-8666-666666666666",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-03T06:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "22222222-2222-4222-8222-222222222222",
+      "chunkId": "55555555-5555-4555-8555-555555555555",
+      "executionId": "33333333-3333-4333-8333-333333333333",
+      "requestId": "33333333-3333-4333-8333-333333333333",
+      "normalizationId": "11111111-1111-4111-8111-111111111111",
+      "eventType": "chunk.execution.finished",
+      "outcome": "FAILED",
+      "errorCode": "PROCESSING_FAILED",
+      "resultKey": null
+    }
+  ]
+}
