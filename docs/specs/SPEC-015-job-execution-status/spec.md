@@ -1,7 +1,7 @@
 ---
 id: SPEC-015
 title: Job 실행 집계와 소유자 상태 조회
-status: Approved
+status: Implementing
 owner: backend 담당자
 repos: [backend, docs]
 created: 2026-11-05
@@ -111,3 +111,13 @@ SPEC-010/014에는 자동 작업 재시도 구현이 없으므로 기본 maxAtte
 ## 8. 미결 사항
 
 이번 실행 집계 범위의 미결 사항은 없다. 적재 완료 이벤트·Analysis/Search 결과 스키마·버전 활성화는 후속 계약에서 정한다. 기본 재시도·기존 운영 활성화·offset을 변경하지 않는다.
+
+## 9. 구현·검증 현황
+
+[backend PR #49](https://github.com/p5-3-final/backend/pull/49)에서 실행 집계·불변 재시도 정책·소유자 조회·bounded 점검을 구현했다. 기존 [backend #47](https://github.com/p5-3-final/backend/pull/47)의 종료 수신과 슬롯 반환, [ai #34](https://github.com/p5-3-final/ai/pull/34)의 실제 추출·종료 Outbox를 재사용한다. ai 코드는 변경하지 않았다.
+
+- 로컬 전체 검사 546개(Pipeline 198개), 실패·오류·건너뜀 0개. 패키징된 복구 CLI smoke도 통과했다.
+- 전체 성공·혼합/전체 실패·재시도 예산·지연·이전 실행·동시 마지막 결과·CLI/점검 경쟁·집계/Outbox 롤백·누락 복구·소유자 API·JSON 계약을 검증했다.
+- 실제 normalize·추론 대역 워커·Kafka·서로 다른 PostgreSQL·객체 저장소를 연결했다. 커밋한 종료 job.status의 eventId가 Kafka에 도착하는지 검증하며 중간 상태·중복 전달을 고정 메시지 수로 오판하지 않는다.
+
+실행 종료여도 분석 status RUNNING과 활성 Job 제한을 유지한다. 후속 Analysis/Search는 수락한 executionId·resultKey에 대한 적재 확인을 설계하고, 그 확인 뒤 분석 상태·버전 활성화·analysis.completed 경로를 연결해야 한다. 실제 AI·운영 활성화·기존 offset 변경·배포는 수행하지 않아 Done으로 표시하지 않는다.
