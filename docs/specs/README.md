@@ -13,7 +13,8 @@
 | [SPEC-007](SPEC-007-video-normalize/spec.md) | 영상 정규화 | Implementing | ai, backend, frontend, docs | | 2026-11-03 |
 | [SPEC-008](SPEC-008-normalized-intake/spec.md) | 정규화 완료 수신과 계획 저장 | Implementing | backend | backend 담당자 | 2026-11-03 |
 | [SPEC-009](SPEC-009-ai-gateway-analyze/spec.md) | ai-gateway 분석 호출 | Implementing | ai, docs | | 2026-11-03 |
-
 | [SPEC-010](SPEC-010-chunk-dispatch/spec.md) | Pipeline 공정 배정과 실행 슬롯·요청 발행 | Implementing | backend, docs | backend 담당자 | 2026-11-05 |
+| [SPEC-011](SPEC-011-ai-gateway-embed/spec.md) | ai-gateway 벡터 생성 | Implementing | ai, docs | | 2026-11-03 |
+| [SPEC-013](SPEC-013-stage-timing/spec.md) | 처리 단계 측정 | Implementing | ai, docs | | 2026-11-04 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)

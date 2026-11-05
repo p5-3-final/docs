@@ -10,7 +10,7 @@ updated: YYYY-MM-DD
 # Plan: SPEC-NNN <기능 이름> — <레포>
 
 - spec: docs 레포 `docs/specs/SPEC-NNN-<slug>/spec.md`
-- 계약: docs 레포 `docs/contracts/...`
+- 계약: docs 레포 `service-contracts/...`
 
 ## 1. 요약
 

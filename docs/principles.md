@@ -15,7 +15,7 @@ updated: 2026-11-03
 
 ## II. 계약 우선 (Contract-First)
 
-레포 경계를 넘는 모든 API와 이벤트는 `docs/contracts/`에 먼저 정의하고, 구현이 그 계약을 따른다. 프론트엔드의 API 타입은 계약에서 생성한다.
+레포 경계를 넘는 모든 API와 이벤트는 `service-contracts/`에 먼저 정의하고, 구현이 그 계약을 따른다. 프론트엔드의 API 타입은 계약에서 생성한다.
 
 ## III. 테스트 우선 (Test-First, TDD)
 

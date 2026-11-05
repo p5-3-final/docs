@@ -1,0 +1,66 @@
+name: service-contracts
+
+# 서비스 간 계약을 버전 릴리스로 배포한다(ADR-0013).
+# PR: 계약을 바꿨으면 VERSION을 올렸는지 검사하고 묶음을 만들어 본다.
+# main: 아직 없는 버전이면 묶음과 SHA-256을 GitHub Release로 올린다.
+on:
+  pull_request:
+    paths:
+      - "service-contracts/**"
+      - "scripts/package-service-contracts.py"
+      - "scripts/check-service-contracts-version.sh"
+      - ".github/workflows/service-contracts.yml"
+  push:
+    branches: [main]
+    paths:
+      - "service-contracts/**"
+      - "scripts/package-service-contracts.py"
+      - ".github/workflows/service-contracts.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: version bumped
+        run: scripts/check-service-contracts-version.sh "${BASE_SHA}"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      - name: package
+        run: python3 scripts/package-service-contracts.py dist
+
+  release:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # 릴리스와 태그를 만드는 job에만 쓰기 권한을 준다.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: package
+        run: python3 scripts/package-service-contracts.py dist
+      - name: publish
+        run: |
+          version="$(tr -d '[:space:]' < service-contracts/VERSION)"
+          tag="service-contracts-v${version}"
+          # 한 번 올린 버전은 바꾸지 않는다. 계약을 바꾼 PR은 check job이 버전을 올리게 한다.
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            echo "${tag} 이미 있음"
+            exit 0
+          fi
+          gh release create "${tag}" dist/* \
+            --target "${GITHUB_SHA}" \
+            --title "${tag}" \
+            --notes "서비스 간 계약 ${version}. 쓰는 쪽은 service-contracts.lock에 버전과 SHA-256을 고정한다(ADR-0013)."
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

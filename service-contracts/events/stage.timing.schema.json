@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/stage.timing.schema.json",
+  "title": "StageTimingBatch",
+  "description": "소비 핸들러 하나가 끝날 때 그 안의 측정 기록을 묶은 메시지(ADR-0010 ⑩, SPEC-013). 비즈니스 이벤트가 아니라 측정 기록이라 이벤트 봉투(소유자 등)를 쓰지 않는다. 핸들러가 실패해도 보낸다. 메시지 키는 측정 대상의 sourceId이고 없으면 batchId다. 발행: 공통 메시징 라이브러리를 쓰는 모든 소비자. 소비: quality-service. 토픽 보존 7일.",
+  "type": "object",
+  "required": ["batchId", "service", "pod", "producedAt", "timings"],
+  "additionalProperties": false,
+  "properties": {
+    "batchId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "uuid5(소비 그룹, 토픽, 파티션, offset, 시도 번호). 같은 메시지를 같은 시도로 다시 처리하면 같은 값이다."
+    },
+    "service": { "type": "string", "minLength": 1, "description": "발행한 서비스 이름" },
+    "pod": { "type": "string", "minLength": 1, "description": "발행한 Pod(호스트) 이름" },
+    "producedAt": { "type": "string", "format": "date-time", "description": "이 묶음을 보낸 시각(UTC)" },
+    "timings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "../stages/v1/stage-timing.schema.json" }
+    }
+  },
+  "examples": [
+    {
+      "batchId": "5b0d2c1e-8f3a-5c7d-9e1f-2a3b4c5d6e7f",
+      "service": "normalize",
+      "pod": "normalize-7c9f8d6b5-x2k4p",
+      "producedAt": "2026-11-04T09:00:12.500Z",
+      "timings": [
+        {
+          "timingId": "1f2e3d4c-5b6a-5978-8a9b-0c1d2e3f4a5b",
+          "stageId": "normalize.queue_wait",
+          "path": "normalize.queue_wait",
+          "subject": { "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f" },
+          "attempt": 1,
+          "startedAt": "2026-11-04T09:00:00.100Z",
+          "endedAt": "2026-11-04T09:00:00.350Z",
+          "durationMs": 250,
+          "status": "ok",
+          "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+          "spanId": null,
+          "aiCallIds": []
+        },
+        {
+          "timingId": "2a3b4c5d-6e7f-5a8b-9c0d-1e2f3a4b5c6d",
+          "stageId": "normalize.transcode",
+          "path": "normalize.handle/normalize.transcode",
+          "subject": { "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f" },
+          "attempt": 1,
+          "startedAt": "2026-11-04T09:00:01.000Z",
+          "endedAt": "2026-11-04T09:00:09.800Z",
+          "durationMs": 8800.4,
+          "status": "ok",
+          "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+          "spanId": null,
+          "aiCallIds": []
+        },
+        {
+          "timingId": "3c4d5e6f-7a8b-5c9d-8e0f-1a2b3c4d5e6f",
+          "stageId": "normalize.store",
+          "path": "normalize.handle/normalize.store",
+          "subject": { "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f" },
+          "attempt": 1,
+          "startedAt": "2026-11-04T09:00:10.200Z",
+          "endedAt": "2026-11-04T09:00:12.000Z",
+          "durationMs": 1800.2,
+          "count": 13,
+          "unit": "files",
+          "status": "ok",
+          "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+          "spanId": null,
+          "aiCallIds": []
+        }
+      ]
+    }
+  ]
+}

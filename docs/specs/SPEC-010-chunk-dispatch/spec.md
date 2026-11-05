@@ -109,8 +109,8 @@ startBefore는 배정 후 기본 5분의 새 실행 시작 기한이며 AI 실�
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/events/chunk.requested.schema.json` | 신규 v1 요청. 객체 key·소유/처리 구간·프로필·시도·시작 기한 | 예(추가) |
-| `docs/contracts/asyncapi/pipeline-service.yaml` | 신규 발행 계약. sourceId Kafka 키 | 예(추가) |
+| `service-contracts/events/chunk.requested.schema.json` | 신규 v1 요청. 객체 key·소유/처리 구간·프로필·시도·시작 기한 | 예(추가) |
+| `service-contracts/asyncapi/pipeline-service.yaml` | 신규 발행 계약. sourceId Kafka 키 | 예(추가) |
 
 저장소 key는 SPEC-008 normalizedKey를 재사용한다. 저장소 endpoint·bucket·접근 권한은 worker 배포 설정으로 연결하며 메시지에 자격 증명·presigned URL을 넣지 않는다. 구간은 정규화 영상 시작 기준 정수 ms, 시작 포함·끝 제외다. 완료/실패 이벤트는 기존 계약이 없어 이번에 임의 토픽을 만들지 않는다.
 

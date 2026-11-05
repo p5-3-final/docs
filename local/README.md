@@ -15,7 +15,7 @@
 | kafka (KRaft 단일 노드) | 9092 | 512M |
 | seaweedfs (S3 API, 버킷 `vlm-media`) | 8333 | 384M |
 
-`seaweedfs-init`은 버킷을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
+`seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
 
 `kafka-init`은 normalize·ai-gateway가 쓰는 토픽(재시도·DLQ 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
 
@@ -91,11 +91,47 @@ docker compose -f local/docker-compose.yml exec postgres psql -U postgres -d ai_
   ```bash
   ollama serve &                 # 이미 떠 있으면 생략
   ollama pull qwen3-vl:4b-instruct   # 프로필 local.toml의 모델. 생각 단계가 없는 판이라 출력 상한 안에 답한다
+  ollama pull bge-m3                 # local.toml의 텍스트 임베딩(아래 "벡터 생성")
   AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
   ```
 
   계속 쓰려면 `local/.env`에 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`을 넣는다. 첫 호출은 모델을 메모리에 올리느라 더 오래 걸린다.
 - 기존 DB 볼륨에 ai_db를 더하려면 아래 "자주 쓰는 명령"의 postgres/init 안내처럼 `30-ai-db.sh`만 실행한다.
+
+### ai-gateway Registry 묶음 (SPEC-009 R-26)
+
+기본은 이미지에 넣은 Prompt Registry와 프로필을 쓴다. 운영처럼 모델 버킷의 묶음으로 띄워 보려면 아래를 한다.
+
+```bash
+local/scripts/upload-registry.sh   # 이미지의 Registry·프로필로 묶음을 만들어 vlm-models에 올리고 설정 세 줄을 출력한다
+```
+
+- 출력한 `AI_GATEWAY_REGISTRY_BUNDLE`·`AI_GATEWAY_REGISTRY_BUNDLE_SHA256`·`AI_GATEWAY_PROFILE_PATH`(묶음 안 상대 경로)를 `local/.env`에 넣고 ai-gateway를 다시 띄운다. 지우면 이미지의 것으로 돌아간다.
+- 프롬프트나 프로필을 바꾸면 이미지를 다시 빌드하고 스크립트를 다시 실행한다. 내용이 바뀌면 해시와 경로가 함께 바뀐다.
+- 새 taskType은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`(프롬프트, 입력·출력 스키마와 예시, `fallback.json`)와 프로필의 `[tasks.<taskType>]`만 더한다(R-24).
+
+### ai-gateway 벡터 생성 (SPEC-011)
+
+`/v1/embed`는 문장·검색용 이미지·텍스트를 벡터로 바꾼다. mock 프로필은 의미 없는 결정적 벡터를 돌려준다. 실제 인코더(MobileCLIP2-S0)와 텍스트 임베딩(Ollama `bge-m3`)을 쓰려면 아래를 한 번 한다.
+
+```bash
+local/scripts/upload-models.sh   # Hugging Face에서 가중치(약 300MB)를 받아 sha256 확인 후 manifest와 함께 vlm-models 버킷에 올린다
+ollama pull bge-m3               # 텍스트 임베딩(한국어 포함, 1024차원)
+AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
+```
+
+- 가중치는 이미지에 넣지 않는다. 버킷의 `models/mobileclip2-s0/dfndr2b/`에 가중치와 `manifest.json`(파일 sha256·차원·출처)을 둔다. ai-gateway가 기동할 때 프로필이 가리키는 manifest를 받아 프로필의 sha256과 맞춰 보고, manifest에 적힌 가중치를 받아 sha256을 확인한다. 받은 파일은 `ai-gateway-models` 볼륨에 남겨 재시작 때 다시 받지 않는다. 해시가 다르면 뜨지 않는다.
+- 가중치(Apple AMLR)는 비상용 시연·학습 목적으로만 쓴다(docs overview "모델과 플랫폼 교체").
+- 검색용 이미지는 `queries/<질의 ID>/` 아래 경로만 받는다. 영상 폴더의 경로는 거부한다.
+
+```bash
+curl -s -X POST localhost:8000/v1/embed -H 'Content-Type: application/json' -H 'X-Caller: search-service' \
+  -d '{"taskType":"embed_visual_text","texts":["a forklift"]}' | jq '{modelId, dimension}'
+curl -s -X POST localhost:8000/v1/embed -H 'Content-Type: application/json' -H 'X-Caller: embedding-worker' \
+  -d '{"taskType":"embed_text","texts":["작업자가 지게차 옆에 넘어졌다"]}' | jq '{modelId, dimension}'
+```
+
+- Ollama를 멈춰도 `embed_visual_text`·`embed_image`는 동작한다. `embed_text`는 503 `AI_PROVIDER_UNAVAILABLE`이다.
 
 ## 자주 쓰는 명령
 

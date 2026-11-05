@@ -108,7 +108,7 @@ SPEC-003·SPEC-005로 영상을 올리고 목록에서 상태를 볼 수 있게 
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/openapi/media-service.yaml` | `GET /api/v1/media/videos/{videoId}/playback`(operationId `getVideoPlayback`) 추가: 200 `VideoPlayback{url, downloadUrl, expiresAt}`, 409 `MEDIA_NOT_PLAYABLE`, 404 `MEDIA_VIDEO_NOT_FOUND`. 1.0.1 → 1.1.0 | 예(엔드포인트·오류 코드 추가) |
+| `service-contracts/openapi/media-service.yaml` | `GET /api/v1/media/videos/{videoId}/playback`(operationId `getVideoPlayback`) 추가: 200 `VideoPlayback{url, downloadUrl, expiresAt}`, 409 `MEDIA_NOT_PLAYABLE`, 404 `MEDIA_VIDEO_NOT_FOUND`. 1.0.1 → 1.1.0 | 예(엔드포인트·오류 코드 추가) |
 
 ## 7. 성공 지표
 

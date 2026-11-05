@@ -41,6 +41,20 @@
       "actions": [
         "Read"
       ]
+    },
+    {
+      "name": "models-upload",
+      "credentials": [
+        {
+          "accessKey": "local-models-key",
+          "secretKey": "local-models-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-models",
+        "Write:vlm-models",
+        "List:vlm-models"
+      ]
     }
   ]
 }

@@ -142,10 +142,10 @@ related: [ADR-0002, ADR-0008, SPEC-003, SPEC-004, SPEC-006]
 
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
-| `docs/contracts/events/video.normalizing.schema.json` | 새 이벤트: envelope만 | 예(추가) |
-| `docs/contracts/events/video.normalized.schema.json` | 새 이벤트: `normalizationId`, `normalizationVersion`, `durationMs`(READY), `result`(`READY`·`REJECTED`), `rejectReason`, `normalizedKey`, `hlsPlaylistKey`, `durationSec`, `fps`, `width`, `height`, `transcoded` | 예(추가) |
-| `docs/contracts/asyncapi/normalize.yaml` | 새 파일: normalize가 발행하는 두 채널. 메시지 키는 sourceId | 예(추가) |
-| `docs/contracts/openapi/media-service.yaml` | `VideoResponse`에 선택 필드 `durationSec`, `estimatedProcessingSec`, `rejectReason` 추가, `VideoStatus` 설명 갱신. 1.1.0 → 1.2.0 | 예(선택 필드 추가) |
+| `service-contracts/events/video.normalizing.schema.json` | 새 이벤트: envelope만 | 예(추가) |
+| `service-contracts/events/video.normalized.schema.json` | 새 이벤트: `normalizationId`, `normalizationVersion`, `durationMs`(READY), `result`(`READY`·`REJECTED`), `rejectReason`, `normalizedKey`, `hlsPlaylistKey`, `durationSec`, `fps`, `width`, `height`, `transcoded` | 예(추가) |
+| `service-contracts/asyncapi/normalize.yaml` | 새 파일: normalize가 발행하는 두 채널. 메시지 키는 sourceId | 예(추가) |
+| `service-contracts/openapi/media-service.yaml` | `VideoResponse`에 선택 필드 `durationSec`, `estimatedProcessingSec`, `rejectReason` 추가, `VideoStatus` 설명 갱신. 1.1.0 → 1.2.0 | 예(선택 필드 추가) |
 
 소비자: media-service(두 이벤트), pipeline-service(`video.normalized`, 다른 작업자), frontend(타입 생성).
 

@@ -1,0 +1,52 @@
+asyncapi: 3.0.0
+info:
+  title: stage timing events
+  version: 1.0.0
+  description: |
+    처리 단계 측정 기록(ADR-0010 ⑩, SPEC-013).
+    발행 서비스 기준으로 파일을 나누는 규칙의 예외다. 특정 서비스가 아니라 공통 메시징 라이브러리(ai `libs/messaging`, 이후 backend `libs/common-messaging`)가 소비 핸들러마다 같은 형식으로 발행하므로 파일을 하나로 둔다.
+    발행은 설정으로 켠다. 끈 서비스(로컬 기본)는 같은 기록을 JSON 로그로만 남긴다.
+    payload의 원본은 `../events/stage.timing.schema.json`이다.
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  stageTiming:
+    address: stage.timing
+    description: 소비 핸들러 하나의 측정 기록 묶음. 메시지 키는 측정 대상의 sourceId이고 없으면 batchId다. 보존 7일.
+    messages:
+      stageTiming:
+        $ref: '#/components/messages/StageTiming'
+operations:
+  publishStageTiming:
+    action: send
+    summary: 소비 핸들러가 끝나면(성공·실패 모두) 그 안의 측정 기록을 한 메시지로 발행 (SPEC-013 R-5)
+    channel:
+      $ref: '#/channels/stageTiming'
+    messages:
+      - $ref: '#/channels/stageTiming/messages/stageTiming'
+components:
+  messages:
+    StageTiming:
+      name: stage.timing
+      title: 처리 단계 측정 기록
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/stage.timing.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId, 없으면 batchId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. 소비한 메시지의 trace를 이어 간다(원칙 VI).
