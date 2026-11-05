@@ -20,5 +20,6 @@
 | [SPEC-014](SPEC-014-execution-results/spec.md) | 청크 실행 종료 결과와 슬롯 자동 반환 | Implementing | backend, ai, docs | backend 담당자 | 2026-11-05 |
 
 | [SPEC-015](SPEC-015-job-execution-status/spec.md) | Job 실행 집계와 소유자 상태 조회 | Implementing | backend, docs | backend 담당자 | 2026-11-05 |
+| [SPEC-016](SPEC-016-ai-gateway-cache-budget/spec.md) | ai-gateway 결과 캐시·예산·호출 한도 | Approved | ai, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
