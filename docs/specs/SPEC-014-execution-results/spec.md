@@ -86,7 +86,7 @@ related: [SPEC-007, SPEC-008, SPEC-010, ADR-0009, ADR-0010, ADR-0013]
 
 종료 성공은 청크 PROCESSED, 종료 실패는 FAILED다. PROCESSED는 결과 객체 준비를 뜻하며 downstream 적재/전체 Job 완료를 뜻하지 않는다. 실행 상태는 SUCCEEDED/FAILED로 종료한다. 기존 STOPPED·RECOVERY_REQUIRED와 상한 정책을 보존한다.
 
-현재 실행은 원 요청의 jobId/chunkId/normalizationId/sourceId/ownerId/requestId와 일치하고 활성인 executionId다. terminal/STOPPED·더 새 시도가 존재하는 실행의 결과는 IGNORED다. 같은 eventId는 전체 JSONB 입력을 비교하고, 다른 eventId의 같은 실행 결과는 outcome/resultKey/errorCode 의미를 비교한다. 이미 반영한 내용과 다르면 충돌이다. 알 수 없는 실행·식별 불일치는 오류이며 자동 skip하지 않는다.
+현재 실행은 원 요청의 jobId/chunkId/normalizationId/sourceId/ownerId/requestId와 일치하고 활성인 executionId다. STOPPED·더 새 시도가 존재하는 실행의 결과는 우선 IGNORED다. 더 새 시도가 없는 현재 실행의 이미 반영된 종료는 아래 중복/충돌 규칙을 따른다. 같은 eventId는 전체 JSONB 입력을 비교하고, 다른 eventId의 같은 실행 결과는 outcome/resultKey/errorCode 의미를 비교한다. 이미 반영한 내용과 다르면 충돌이다. 알 수 없는 실행·식별 불일치는 오류이며 자동 skip하지 않는다.
 
 CLI가 먼저 STOPPED를 확정하면 늦은 결과는 무시한다. 결과가 먼저 종료하면 CLI는 기존 종료를 유지하고 슬롯을 다시 반환하지 않는다. 두 경로는 같은 DB 잠금과 트랜잭션 정책을 쓴다. startBefore 경과만으로 worker 실행이 끝났다고 가정하지 않는다.
 
@@ -117,7 +117,8 @@ normalize는 결과 이벤트를 발행하기 전에 객체 저장소의 조건�
 | --- | --- | --- |
 | `service-contracts/events/chunk.execution.finished.schema.json` | 새 v1 종료 이벤트, outcome SUCCEEDED/FAILED, 성공 resultKey 또는 실패 errorCode | 예(추가) |
 | `service-contracts/asyncapi/chunk-processor.yaml` | chunk.requested 소비·종료 결과 발행 | 예(추가) |
-| `service-contracts/VERSION` | 2.3.0 → 2.4.0, 소비자 lock 갱신 | 예(추가) |
+| `service-contracts/stages/v1/stages.schema.json` | 공통 메시징이 쓰는 chunk-processor.queue_wait/handle 추가 | 예(추가) |
+| `service-contracts/VERSION` | 2.3.0 → 2.4.0(종료) → 2.5.0(워커 측정 단계), 소비자 lock 갱신 | 예(추가) |
 
 종료 이벤트는 envelope와 jobId/chunkId/executionId/requestId/normalizationId를 담는다. resultKey는 `sources/<sourceId>/jobs/<jobId>/chunks/<chunkId>/executions/<executionId>/result.json`의 불변 참조다. 모델 output은 별도 스키마 대상으로 추측하지 않는다. chunk.manifest·AI Gateway API는 변경하지 않는다.
 

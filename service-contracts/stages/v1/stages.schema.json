@@ -7,14 +7,46 @@
     "stageId": {
       "description": "처리 단계 ID",
       "oneOf": [
-        { "const": "normalize.queue_wait", "description": "normalize 소비 그룹: 발행부터 소비까지 기다린 시간" },
-        { "const": "normalize.handle", "description": "normalize 소비 그룹: video.uploaded 핸들러 전체" },
-        { "const": "normalize.probe", "description": "원본 메타데이터 읽기(ffprobe)" },
-        { "const": "normalize.transcode", "description": "정규화 사본 만들기(재인코딩 또는 복사)" },
-        { "const": "normalize.hls", "description": "HLS 조각 만들기" },
-        { "const": "normalize.store", "description": "정규화 사본·HLS 저장소 업로드" },
-        { "const": "ai-gateway.queue_wait", "description": "ai-gateway 소비 그룹(video.deleted): 발행부터 소비까지 기다린 시간" },
-        { "const": "ai-gateway.handle", "description": "ai-gateway 소비 그룹: video.deleted 핸들러 전체" }
+        {
+          "const": "normalize.queue_wait",
+          "description": "normalize 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "normalize.handle",
+          "description": "normalize 소비 그룹: video.uploaded 핸들러 전체"
+        },
+        {
+          "const": "normalize.probe",
+          "description": "원본 메타데이터 읽기(ffprobe)"
+        },
+        {
+          "const": "normalize.transcode",
+          "description": "정규화 사본 만들기(재인코딩 또는 복사)"
+        },
+        {
+          "const": "normalize.hls",
+          "description": "HLS 조각 만들기"
+        },
+        {
+          "const": "normalize.store",
+          "description": "정규화 사본·HLS 저장소 업로드"
+        },
+        {
+          "const": "ai-gateway.queue_wait",
+          "description": "ai-gateway 소비 그룹(video.deleted): 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "ai-gateway.handle",
+          "description": "ai-gateway 소비 그룹: video.deleted 핸들러 전체"
+        },
+        {
+          "const": "chunk-processor.queue_wait",
+          "description": "SPEC-014 처리 요청 큐 대기"
+        },
+        {
+          "const": "chunk-processor.handle",
+          "description": "SPEC-014 실행 점유·처리·종료 기록"
+        }
       ]
     }
   }
