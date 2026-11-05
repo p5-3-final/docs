@@ -1,12 +1,13 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 0.2.1
+  version: 0.3.0
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
     taskType별 입력 변수·출력 형식의 원본은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다(docs ADR-0012).
     이미지는 저장소 경로로만 넘기며, 허용 패턴에 맞는 블러 사본 경로만 받는다. (SPEC-009 R-9, R-10)
     `/v1/embed`는 질의·텍스트·이미지 벡터를 만든다. 검색용 이미지는 taskType별 허용 패턴(질의 전용 폴더)의 경로만 받는다. (SPEC-011)
+    `/v1/parse`는 검색 문장을 표준 질의로 해석한다. 질의 사전과 `query_parse` 프롬프트의 원본은 ai 레포 Prompt Registry다. (SPEC-012)
 servers:
   - url: http://ai-gateway:8000
     description: 클러스터 내부 주소 (로컬 compose 서비스 이름 기준)
@@ -147,6 +148,53 @@ paths:
           $ref: '#/components/responses/ProviderFailed'
         '503':
           $ref: '#/components/responses/EmbedUnavailable'
+  /v1/parse:
+    post:
+      operationId: parse
+      summary: 검색 문장을 표준 질의로 해석
+      description: |
+        질의 사전으로 먼저 해석하고, 사전에 맞는 한국어 표현이 없을 때만 영어 구문 처리나 LLM(`query_parse`)을 쓴다. (SPEC-012 R-3~R-11)
+        - LLM이 미설정이거나 실패해도 오류가 아니라 200으로 `parseMethod: safe-fallback`, 대상어 `person`인 결과를 돌려준다. (R-12~R-14)
+        - route는 해석 방법과 상관없이 사전으로만 정한다. (R-15)
+        - 같은 사전·프롬프트로 같은 문장을 다시 보내면 같은 표준 질의를 받는다.
+        - 호출 로그에는 검색 문장 원문과 모델 원문이 남지 않는다. (R-27)
+      tags: [internal]
+      # /v1/analyze와 같은 이유로 토큰 인증 없이 NetworkPolicy와 호출자 헤더 허용 목록으로 막는다.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParseRequest'
+            example:
+              query: 안전모 안 쓴 작업자 찾아줘
+      responses:
+        '200':
+          description: 표준 질의. `safe-fallback`도 200이며 `parseMethod`로 구분한다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResponse'
+              example:
+                callId: 0192f0e1-0000-7000-8000-000000000003
+                route: video_retrieval
+                targets: [person without a hard hat]
+                eventTypes: [ppe_missing]
+                visualQuery: a photo of person without a hard hat
+                parseMethod: industrial-rule
+                rationale: '사전 표현: 안전모를 안'
+                dictionaryVersion: v1@4d1c0a9e7b2f
+                promptVersion: null
+                taxonomyVersion: v2
+                canonicalQuery: 'v1:video_retrieval|person without a hard hat|ppe_missing|industrial-rule|v1@4d1c0a9e7b2f|v2'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
   parameters:
     XCaller:
@@ -174,6 +222,7 @@ components:
         이미지 수가 taskType 상한을 넘음 (`AI_TOO_MANY_IMAGES`), 저장소에 없는 이미지 (`AI_IMAGE_NOT_FOUND`). (SPEC-009 R-2~R-4, R-11)
         `/v1/embed`: 입력 수가 taskType 상한을 넘음 (`AI_TOO_MANY_INPUTS`), 디코딩할 수 없는 이미지 (`AI_IMAGE_UNREADABLE`).
         taskType에 맞지 않는 입력 종류·빈 목록·빈 문장·길이 상한을 넘는 문장은 `AI_INVALID_REQUEST`다. (SPEC-011 R-7~R-9, R-11, R-12, R-26)
+        `/v1/parse`: 빈 문장, 정규화 뒤 빈 문장, 길이 상한(프로필 값)을 넘는 문장은 `AI_INVALID_REQUEST`다. (SPEC-012 R-20, R-21)
       content:
         application/problem+json:
           schema:
@@ -238,6 +287,83 @@ components:
             detail: 이 작업의 모델이 설정되지 않았습니다.
             code: AI_MODEL_NOT_CONFIGURED
   schemas:
+    ParseRequest:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: 사용자의 검색 문장(한국어·영어). 길이 상한은 프로필 값이다. (SPEC-012 R-20, R-21)
+    QueryRoute:
+      type: string
+      description: |
+        검색 경로. (SPEC-012 R-3, R-4)
+        - `video_retrieval`: 장면 찾기
+        - `temporal_video_rag`: 시간·상태 질문 답변(사전의 시간·상태 표현이 있을 때)
+      enum: [video_retrieval, temporal_video_rag]
+    ParseMethod:
+      type: string
+      description: |
+        해석 방법. (SPEC-012 R-5, R-8, R-9, R-11~R-14)
+        - `industrial-rule`: 질의 사전의 한국어 표현
+        - `english-phrase`: 영어 위주 문장에서 불용어를 지운 구문
+        - `llm`: `query_parse` 모델 출력
+        - `safe-fallback`: 위 방법으로 해석하지 못해 대상어를 `person`으로 제한함
+      enum: [industrial-rule, english-phrase, llm, safe-fallback]
+    ParseResponse:
+      type: object
+      required: [callId, route, targets, eventTypes, visualQuery, parseMethod, rationale, dictionaryVersion, promptVersion, taxonomyVersion, canonicalQuery]
+      properties:
+        callId:
+          type: string
+          format: uuid
+          description: 호출 ID. 호출 로그를 찾는 키다. (SPEC-012 R-1, R-27)
+        route:
+          $ref: '#/components/schemas/QueryRoute'
+        targets:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: 영어 시각 대상어. bbox 주석(grounding) 대상으로 쓴다. (R-5, R-8, R-11)
+          items:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9 -]*$'
+            maxLength: 64
+        eventTypes:
+          type: array
+          description: 분류 체계 이벤트 유형(`other` 제외). 텍스트 인덱스 필터로 쓴다. 맞은 유형이 없으면 빈 목록이다. (R-7, R-11)
+          uniqueItems: true
+          items:
+            $ref: '../taxonomy/v2/taxonomy.schema.json#/$defs/detectableEventType'
+        visualQuery:
+          type: string
+          minLength: 1
+          description: 대상어로 만든 영어 검색 문장. `embed_visual_text`의 입력으로 쓴다. 같은 대상어 목록이면 같은 문장이다. (R-16)
+        parseMethod:
+          $ref: '#/components/schemas/ParseMethod'
+        rationale:
+          type: string
+          description: 해석 근거(해석 방법과 맞은 사전 표현). LLM 출력의 설명문은 넣지 않는다. 사람이 읽는 값이라 형식에 의존하지 않는다. (R-17)
+        dictionaryVersion:
+          type: string
+          description: 질의 사전 버전. `<버전 이름>@<사전 내용 해시 12자리>`다. (R-29)
+          pattern: '^v[0-9]+@[0-9a-f]{12}$'
+        promptVersion:
+          type: [string, 'null']
+          description: '`parseMethod`가 `llm`일 때만 `query_parse` 프롬프트 버전 ID, 아니면 null (R-11, R-19)'
+          pattern: '^[a-z_]+@[0-9a-f]{12}$'
+        taxonomyVersion:
+          type: string
+          description: 질의 사전과 `query_parse` 출력 스키마가 참조하는 분류 체계 버전(`service-contracts/taxonomy/<버전>/`) (R-30)
+          pattern: '^v[0-9]+$'
+        canonicalQuery:
+          type: string
+          minLength: 1
+          description: |
+            표준 질의 문자열. route·대상어·이벤트 유형·해석 방법·사전 버전·분류 체계 버전(`llm`이면 프롬프트 버전 포함)이 같으면 같은 값이고 하나라도 다르면 다른 값이다. (R-18)
+            호출자는 이 문자열을 해석하지 않고 그대로 재사용 키의 일부로 쓴다. 형식은 바뀔 수 있다.
     TaskType:
       type: string
       description: 분석 작업 유형. 다른 taskType은 각 기능 spec에서 추가한다.
