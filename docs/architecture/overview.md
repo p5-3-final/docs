@@ -62,7 +62,7 @@ flowchart TB
 | --- | --- | --- |
 | 맡는 일 | 사용자 요청, 업무 상태(업로드·작업·버전), 권한, 저장, 조회, 품질 검토 | 영상 디코딩, 객체 탐지·추적, 이미지 벡터, VLM 호출, bbox 주석 |
 | 서버 형태 | HTTP API 서버 (analysis-loader만 컨슈머 전용) | ai-gateway 1개는 HTTP 서버, 나머지 9개는 Kafka 워커 |
-| DB 접근 | 자기 DB를 직접 읽고 씀(Outbox 포함) | 기존 v3는 PostgreSQL 직접 쓰기를 금지했으나, backend 소유 normalize·chunk-processor의 수신/실행·결과 Outbox 원장은 후속 설계에서 자체 저장소를 사용한다. pipeline DB 직접 쓰기는 금지한다. ai-gateway는 자기 DB 소유 |
+| DB 접근 | 자기 DB를 직접 읽고 씀(Outbox 포함) | 기존 v3는 PostgreSQL 직접 쓰기를 금지했으나, backend 소유 normalize·chunk-processor의 수신/실행·결과 Outbox 원장은 SPEC-014에서 normalize는 불변 객체 스냅샷, chunk-processor는 자체 PostgreSQL 실행·결과 Outbox 원장을 사용한다. pipeline DB 직접 쓰기는 금지한다. ai-gateway는 자기 DB 소유 |
 | 스케일 기준 | HPA (CPU·요청 수) | KEDA (Kafka 처리 대기량), ai-gateway는 HPA |
 | 이미지 | 서비스마다 하나 (backend 공통 `Dockerfile`) | 서비스마다 하나 ([ADR-0001](../adr/0001-ai-uv-workspace.md)). 무거운 의존성(PyTorch, Ultralytics, FFmpeg)이 가벼운 워커에 섞이지 않게 함 |
 | 모델 | 없음 | 자체 실행(CPU): 이미지·질의 인코더, 탐지기. 외부: VLM·텍스트 임베딩 |
@@ -74,8 +74,9 @@ flowchart LR
   ME[media-service] -->|video.uploaded| NZ[normalize]
   NZ -->|video.normalized| PL[pipeline-service]
   NZ -->|video.normalized| ME
-  PL -->|Job·Chunk 계획 저장만| DS[배정기 · 후속]
+  PL -->|Job·Chunk 계획 저장만| DS[배정기]
   DS -->|실행·슬롯·Outbox 커밋 후 chunk.requested| CP[chunk-processor]
+  CP -->|chunk.execution.finished| PL
   CP -->|준비된 청크 객체 참조 · 내부 HTTP| INF[AI 추론 경계 · endpoint 초안]
   CP -->|segment.ready| FEN[frame-encoder]
   FEN -->|segment.embedded| SE[search-service]
@@ -652,6 +653,12 @@ sequenceDiagram
 
 ## 영상 처리 책임과 실행 경계 (ADR-0009)
 
-normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행 슬롯·요청 Outbox와 종료 확인 복구는 [SPEC-010](../specs/SPEC-010-chunk-dispatch/spec.md) 및 backend `specs/SPEC-010-chunk-dispatch/plan.md`에서 다룬다. 만료만으로 슬롯을 반환하지 않으며 실제 worker 완료·결과 반영·자동 재시도는 후속이다. SPEC-008은 수신·계획 저장 범위다. 완료/실패 이벤트의 executionId·결과 참조·오류 코드는 후속 계약 대상이며 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
+normalize·chunk-processor·Kafka·계획·배정은 backend 소관이고 AI팀은 추론 기능을 담당한다. 언어·레포 위치는 담당과 다르며 이번 문서 변경으로 서비스를 이동하거나 배포 단위를 추가하지 않는다. 계획 단계의 Outbox 부재는 정상 미배정 상태다. 배정·실행 슬롯·요청 Outbox와 종료 확인 복구는 [SPEC-010](../specs/SPEC-010-chunk-dispatch/spec.md) 및 backend `specs/SPEC-010-chunk-dispatch/plan.md`에서 다룬다. 만료만으로 슬롯을 반환하지 않는다. 실제 worker의 chunk.execution.finished 수신·슬롯 반환은 [SPEC-014](../specs/SPEC-014-execution-results/spec.md), Job 실행 집계·제한된 확정 실패 재시도·소유자 조회·점검은 [SPEC-015](../specs/SPEC-015-job-execution-status/spec.md)에서 구현한다. SPEC-008은 수신·계획 저장 범위다. 기존 chunk.manifest를 실행 완료 계약으로 간주하지 않는다.
 
 기존 AI Gateway의 /v1/analyze·/v1/embed·/v1/parse와 블러 사본·모델 Adapter 정책은 유지한다. /v1/inferences는 문서 초안으로, 준비된 입력 객체 읽기 권한과 requestId별 실행 제어를 추가해야 한다. AI 출력의 실제 검출/설명/임베딩 구조를 이 문서로 확정하지 않는다.
+
+### 실행 종료와 분석 완료
+
+SPEC-015의 `execution.status`는 PENDING/RUNNING/UNKNOWN/SUCCEEDED/PARTIAL_FAILED/FAILED이며 기존 Job 분석 생명주기와 별도다. `job.status`는 두 상태와 Job별 단조 sequence를 담은 전체 스냅샷이다. 진행률은 확정 종료 청크/전체 계획 청크이고, 성공률은 별도다. 실행 성공/실패만으로 ANALYZED·COMPLETED나 analysis.completed를 선언하지 않으며 영상당 활성 Job 제한도 유지한다.
+
+위 전체 흐름 중 현재 실제 연결은 normalize→계획→배정→chunk-processor의 실제 추출·검증 추론 대역→종료 결과→슬롯 반환·다음 청크·실행 집계까지다. Analysis/Search 적재 확인·버전 활성화·최종 분석 완료·실제 AI 추론은 후속이다. 적재 확인은 수락한 executionId와 resultKey를 연결해야 하며 이 계약의 실제 필드를 이번 실행 집계에서 추정하지 않는다. 운영 활성화·기존 offset 변경은 수행하지 않았다.

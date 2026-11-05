@@ -18,6 +18,6 @@
 | [SPEC-013](SPEC-013-stage-timing/spec.md) | 처리 단계 측정 | Implementing | ai, docs | | 2026-11-04 |
 | [SPEC-014](SPEC-014-execution-results/spec.md) | 청크 실행 종료 결과와 슬롯 자동 반환 | Implementing | backend, ai, docs | backend 담당자 | 2026-11-05 |
 
-| [SPEC-015](SPEC-015-job-execution-status/spec.md) | Job 실행 집계와 소유자 상태 조회 | Approved | backend, docs | backend 담당자 | 2026-11-05 |
+| [SPEC-015](SPEC-015-job-execution-status/spec.md) | Job 실행 집계와 소유자 상태 조회 | Implementing | backend, docs | backend 담당자 | 2026-11-05 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
