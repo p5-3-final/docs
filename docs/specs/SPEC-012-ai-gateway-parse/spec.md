@@ -49,7 +49,7 @@ related: [ADR-0008, SPEC-009, SPEC-011]
 - 표준 질의의 속성 조건(보호구 착용 여부, 역할, 장비 등): 분류 체계에 속성 enum이 생기는 spec에서 더한다.
 - 시간 조건 해석("오후 3시 이후" 같은 절대·상대 시각을 필터로 바꾸는 것): 시간 필터의 의미는 search-service가 정한 뒤 더한다. 이번 spec에서는 시간·상태 표현을 route를 나누는 데만 쓴다.
 - 사전에 일부만 맞는 문장의 사전 밖 단어를 LLM으로 보충하는 것: 사전에 하나라도 맞으면 LLM을 부르지 않는다. 빠진 단어는 질의 로그로 모아 사전을 보강한다.
-- 질의 해석 결과 캐시(Redis → DB), 예산, 토큰 버킷: SPEC-014
+- 질의 해석 결과 캐시(Redis → DB), 예산, 토큰 버킷: SPEC-016
 - 질의 로그(질의 원문, 이동·재생 구간, 맞음·틀림)와 `safe-fallback` 질의 모으기: search-service
 - 단계별 재사용 키 생성과 검색 결과 재사용: search-service
 - route에 따른 Video RAG 처리: search-service와 이후 `video_rag` spec
