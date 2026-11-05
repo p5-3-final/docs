@@ -98,7 +98,7 @@ SPEC-010/014에는 자동 작업 재시도 구현이 없으므로 기본 maxAtte
 | --- | --- | --- |
 | `service-contracts/openapi/pipeline-service.yaml` | GET /api/v1/jobs/{jobId}/execution | 예(신규) |
 | `service-contracts/events/job.status.schema.json` | 분석 status와 별도 execution, 단조 sequence 전체 스냅샷 | 예(신규) |
-| `service-contracts/asyncapi/pipeline-service.yaml` | 기존 chunk.requested와 job.status 발행 기술 | 예(신규 문서) |
+| `service-contracts/asyncapi/pipeline-service.yaml` | 기존 chunk.requested 보존·job.status 발행 추가 | 예(추가) |
 | `service-contracts/VERSION` | 2.5.1 → 2.6.0 | 예 |
 
 기존 개요의 GET /jobs/{sourceId}는 향후 영상별 조회 구상이다. 이번 조회는 jobId(plan_id)별 /jobs/{jobId}/execution으로 구분하며 기존 구상을 교체하지 않는다. analysis.completed는 계약 스키마·발행 구현이 아직 없으며 이번에 만들지 않는다. 향후 적재 확인은 jobId/chunkId와 수락한 executionId·resultKey를 연결하고 모두 준비된 뒤 별도 분석 상태 전이에서 수행한다.
