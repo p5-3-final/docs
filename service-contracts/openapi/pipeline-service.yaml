@@ -1,0 +1,239 @@
+---
+openapi: 3.1.0
+info:
+  title: pipeline-service API
+  version: 1.0.0
+  description: Job 실행 집계 조회. 실행 종료는 분석 적재 완료가 아니다(SPEC-015).
+servers:
+- url: "/"
+  description: api-gateway 경유
+tags:
+- name: jobs
+  description: Job 실행 현황
+paths:
+  "/api/v1/jobs/{jobId}/execution":
+    get:
+      operationId: getJobExecution
+      summary: 소유자 Job 실행 상태 조회
+      description: 진행률은 확정 종료 청크/전체 청크 정수 백분율이다. 타인·미존재·소유자 연결 없는 과거 계획은 404. 인증은
+        gateway, 인가는 서비스가 수행한다.
+      tags:
+      - jobs
+      parameters:
+      - "$ref": "./_common.yaml#/components/parameters/XUserId"
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 소유자 Job 실행 스냅샷
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/JobExecution"
+              example:
+                jobId: 11111111-1111-4111-8111-111111111111
+                sourceId: 22222222-2222-4222-8222-222222222222
+                ownerId: 33333333-3333-4333-8333-333333333333
+                status: RUNNING
+                sequence: 2
+                execution:
+                  status: SUCCEEDED
+                  terminal: true
+                  total: 2
+                  succeeded: 2
+                  failed: 0
+                  pending: 0
+                  retryPending: 0
+                  running: 0
+                  unknown: 0
+                  progressPercent: 100
+                  successPercent: 100
+                issues: []
+                failures: []
+        '400':
+          description: VALIDATION_FAILED
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "./_common.yaml#/components/schemas/ProblemDetail"
+              example:
+                type: about:blank
+                title: VALIDATION_FAILED
+                status: 400
+                code: VALIDATION_FAILED
+        '401':
+          description: TOKEN_MISSING
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "./_common.yaml#/components/schemas/ProblemDetail"
+              example:
+                type: about:blank
+                title: TOKEN_MISSING
+                status: 401
+                code: TOKEN_MISSING
+        '404':
+          description: PIPELINE_JOB_NOT_FOUND
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "./_common.yaml#/components/schemas/ProblemDetail"
+              example:
+                type: about:blank
+                title: PIPELINE_JOB_NOT_FOUND
+                status: 404
+                code: PIPELINE_JOB_NOT_FOUND
+components:
+  schemas:
+    JobExecution:
+      type: object
+      additionalProperties: false
+      required:
+      - jobId
+      - sourceId
+      - ownerId
+      - status
+      - sequence
+      - execution
+      - issues
+      - failures
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        sequence:
+          type: integer
+          minimum: 1
+        execution:
+          type: object
+          additionalProperties: false
+          required:
+          - total
+          - succeeded
+          - failed
+          - pending
+          - retryPending
+          - running
+          - unknown
+          - progressPercent
+          - successPercent
+          - status
+          - terminal
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            succeeded:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            pending:
+              type: integer
+              minimum: 0
+            retryPending:
+              type: integer
+              minimum: 0
+            running:
+              type: integer
+              minimum: 0
+            unknown:
+              type: integer
+              minimum: 0
+            progressPercent:
+              type: integer
+              minimum: 0
+            successPercent:
+              type: integer
+              minimum: 0
+            status:
+              type: string
+              enum:
+              - PENDING
+              - RUNNING
+              - UNKNOWN
+              - SUCCEEDED
+              - PARTIAL_FAILED
+              - FAILED
+            terminal:
+              type: boolean
+        issues:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - chunkId
+            - executionId
+            - state
+            - attempt
+            - errorCode
+            - retryAt
+            properties:
+              chunkId:
+                type: string
+                format: uuid
+              executionId:
+                type:
+                - string
+                - 'null'
+                format: uuid
+              state:
+                type: string
+              attempt:
+                type: integer
+                minimum: 0
+              errorCode:
+                type:
+                - string
+                - 'null'
+              retryAt:
+                type:
+                - string
+                - 'null'
+                format: date-time
+        failures:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - chunkId
+            - executionId
+            - attempt
+            - status
+            - errorCode
+            properties:
+              chunkId:
+                type: string
+                format: uuid
+              executionId:
+                type: string
+                format: uuid
+              attempt:
+                type: integer
+                minimum: 0
+              status:
+                type: string
+              errorCode:
+                type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- bearerAuth: []
