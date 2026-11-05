@@ -92,7 +92,7 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 
 | 작업 | 재개 조건 |
 | --- | --- |
-| SPEC-012 ai-gateway 질의 해석 | 재개함(D-4·A-3 완료). spec Approved, ai 구현 중 |
+| SPEC-012 ai-gateway 질의 해석 | 재개함(D-4·A-3 완료). ai 구현 완료(ai #35), 배포 대기 |
 | SPEC-016 결과 캐시·예산·토큰 버킷·단계 상향(SPEC-013은 처리 단계 측정, SPEC-014·015는 backend 실행 결과·상태에 썼다) | SPEC-012 이후 |
 
 ## 7. 결정할 것
