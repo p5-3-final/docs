@@ -1,9 +1,9 @@
 asyncapi: 3.0.0
 info:
   title: Pipeline dispatch events
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    SPEC-010 신규 backend 계약. 실제 chunk-processor 연결은 후속이다.
+    SPEC-010 요청·SPEC-014 워커 연결·SPEC-015 실행 집계. 실행 종료는 분석 적재 완료가 아니다.
     최소 한 번 전달. eventId·executionId·requestId·입력은 재발행 시 유지한다.
     requestId=executionId. startBefore 이후 신규 시작을 거부한다. 만료만으로 실행 종료를 가정하지 않는다.
 defaultContentType: application/json
@@ -17,6 +17,11 @@ channels:
     messages:
       chunkRequested:
         $ref: '#/components/messages/ChunkRequested'
+  jobStatus:
+    address: job.status
+    messages:
+      jobStatus:
+        $ref: '#/components/messages/JobStatus'
 operations:
   publishChunkRequested:
     action: send
@@ -25,6 +30,13 @@ operations:
       $ref: '#/channels/chunkRequested'
     messages:
       - $ref: '#/channels/chunkRequested/messages/chunkRequested'
+  publishJobStatus:
+    action: send
+    summary: 분석 상태와 실행 집계 전체 스냅샷 발행
+    channel:
+      $ref: '#/channels/jobStatus'
+    messages:
+      - $ref: '#/channels/jobStatus/messages/jobStatus'
 components:
   messages:
     ChunkRequested:
@@ -38,6 +50,23 @@ components:
             description: W3C Trace Context
       payload:
         $ref: '../events/chunk.requested.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    JobStatus:
+      name: job.status
+      title: Job 상태 스냅샷
+      headers:
+        type: object
+        properties:
+          traceparent:
+            type: string
+            description: W3C Trace Context
+      payload:
+        $ref: '../events/job.status.schema.json'
       bindings:
         kafka:
           key:

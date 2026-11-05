@@ -15,7 +15,7 @@ updated: 2026-11-04
 | api-gateway | `services/api-gateway` | 라우팅, JWT 검증(JWKS), 사용자 헤더 주입, CORS, rate limit, 알림 티켓 검증 | — | 8080 | — (Redis) | — | |
 | auth-service | `services/auth-service` | 회원, 로그인, 토큰 발급·재발급·폐기, 역할, 공개키(JWKS), 알림 티켓 | — | 8081 | auth_db | `openapi/auth-service.yaml` | |
 | media-service | `services/media-service` | 업로드 자리 발급, 완료 확인(조건부 전이), 원본 재생 주소, 정규화 결과 반영, 사전 견적, 삭제 전파, v4 작업 세션·학습용 보존 동의·보존 키·외부 데이터셋 영상 등록 | `video.normalized` → `video.uploaded`, `video.deleted`, 보존 동의 철회 | 8082 | media_db | `openapi/media-service.yaml` | |
-| pipeline-service | `services/pipeline-service` | 계획 저장과 배정 분리(실행·슬롯·요청 Outbox는 배정 시), 3단계 공정성, 적재 완료 기준 완료 판정, 재판정·재임베딩 job | `video.normalized`, `chunk.manifest`, `segment.indexed`, `event.manifest`, `track.manifest` → `chunk.requested`, `analysis.completed`, `job.status` | 8083 | pipeline_db | `openapi/pipeline-service.yaml` | backend |
+| pipeline-service | `services/pipeline-service` | 계획 저장과 배정 분리(실행·슬롯·요청 Outbox는 배정 시), 3단계 공정성, 실행 집계·소유자 조회, 적재 완료 기준 완료 판정, 재판정·재임베딩 job | `video.normalized`, `chunk.execution.finished`, `chunk.manifest`, `segment.indexed`, `event.manifest`, `track.manifest` → `chunk.requested`, `analysis.completed`, `job.status` | 8083 | pipeline_db | `openapi/pipeline-service.yaml` | backend |
 | analysis-api | `services/analysis-api` | 이벤트 타임라인·상세·검토, 위험 상태·상태 스냅샷 저장·조회, 위험구역 정의, 클릭 조회, 오버레이, 요약, 활성 버전, 트랙 속성 요청, 객체 자유 질문, aggregator·search-service용 내부 읽기 API | `event.analyzed`, `track.detected`, `track.analyzed`, `source.completed` → `attribute.requested`, `version.activated` | 8084 | analysis_db | `openapi/analysis-service.yaml` | 다른 작업자 |
 | analysis-loader | `services/analysis-loader` | 검출 박스·트랙 위치 파일 대량 적재(analysis-api와 DB 공유, 분리 배포) | `track.detected` → — | 8085 | analysis_db | — | 다른 작업자 |
 | search-service | `services/search-service` | 문장·이미지로 장면 찾기(질의 해석·시각/텍스트 검색·정밀 검색 선택), 구간·크롭 벡터 적재, bbox 주석 요청, Video RAG, 결과 재사용, 구간 주석 | `segment.embedded`, `embedding.ready`, `grounding.completed`, `version.activated`, `video.deleted` → `segment.indexed`, `segment.annotated`, `grounding.requested` | 8086 | search_db (pgvector) | `openapi/search-service.yaml` | 다른 작업자 |
@@ -60,3 +60,5 @@ Kafka 워커는 기존 health 전용 포트 규칙을 유지하며 업무 API용
 ### 배정과 AI 추론의 범위
 
 배정기는 pipeline-service의 후속 구성요소이며 별도 새 배포 단위를 확정하지 않는다. AI 추론 서버는 논리 역할이고 POST /v1/inferences는 신규 초안이다. 기존 ai-gateway facade 또는 별도 서버 adapter 중 실제 연결을 확인하기 전까지 기존 경로를 교체하지 않는다. 작업 완료·실패 토픽은 실행 식별자·결과 참조/오류 코드가 필요한 후보이며 현재 계약으로 구현됐다고 표기하지 않는다.
+
+Pipeline의 실제 종료 수신·슬롯 반환은 [SPEC-014](../specs/SPEC-014-execution-results/spec.md), 실행 집계·소유자 상태 조회·제한된 확정 실패 재시도는 [SPEC-015](../specs/SPEC-015-job-execution-status/spec.md)다. 실행 SUCCEEDED는 워커 결과 준비를 뜻한다. 표의 Analysis/Search 적재 완료 판정·analysis.completed·버전 활성화는 후속이며 현재 구현으로 완료를 선언하지 않는다.
