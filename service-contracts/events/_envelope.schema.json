@@ -4,7 +4,14 @@
   "title": "EventEnvelope",
   "description": "모든 이벤트가 공통으로 담는 필드. 각 이벤트 스키마가 allOf로 포함한다. 소비자는 eventId로 중복을 흡수한다. 필드는 추가만 허용한다.",
   "type": "object",
-  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "sourceId", "ownerId"],
+  "required": [
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "occurredAt",
+    "sourceId",
+    "ownerId"
+  ],
   "properties": {
     "eventId": {
       "type": "string",
@@ -38,7 +45,7 @@
     "producedAt": {
       "type": "string",
       "format": "date-time",
-      "description": "발행 라이브러리가 브로커에 보낸 시각(UTC). 소비자가 큐 대기 시간을 재는 데 쓴다(ADR-0010 ⑩, SPEC-013 R-8). 아직 채우지 않는 생산자가 있어 필수가 아니다."
+      "description": "최초 발행 준비 시각(UTC). 없는 이벤트는 발행 라이브러리가 채운다. 영속 스냅샷/Outbox 생산자는 최초 값을 함께 보존하고 재전달에서 바꾸지 않는다. 소비자는 최초 발행부터의 큐 대기/재시도 지연을 측정한다(SPEC-013, SPEC-014)."
     }
   }
 }

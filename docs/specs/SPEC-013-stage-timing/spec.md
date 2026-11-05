@@ -5,7 +5,7 @@ status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-04
-updated: 2026-11-04
+updated: 2026-11-05
 related: [ADR-0010, SPEC-007, SPEC-009]
 ---
 
@@ -123,3 +123,7 @@ quality 담당자로서 재배치 등으로 같은 메시지를 다시 처리해
 ## 8. 미결 사항
 
 - 해당 없음
+
+### 영속 이벤트 재발행의 발행 시각
+
+SPEC-014 연동 검증에서 재발행마다 producedAt을 덮어쓰면 동일 eventId의 입력 불변성과 충돌함을 확인했다. 발행 라이브러리는 없는 producedAt만 채우고 이미 준비된 값을 보존한다. 스냅샷/Outbox 생산자는 최초 준비 시각을 영속 payload에 저장한다. 재시도 지연은 최초 발행부터 소비까지의 시간에 포함한다. 필드 형식·선택 여부와 기존 측정 ID는 바꾸지 않는다.
