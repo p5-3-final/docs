@@ -1,0 +1,56 @@
+asyncapi: 3.0.0
+info:
+  title: Chunk processor execution events
+  version: 1.0.0
+  description: SPEC-014. 실제 종료만 발행하며 불명 timeout은 종료로 취급하지 않는다.
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+channels:
+  requested:
+    address: chunk.requested
+    messages:
+      requested:
+        payload:
+          $ref: '../events/chunk.requested.schema.json'
+        headers:
+          $ref: '#/components/schemas/Headers'
+        bindings:
+          kafka:
+            key:
+              type: string
+              format: uuid
+              description: sourceId
+  finished:
+    address: chunk.execution.finished
+    messages:
+      finished:
+        payload:
+          $ref: '../events/chunk.execution.finished.schema.json'
+        headers:
+          $ref: '#/components/schemas/Headers'
+        bindings:
+          kafka:
+            key:
+              type: string
+              format: uuid
+              description: sourceId
+operations:
+  consumeRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/requested'
+  publishFinished:
+    action: send
+    channel:
+      $ref: '#/channels/finished'
+components:
+  schemas:
+    Headers:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context
