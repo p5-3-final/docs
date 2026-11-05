@@ -68,7 +68,7 @@ related: [SPEC-007, SPEC-008, SPEC-010, ADR-0009, ADR-0010, ADR-0013]
 
 | ID | 요구사항 | 시나리오 |
 | --- | --- | --- |
-| R-1 | WHEN normalize가 동일 정규화 결과를 재전달하면, THE normalize SHALL 최초 결과 이벤트 전체를 재사용한다. | US-1 |
+| R-1 | WHEN normalize가 동일 정규화 결과를 재전달하면, THE normalize SHALL 최초 결과 이벤트 전체(occurredAt·producedAt 포함)를 재사용한다. | US-1 |
 | R-2 | IF 동일 실행 식별자의 요청 입력이 바뀌면, THEN THE chunk-processor SHALL 기존 실행을 덮어쓰지 않고 충돌 처리한다. | US-1 |
 | R-3 | WHEN 같은 executionId를 동시에 수신하면, THE chunk-processor SHALL 실행 원장을 원자적으로 점유하여 하나만 실행한다. | US-1 |
 | R-4 | WHEN 시작 기한이 지난 미실행 요청을 수신하면, THE chunk-processor SHALL 작업을 시작하지 않고 종료 실패를 기록한다. | US-1 |
@@ -118,7 +118,7 @@ normalize는 결과 이벤트를 발행하기 전에 객체 저장소의 조건�
 | `service-contracts/events/chunk.execution.finished.schema.json` | 새 v1 종료 이벤트, outcome SUCCEEDED/FAILED, 성공 resultKey 또는 실패 errorCode | 예(추가) |
 | `service-contracts/asyncapi/chunk-processor.yaml` | chunk.requested 소비·종료 결과 발행 | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | 공통 메시징이 쓰는 chunk-processor.queue_wait/handle 추가 | 예(추가) |
-| `service-contracts/VERSION` | 2.3.0 → 2.4.0(종료) → 2.5.0(워커 측정 단계), 소비자 lock 갱신 | 예(추가) |
+| `service-contracts/VERSION` | 2.3.0 → 2.4.0(종료) → 2.5.0(워커 측정 단계) → 2.5.1(영속 producedAt 설명), 소비자 lock 갱신 | 예(추가) |
 
 종료 이벤트는 envelope와 jobId/chunkId/executionId/requestId/normalizationId를 담는다. resultKey는 `sources/<sourceId>/jobs/<jobId>/chunks/<chunkId>/executions/<executionId>/result.json`의 불변 참조다. 모델 output은 별도 스키마 대상으로 추측하지 않는다. chunk.manifest·AI Gateway API는 변경하지 않는다.
 
@@ -131,3 +131,5 @@ normalize는 결과 이벤트를 발행하기 전에 객체 저장소의 조건�
 ## 8. 미결 사항
 
 이번 backend 소유 종료·반환 범위의 미결 사항은 없다. 실제 AI 추론 adapter·출력 스키마·모델 프로필 연동, 원장 RUNNING의 자동 장애 복구·재실행 및 전체 Job 완료는 후속이다. 테스트 추론 대역과 실제 영상 추출을 구분해서 보고한다. 운영 활성화/offset 변경은 하지 않는다.
+
+실제 Kafka 통합에서 Publisher의 producedAt 재생성도 확인했다. 영속 생산자는 공통 준비 함수를 통해 producedAt을 채운 뒤 저장하고 Publisher는 이를 보존한다. producedAt이 없는 과거 스냅샷/발행 건의 최초 payload는 추정하지 않으며 별도 운영 확인이 필요하다.
