@@ -1,7 +1,7 @@
 ---
 id: SPEC-014
 title: 청크 실행 종료 결과와 슬롯 자동 반환
-status: Approved
+status: Implementing
 owner: backend 담당자
 repos: [backend, ai, docs]
 created: 2026-11-05
@@ -133,3 +133,13 @@ normalize는 결과 이벤트를 발행하기 전에 객체 저장소의 조건�
 이번 backend 소유 종료·반환 범위의 미결 사항은 없다. 실제 AI 추론 adapter·출력 스키마·모델 프로필 연동, 원장 RUNNING의 자동 장애 복구·재실행 및 전체 Job 완료는 후속이다. 테스트 추론 대역과 실제 영상 추출을 구분해서 보고한다. 운영 활성화/offset 변경은 하지 않는다.
 
 실제 Kafka 통합에서 Publisher의 producedAt 재생성도 확인했다. 영속 생산자는 공통 준비 함수를 통해 producedAt을 채운 뒤 저장하고 Publisher는 이를 보존한다. producedAt이 없는 과거 스냅샷/발행 건의 최초 payload는 추정하지 않으며 별도 운영 확인이 필요하다.
+
+## 9. 구현·검증 현황
+
+- 정규화 이벤트 보존: [ai PR #32](https://github.com/p5-3-final/ai/pull/32). 공통 Publisher의 최초 producedAt 보존까지 포함한 후속 보완과 실제 워커: [ai PR #34](https://github.com/p5-3-final/ai/pull/34).
+- Pipeline 종료 수신·슬롯 반환과 실제 Kafka 연결 검사: [backend PR #47](https://github.com/p5-3-final/backend/pull/47). CI는 ai의 머지 커밋 `5408a90b67f15d3af187d9083709c2c6820db141`을 고정한다.
+- backend 로컬 전체 검사 506개(Pipeline 158개), 실패·오류·건너뜀 0개. 실제 normalize→Pipeline→배정 Outbox→chunk-processor→종료 Outbox→Pipeline 경로에서 성공·실패 뒤 다음 청크 배정과 결과 저장 실패 시 offset 미진행·재처리를 검증했다.
+- AI 필수 Python 검사 478개, 별도 normalize 이미지 검사 65개, chunk-processor 이미지 검사 13개가 통과했다. 서로 중복되는 별도 실행이므로 합산하지 않는다.
+- 동일 eventId 재전달 시 occurredAt·producedAt을 포함한 전체 payload 불변, 중복·이전 실행 결과·동시 수신·복구 CLI 경쟁·저장 실패 롤백을 검증했다.
+
+실제 영상 추출과 객체 저장소·Kafka·각 서비스 DB 연결은 구현했다. 추론은 명시적인 test 환경의 검증 대역이며 운영 설정에서는 이 어댑터로 시작할 수 없다. 실제 추론 어댑터·결과 스키마, 불명 RUNNING의 자동 복구, 전체 Job 완료·downstream 적재는 연결하지 않았다. 기존 운영 활성화와 offset은 바꾸지 않았으며 배포 완료를 뜻하는 Done으로 표시하지 않는다.

@@ -17,6 +17,6 @@
 | [SPEC-011](SPEC-011-ai-gateway-embed/spec.md) | ai-gateway 벡터 생성 | Implementing | ai, docs | | 2026-11-03 |
 | [SPEC-013](SPEC-013-stage-timing/spec.md) | 처리 단계 측정 | Implementing | ai, docs | | 2026-11-04 |
 
-| [SPEC-014](SPEC-014-execution-results/spec.md) | 청크 실행 종료 결과와 슬롯 자동 반환 | Approved | backend, ai, docs | backend 담당자 | 2026-11-05 |
+| [SPEC-014](SPEC-014-execution-results/spec.md) | 청크 실행 종료 결과와 슬롯 자동 반환 | Implementing | backend, ai, docs | backend 담당자 | 2026-11-05 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
