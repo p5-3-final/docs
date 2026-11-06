@@ -22,7 +22,7 @@ related: [ADR-0008, ADR-0006, SPEC-009, SPEC-011]
 | 3차 | 작업 전후 상태 변화 | 안전시설 제거·이동, 장비 방치, 미복구, 후속 위험 노출 |
 | 이후 | 예측 | 확정 이벤트·위험 상태의 시간순 기록 |
 
-설계 원본(루트 `references/검색·이벤트 VLM 아키텍처_v2.md`, 내용은 v4)은 v3 구조로 이 목표를 진행할 때 막히는 지점을 확인했다.
+설계 원본([design-origin-v2.md](../architecture/legacy/design-origin-v2.md), 내용은 v4)은 v3 구조로 이 목표를 진행할 때 막히는 지점을 확인했다.
 
 - 이벤트 유형·클래스가 코드와 DB enum에 있으면 유형을 하나 더할 때마다 여러 서비스 배포와 마이그레이션이 필요하다. 결과에 분류 체계·탐지 프로필 버전이 남지 않으면 단계별 평가 결과를 나중에 비교할 수 없다.
 - 모델 가중치의 저장 규칙이 없어 어떤 파일이 어느 프로필에 쓰였는지 추적할 수 없다. 지금 ai-gateway 프로필은 가중치 키와 해시를 직접 적는다([SPEC-011](../specs/SPEC-011-ai-gateway-embed/spec.md) R-15).
@@ -108,5 +108,5 @@ related: [ADR-0008, ADR-0006, SPEC-009, SPEC-011]
 
 - [ADR-0008 산업안전 v3 구조(19개 배포 단위)를 채택하고 모델·플랫폼을 설정으로 교체할 수 있게 한다](0008-industrial-safety-v3.md) (유지)
 - [ADR-0006 로컬 개발과 테스트의 S3 대체 저장소로 SeaweedFS를 쓴다](0006-local-s3-seaweedfs.md)
-- 설계 원본: 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`의 "v4 변경: 평가·상태 변화·예측 준비"
+- 설계 원본: [design-origin-v2.md](../architecture/legacy/design-origin-v2.md)의 "v4 변경: 평가·상태 변화·예측 준비"
 - Kubernetes ConfigMap 크기 상한: <https://kubernetes.io/docs/concepts/configuration/configmap/>

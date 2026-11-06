@@ -100,5 +100,5 @@ related: [ADR-0010, SPEC-003, SPEC-009]
 ## 참고
 
 - [ADR-0010 v3 구조를 유지하고 평가·상태 변화·예측을 받칠 확장 자리(v4)를 더한다](0010-v4-evaluation-readiness.md)
-- 설계 원본: 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`의 "v4 변경" ⑧
+- 설계 원본: [design-origin-v2.md](../architecture/legacy/design-origin-v2.md)의 "v4 변경" ⑧
 - HMAC: RFC 2104 <https://www.rfc-editor.org/rfc/rfc2104>
