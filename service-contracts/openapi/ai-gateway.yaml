@@ -1,13 +1,14 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
     taskType별 입력 변수·출력 형식의 원본은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다(docs ADR-0012).
     이미지는 저장소 경로로만 넘기며, 허용 패턴에 맞는 블러 사본 경로만 받는다. (SPEC-009 R-9, R-10)
     `/v1/embed`는 질의·텍스트·이미지 벡터를 만든다. 검색용 이미지는 taskType별 허용 패턴(질의 전용 폴더)의 경로만 받는다. (SPEC-011)
     `/v1/parse`는 검색 문장을 표준 질의로 해석한다. 질의 사전과 `query_parse` 프롬프트의 원본은 ai 레포 Prompt Registry다. (SPEC-012)
+    호출자는 `X-Request-Deadline`(epoch ms)을 싣는다. 남은 시간이 외부 모델 제한 시간이 되고, 남은 시간이 없으면 처리하지 않고 504다. (SPEC-021, overview "통신 규칙" 내부 동기 호출 규약)
     외부 모델을 부르는 경로(`/v1/analyze`, `/v1/parse`의 LLM 보조, `embed_text`)는 결과 캐시·예산·분당 한도를 거친다. 캐시에 있는 입력이면 모델을 부르지 않고 같은 결과를 새 호출 ID로 돌려준다. 예산(호출 서비스별·전체 하루)을 넘으면 모델 미설정과 같은 결과다. (SPEC-016)
 servers:
   - url: http://ai-gateway:8000
@@ -33,6 +34,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/XCaller'
         - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
       requestBody:
         required: true
         content:
@@ -90,6 +92,8 @@ paths:
           $ref: '#/components/responses/ProviderFailed'
         '503':
           $ref: '#/components/responses/ProviderUnavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
   /v1/embed:
     post:
       operationId: embed
@@ -107,6 +111,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/XCaller'
         - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
       requestBody:
         required: true
         content:
@@ -152,6 +157,8 @@ paths:
           $ref: '#/components/responses/ProviderFailed'
         '503':
           $ref: '#/components/responses/EmbedUnavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
   /v1/parse:
     post:
       operationId: parse
@@ -169,6 +176,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/XCaller'
         - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
       requestBody:
         required: true
         content:
@@ -200,6 +208,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
 components:
   parameters:
     XCaller:
@@ -211,6 +221,17 @@ components:
         type: string
         pattern: '^[a-z][a-z0-9-]{1,62}$'
       example: event-analyzer
+    XRequestDeadline:
+      name: X-Request-Deadline
+      in: header
+      required: false
+      description: |
+        호출자가 결과를 기다리는 마감 시각(Unix epoch 밀리초). 받은 시각부터 남은 시간과 프로필 제한 시간 중 짧은 것이 외부 모델 호출의 제한 시간이다.
+        남은 시간이 없으면 저장소·캐시·예산·모델을 부르지 않고 504 `AI_DEADLINE_EXCEEDED`다. 0 이상의 정수가 아니면 400 `AI_INVALID_REQUEST`다. 없으면 프로필 제한 시간만 쓴다. (SPEC-021 R-1~R-5)
+      schema:
+        type: string
+        pattern: '^[0-9]{1,16}$'
+      example: '1793947448160'
     TraceParent:
       name: traceparent
       in: header
@@ -228,6 +249,7 @@ components:
         `/v1/embed`: 입력 수가 taskType 상한을 넘음 (`AI_TOO_MANY_INPUTS`), 디코딩할 수 없는 이미지 (`AI_IMAGE_UNREADABLE`).
         taskType에 맞지 않는 입력 종류·빈 목록·빈 문장·길이 상한을 넘는 문장은 `AI_INVALID_REQUEST`다. (SPEC-011 R-7~R-9, R-11, R-12, R-26)
         `/v1/parse`: 빈 문장, 정규화 뒤 빈 문장, 길이 상한(프로필 값)을 넘는 문장은 `AI_INVALID_REQUEST`다. (SPEC-012 R-20, R-21)
+        `X-Request-Deadline`이 0 이상의 정수가 아니면 `AI_INVALID_REQUEST`다. (SPEC-021 R-4)
       content:
         application/problem+json:
           schema:
@@ -277,6 +299,20 @@ components:
             status: 503
             detail: 모델을 일시적으로 사용할 수 없습니다.
             code: AI_PROVIDER_UNAVAILABLE
+    DeadlineExceeded:
+      description: |
+        `X-Request-Deadline`까지 남은 시간이 없어 처리하지 않았거나, 남은 시간 안에 외부 모델 호출이 끝나지 않음 (`AI_DEADLINE_EXCEEDED`).
+        호출자가 이미 기다리지 않는 요청이다. analyze는 다시 보내지 않는다(비용이 두 번 들 수 있다). (SPEC-021 R-2, R-3)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Gateway Timeout
+            status: 504
+            detail: 요청 마감 시각이 지났습니다.
+            code: AI_DEADLINE_EXCEEDED
     EmbedUnavailable:
       description: |
         텍스트 임베딩 공급자가 제한 시간 안에 응답하지 않음, 연결할 수 없음, 429·5xx (`AI_PROVIDER_UNAVAILABLE`). 다시 시도할 수 있다. (SPEC-011 R-20)
