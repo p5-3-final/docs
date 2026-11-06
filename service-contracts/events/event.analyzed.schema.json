@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/event.analyzed.schema.json",
   "title": "EventAnalyzed",
-  "description": "이벤트 후보 하나를 판정했다. 후보마다 한 번 발행한다(같은 후보면 같은 eventId). 모델 미설정·예산 초과(unverified)와 판정 실패(unknown)도 버리지 않고 발행한다. 소비자는 eventId로 중복을 흡수한다. 벡터 후보(SPEC-020)와 탐지기·규칙 후보(SPEC-023)를 같은 형식으로 낸다. 발행: event-analyzer. 소비: analysis-api, embedding-worker, quality-service (SPEC-020 R-8~R-10)",
+  "description": "이벤트 후보 하나를 판정했다. 후보마다 한 번 발행한다(같은 후보면 같은 eventId). 모델 미설정·예산 초과(unverified)와 판정 실패(unknown)도 버리지 않고 발행한다. 소비자는 eventId로 중복을 흡수한다. 벡터 후보(SPEC-020)와 탐지기·규칙 후보(SPEC-023)를 같은 형식으로 낸다. 발행: event-analyzer. 소비: analysis-api, embedding-worker, quality-service, aggregator(벡터 대기 집합·STREAM 창 입력, SPEC-027 R-25·R-29), stream-service(STREAM만, SPEC-036 R-15) (SPEC-020 R-8~R-10)",
   "type": "object",
   "allOf": [
     {
@@ -31,6 +31,7 @@
           "judgmentMethod": {
             "enum": [
               "rule",
+              "rule+carry",
               "rule+vlm",
               "rule+vlm+escalate"
             ]
@@ -48,7 +49,10 @@
         "properties": {
           "judgmentMethod": {
             "not": {
-              "const": "rule"
+              "enum": [
+                "rule",
+                "rule+carry"
+              ]
             }
           }
         }
@@ -65,7 +69,10 @@
       "if": {
         "properties": {
           "judgmentMethod": {
-            "const": "rule"
+            "enum": [
+              "rule",
+              "rule+carry"
+            ]
           }
         }
       },
@@ -101,6 +108,16 @@
     },
     "schemaVersion": {
       "const": 1
+    },
+    "jobType": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "REANALYZE",
+        "REEMBED",
+        "STREAM"
+      ],
+      "description": "Job 유형(v5.1, ADR-0015). 없으면 FULL. STREAM이면 실시간 창(stream-ingestor)이고 track-stitcher·pipeline-service는 건너뛴다."
     },
     "jobId": {
       "type": "string",
@@ -153,12 +170,13 @@
       "type": "string",
       "enum": [
         "rule",
+        "rule+carry",
         "rule+vlm",
         "rule+vlm+escalate",
         "vector+vlm",
         "vector+vlm+escalate"
       ],
-      "description": "rule: 규칙으로 확정(VLM 없음, 템플릿 결과), rule+vlm·vector+vlm: event_judge 한 번, …+escalate: event_judge_escalate 재판정까지 부른 것. rule로 시작하면 탐지기·규칙 후보(event.candidate, SPEC-023), vector로 시작하면 벡터 후보(event.candidate.vector, SPEC-020)다."
+      "description": "rule: 규칙으로 확정(VLM 없음, 템플릿 결과), rule+carry: 상태형 유형에서 구간 규칙·재판정 간격 안이라 직전 판정 결과를 복사(v5.1, SPEC-023 R-17·R-18, carriedFromEventId), rule+vlm·vector+vlm: event_judge 한 번, …+escalate: event_judge_escalate 재판정까지 부른 것. rule로 시작하면 탐지기·규칙 후보(event.candidate, SPEC-023), vector로 시작하면 벡터 후보(event.candidate.vector, SPEC-020)다."
     },
     "vectorCandidate": {
       "type": "object",
@@ -291,6 +309,24 @@
         ]
       },
       "description": "judgment_disagreement: 1차와 재판정이 confirmed·rejected로 엇갈림. reviewRequired가 false면 빈 배열"
+    },
+    "unverifiedReason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "budget_exceeded",
+        "model_unavailable",
+        "call_cap_reached",
+        null
+      ],
+      "description": "analysis.verificationStatus가 unverified인 이유(v5.1, ADR-0016). budget_exceeded·model_unavailable은 ai-gateway 응답, call_cap_reached는 event-analyzer 실행당 상한(SPEC-023 R-19). quality-service가 재판정 큐 사유로 쓴다. unverified가 아니면 null 또는 없음"
+    },
+    "carriedFromEventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "judgmentMethod가 rule+carry일 때 결과를 복사한 원본 event.analyzed의 eventId(v5.1)"
     },
     "taxonomyVersion": {
       "const": "v2"

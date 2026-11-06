@@ -6,7 +6,7 @@ owner: <이름>
 repos: [frontend, backend, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [SPEC-002, SPEC-029, SPEC-030, SPEC-031]
+related: [SPEC-002, SPEC-029, SPEC-030, SPEC-031, ADR-0016]
 ---
 
 # SPEC-035 품질 화면(검토 큐·Golden Set·평가 실행·처리 단계·데이터셋 가져오기)
@@ -21,6 +21,8 @@ quality-service(SPEC-029·SPEC-030)는 검토 큐, Golden Set, 평가 실행, �
 - Gate 실패 원인과 단계별 지연 추이를 한눈에 볼 수 없다.
 
 이 spec은 OPERATOR에게만 보이는 사이드바 "품질" 메뉴와 하위 화면 다섯 개를 만든다. 계약은 SPEC-029·SPEC-030의 `openapi/quality-service.yaml`을 쓴다. 근거 프레임을 화면에 띄우도록 검토 항목 응답에 서명 주소 필드만 더한다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 16절): 검토 큐 사유 필터와 긴급 알림 지표를 더한다.
 
 ## 2. 범위
 
@@ -113,6 +115,8 @@ AI 담당자로서 가져오기 버킷에 올린 매니페스트를 화면에서
 | R-18 | THE frontend SHALL 가져오기 상세에 상태, 영상·등록·실패·라벨·분할별 개수, 만든 Golden Set 버전(누르면 그 Golden Set 상세), 오류 목록을 표시한다. | US-5 |
 | R-19 | WHEN 운영자가 Golden Set이나 기간(최대 90일)으로 특징 내보내기를 시작하면, THE frontend SHALL 둘 중 하나만 받도록 입력을 막고 요청하며, 완료되면 파일 경로·줄 수·영상 수를 표시한다. | US-5 |
 | R-20 | IF 품질 API가 403을 돌려주면, THEN THE frontend SHALL 권한 없음 안내를 표시하고, 5xx·네트워크 오류면 다시 시도 버튼을 표시한다. | US-1 |
+| R-21 | THE frontend SHALL 검토 큐 목록에 사유 필터(`reviewRequired`·`budget_exceeded`·`call_cap_reached`·`model_unavailable`·`alert_dismissed`·표본)를 두고, 예산·상한 사유 항목에는 "재분석 뒤 자동 판정됨" 안내를 표시한다. | US-1 |
+| R-22 | THE frontend SHALL 처리 단계 화면에 긴급 알림 지연(p50·p95)과 `dismissed` 비율 리포트를 표시한다. | US-4 |
 
 ### 비기능 요구사항
 
@@ -136,8 +140,9 @@ AI 담당자로서 가져오기 버킷에 올린 매니페스트를 화면에서
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
 | `service-contracts/openapi/quality-service.yaml` | `ReviewItem.evidenceFrameUrls`(근거 프레임 서명 주소, 응답 필드) 추가, 1.1.0 → 1.2.0 | 예(응답 필드 추가) |
+| `service-contracts/openapi/quality-service.yaml` | v5.1: 검토 사유 열거값·필터, 알림 지표 리포트(SPEC-029) | 예(추가) |
 
-계약 묶음 3.13.0 → 3.14.0
+계약 묶음 3.13.0 → 3.14.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

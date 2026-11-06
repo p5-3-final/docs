@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/alert.candidate.schema.json",
+  "title": "AlertCandidate",
+  "description": "실시간 긴급 후보(v5.1, ADR-0015·0016). alertImmediately 유형이나 활성 위험 구역 진입이 최소 관측 수를 넘는 즉시 창 종료를 기다리지 않고 1건 발행한다. candidateId는 같은 후보가 창 종료 때 event.candidate로 나올 때와 같다. 알림만 만들고 이벤트는 창 후보가 저장한다. 발행: stream-ingestor (SPEC-037 R-11~R-13). 소비: event-analyzer (SPEC-023 R-21)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "jobId",
+    "jobType",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "cameraId",
+    "candidateId",
+    "candidateEventType",
+    "reason",
+    "trackId",
+    "zoneId",
+    "firstSeenMs",
+    "observedMs",
+    "observations",
+    "score",
+    "evidenceFrameKeys",
+    "detectorProfile",
+    "taxonomyVersion"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "alert.candidate"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobType": {
+      "const": "STREAM"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "이 후보가 들어갈 진행 중 창"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "cameraId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "candidateId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "uuid5(sourceId, trackId, eventType, firstSeenMs). 창 event.candidate의 같은 후보와 같다"
+    },
+    "candidateEventType": {
+      "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/detectableEventType"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "severity_high",
+        "active_risk_zone"
+      ],
+      "description": "severity_high: 이벤트 정의 alertImmediately 유형, active_risk_zone: Redis 세션 키의 활성 위험 구역 진입(SPEC-037 R-12)"
+    },
+    "trackId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "description": "세션 trackId. 화재·연기처럼 트랙이 없으면 null"
+    },
+    "zoneId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "firstSeenMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807,
+      "description": "최초 관측 PTS(세션 시작 기준 ms)"
+    },
+    "observedMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807,
+      "description": "최소 관측 수를 넘긴 프레임 PTS"
+    },
+    "observations": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evidenceFrameKeys": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "type": "string",
+        "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/blurred/[^/?#]+\\.(jpg|jpeg|png|webp)$"
+      },
+      "description": "근거 프레임(블러 사본). 창 후보와 같은 경로를 써 ai-gateway 결과 캐시가 적중한다"
+    },
+    "detectorProfile": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$"
+    },
+    "taxonomyVersion": {
+      "const": "v2"
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192fb00-0000-5000-8000-000000000002",
+      "eventType": "alert.candidate",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T10:05:03Z",
+      "sourceId": "0192fb00-0000-7000-8000-000000000010",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "0192fb00-0000-7000-8000-000000000030",
+      "jobType": "STREAM",
+      "chunkId": "0192fb00-0000-5000-8000-00000000000f",
+      "executionId": "0192fb00-0000-7000-8000-000000000040",
+      "normalizationId": "0192fb00-0000-7000-8000-000000000010",
+      "cameraId": "0192fb00-0000-7000-8000-000000000020",
+      "candidateId": "0192fb00-0000-5000-8000-0000000000c1",
+      "candidateEventType": "fall",
+      "reason": "severity_high",
+      "trackId": "0192fb00-0000-5000-8000-0000000000a1",
+      "zoneId": null,
+      "firstSeenMs": 302400,
+      "observedMs": 302800,
+      "observations": 2,
+      "score": 0.82,
+      "evidenceFrameKeys": [
+        "sources/0192fb00-0000-7000-8000-000000000010/jobs/0192fb00-0000-7000-8000-000000000030/chunks/0192fb00-0000-5000-8000-00000000000f/executions/0192fb00-0000-7000-8000-000000000040/blurred/f302400.jpg",
+        "sources/0192fb00-0000-7000-8000-000000000010/jobs/0192fb00-0000-7000-8000-000000000030/chunks/0192fb00-0000-5000-8000-00000000000f/executions/0192fb00-0000-7000-8000-000000000040/blurred/f302800.jpg"
+      ],
+      "detectorProfile": "industrial-default@1",
+      "taxonomyVersion": "v2"
+    }
+  ]
+}

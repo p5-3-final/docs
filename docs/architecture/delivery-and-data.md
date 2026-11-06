@@ -4,7 +4,7 @@ updated: 2026-11-04
 
 # 배포와 데이터 관리
 
-무엇을 어디서 만들어 어디에 올리고, 어떤 방식으로 버전을 관리하고 지우는지 정리한다. 흐름의 근거는 [overview](overview.md) "환경"·"서비스 배포 흐름"·"데이터 저장", [ADR-0010](../adr/0010-v4-evaluation-readiness.md) ②⑦, [ADR-0011](../adr/0011-derived-data-retention.md), [ADR-0012](../adr/0012-prompt-registry-source.md)다.
+무엇을 어디서 만들어 어디에 올리고, 어떤 방식으로 버전을 관리하고 지우는지 정리한다. 흐름의 근거는 [아키텍처 v5](architecture.md) "환경"·"서비스 배포 흐름"·"데이터 저장", [ADR-0010](../adr/0010-v4-evaluation-readiness.md) ②⑦, [ADR-0011](../adr/0011-derived-data-retention.md), [ADR-0012](../adr/0012-prompt-registry-source.md)다.
 
 상태 표시: `구현` 지금 동작한다 · `로컬` 로컬 compose에서만 동작한다 · `예정` 설계만 있다
 
@@ -85,6 +85,9 @@ flowchart LR
 | `sources/<sourceId>/original` | 업로드 원본 | 브라우저(presigned), media-service가 발급 | 구현 |
 | `sources/<sourceId>/normalizations/<normalizationId>/normalized.mp4` | 정규화 사본(불변, 재정규화는 새 ID) | normalize | 구현 |
 | `sources/<sourceId>/normalizations/<normalizationId>/hls/` | HLS 재생 목록·조각 | normalize | 구현 |
+| `sources/<sourceId>/live/hls/` | 실시간 라이브 HLS 조각(6초). 프로필 보존 24시간 뒤 삭제 (v5.1) | stream-ingestor | 계획 |
+| `sources/<sourceId>/live/<chunkId>.mp4` | 실시간 창 파일(20초). 프로필 보존 7일 (v5.1) | stream-ingestor | 계획 |
+| `sources/<sourceId>/state/<sequence>.json` | aggregator 실시간 상태 스냅샷(30창마다). 세션 종료 뒤 소스 삭제까지 (v5.1) | aggregator | 계획 |
 | 구간 대표 프레임(블러 사본), 트랙 크롭, 검출 박스 파일, 근거 프레임 | 분석 산출물 | chunk-processor | 예정(경로는 해당 계약에서) |
 | 벡터 파일 | 구간·크롭 벡터(DB 적재 확인 후 30일) | frame-encoder | 예정 |
 | 주석 클립 | bbox 주석 클립(30일 미접근 시 지우고 다시 만듦) | grounding-worker | 예정 |
@@ -95,7 +98,7 @@ flowchart LR
 | 대상 | 위치 | 관리 |
 | --- | --- | --- |
 | 서비스 DB | 서비스마다 하나(auth_db, media_db, pipeline_db, analysis_db, search_db, quality_db, ai_db). 로컬은 PostgreSQL 컨테이너 하나에 DB를 나눔 | 스키마는 Flyway(backend)·Alembic(ai)로만 바꾼다. 다른 서비스 DB에 접근하지 않는다. |
-| Kafka | 토픽은 overview "Kafka 토픽" | 보존 30일(`stage.timing` 7일), 별도 아카이브 없음 |
+| Kafka | 토픽은 아키텍처 11.2절 | 보존 30일(`stage.timing` 7일), 별도 아카이브 없음 |
 | Redis | rate limit, 알림, 캐시, 분산 락 | 공유 상태 원본이 아니라 앞단 캐시로만 쓴다. |
 | Golden Set 확정본 | 별도 버킷(Versioning·Object Lock) | 영구, 삭제 전파 제외 |
 

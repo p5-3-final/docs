@@ -6,7 +6,7 @@ owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [SPEC-006, SPEC-022, SPEC-024, SPEC-027, SPEC-031]
+related: [SPEC-006, SPEC-022, SPEC-024, SPEC-027, SPEC-031, ADR-0015, ADR-0016, SPEC-036]
 ---
 
 # SPEC-032 플레이어 오버레이·클릭 조회·객체 질문·위험구역 편집 화면
@@ -15,7 +15,7 @@ related: [SPEC-006, SPEC-022, SPEC-024, SPEC-027, SPEC-031]
 
 ## 1. 배경과 목적
 
-[아키텍처 개요](../../architecture/overview.md) 처리 흐름 12단계는 화면 동작을 이렇게 정한다.
+[아키텍처 v5](../../architecture/architecture.md) 처리 흐름 12단계는 화면 동작을 이렇게 정한다.
 
 - 화면을 클릭하면 analysis-api가 (t, x, y)로 트랙을 찾는다.
 - 속성이 있으면 바로 돌려준다. 없으면 클래스와 박스를 먼저 돌려주고 속성 분석을 요청한 뒤 SSE로 채운다.
@@ -31,6 +31,8 @@ related: [SPEC-006, SPEC-022, SPEC-024, SPEC-027, SPEC-031]
 - 위험구역 다각형 편집
 
 analysis-api 공개 API는 다른 담당자 서비스이고, 이 spec이 overview "외부 API" 표대로 먼저 정한다(생산자 확인 필요).
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 17.2절): 보호구 상태는 확정 이벤트를 우선 표시한다. 카메라 구역은 stream-service에 저장한다.
 
 ## 2. 범위
 
@@ -107,6 +109,8 @@ analysis-api 공개 API는 다른 담당자 서비스이고, 이 spec이 overvie
 | R-12 | WHEN 사용자가 구역을 저장하면, THE frontend SHALL 구역 목록 전체를 보내고, 성공하면 "다음 분석부터 반영됨(재분석 필요)" 안내를 표시한다. 400 `ANALYSIS_ZONE_INVALID`이면 서버 이유를, 403이면 권한 없음 안내를 표시한다. | US-3 |
 | R-13 | WHILE 영상의 구역 조회 결과가 `reanalysisNeeded: true`이면, THE frontend SHALL 영상 상세 요약 패널에 재분석이 필요하다는 안내를 표시한다. | US-3 |
 | R-14 | THE frontend SHALL 오버레이 박스와 구역 다각형 좌표를 영상의 실제 표시 영역(레터박스 제외)에 맞춰 그리고, 창 크기가 바뀌면 다시 맞춘다. | US-1, US-3, US-4 |
+| R-15 | WHILE 트랙에 `confirmed`인 `ppe_missing` 이벤트가 있으면, THE frontend SHALL 트랙 패널의 보호구 상태를 그 이벤트 결과로 표시하고 `track_attribute`의 보호구 값은 보조 정보로만 표시한다. | US-1 |
+| R-16 | WHEN 사용자가 카메라의 구역을 편집하면, THE frontend SHALL 업로드 영상과 같은 편집기로 다각형을 그리고 `PUT /api/v1/stream/cameras/{id}/zones`로 저장하며, "다음 세션부터 적용됨"을 표시한다. | US-3 |
 
 ### 비기능 요구사항
 
@@ -131,8 +135,9 @@ analysis-api 공개 API는 다른 담당자 서비스이고, 이 spec이 overvie
 | --- | --- | --- |
 | `service-contracts/openapi/analysis-service.yaml` | 공개 API 7개, 0.3.0 → 0.4.0(생산자 확인 필요) | 예(추가) |
 | `service-contracts/openapi/quality-service.yaml` | 생성 YAML의 별칭(`&id`·`*id`)을 펼침. 내용 변화 없음 | 예(형식만) |
+| `service-contracts/openapi/stream-service.yaml` | v5.1: 카메라 구역 API(SPEC-036) | 예(추가) |
 
-계약 묶음 3.11.0 → 3.12.0
+계약 묶음 3.11.0 → 3.12.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

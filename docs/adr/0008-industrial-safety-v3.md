@@ -61,7 +61,7 @@ v3가 ADR-0005와 다른 점은 다음과 같다.
 - 배포 단위 19개: Spring 9개(api-gateway, auth, media, pipeline, analysis-api, analysis-loader, search, notification, quality), Python 10개(ai-gateway, normalize, chunk-processor, track-stitcher, frame-encoder, grounding-worker, event-analyzer, track-analyzer, embedding-worker, aggregator).
 - 이벤트 정의 목록 v1(산업안전 6종 + `other`)과 탐지기 능력 선언(`supported_events`, `unsupported_events`), `VLMAnalysis` 출력 스키마, 위험 상태와 상태 스냅샷은 원본 설계를 따른다.
 - 검색 단위는 구간(segment)이고, 토픽은 `segment.ready`·`segment.embedded`·`segment.indexed`·`segment.annotated`로 바꾼다. Grounding Worker를 위해 `grounding.requested`·`grounding.completed`를 더한다.
-- 상세 흐름과 규칙은 [아키텍처 개요](../architecture/overview.md), 서비스 목록은 [서비스 카탈로그](../architecture/service-catalog.md)에 둔다.
+- 상세 흐름과 규칙은 [아키텍처 v5](../architecture/architecture.md), 서비스 목록은 [서비스 카탈로그](../architecture/service-catalog.md)에 둔다.
 
 ### 모델 교체 원칙
 
@@ -115,7 +115,7 @@ v3가 ADR-0005와 다른 점은 다음과 같다.
   - 산업안전 이벤트의 후보 재현율이 탐지기(YOLOE 텍스트 클래스·파인튜닝)에 묶인다. 능력 선언으로 "판정하지 않음"을 드러내고 evals로 재현율을 잰다.
   - MVP 목록이 넓다(Quality, Re-ID, Grounding, Video RAG, 파인튜닝, 외부 로그인). 착수 순서는 의존성 기준으로 정하고, 범위 조정이 필요하면 별도로 결정한다.
 - 후속 작업:
-  - [아키텍처 개요](../architecture/overview.md)와 [서비스 카탈로그](../architecture/service-catalog.md)를 이 결정 기준으로 갱신(이 ADR과 같은 PR)
+  - [아키텍처 v5](../architecture/architecture.md)와 [서비스 카탈로그](../architecture/service-catalog.md)를 이 결정 기준으로 갱신(이 ADR과 같은 PR)
   - ai 레포: `AGENTS.md` 구조 갱신, `vlm-worker` 폴더 제거, `frame-encoder`·`grounding-worker` 폴더 추가
   - 이벤트 계약(`docs/contracts/events/`), ai-gateway 계약(`openapi/ai-gateway.yaml`), 분류 체계 v1·이벤트 정의 목록·질의 사전(`docs/contracts/taxonomy/`)은 각 기능 spec에서 작성. 토픽 이름 변경(`segment.*`)은 Pipeline·Search·Chunk Processor 담당자와 계약 PR에서 맞춘다
   - PoC에서 검색 단계별 지연(p50·p95), 이미지 토큰 비용, YOLOE 후보 재현율 실측

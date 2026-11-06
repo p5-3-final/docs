@@ -4,6 +4,64 @@
   "title": "Taxonomy v2",
   "description": "분류 체계 v2(산업안전, ADR-0010 ①). 출력 스키마의 enum은 여기를 참조한다. v1 6종에 equipment_abandoned·object_moved를 더했다. 객체 종류·속성·위험 유형은 해당 기능 spec에서 추가한다. 트랙 속성(ppeState·workerRole)은 SPEC-024에서 더했다.",
   "$defs": {
+    "eventDefinition": {
+      "description": "이벤트 정의 목록의 항목 형식(아키텍처 v5.1 8.2절). 목록 파일(event-definitions.json)은 AI 담당자가 채우고 chunk-processor·stream-ingestor·event-analyzer가 기동 시 검증한다. v5.1에서 alertImmediately·rejudgeIntervalS를 더했다(SPEC-023, SPEC-037)",
+      "type": "object",
+      "required": [
+        "eventType",
+        "triggerClasses",
+        "minObservations",
+        "requiresVlm",
+        "defaultSeverity",
+        "cooldownS"
+      ],
+      "properties": {
+        "eventType": {
+          "$ref": "#/$defs/detectableEventType"
+        },
+        "triggerClasses": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/className"
+          }
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "description": "전제 조건(예: zone_defined, pose_model)"
+        },
+        "minObservations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requiresVlm": {
+          "type": "boolean"
+        },
+        "defaultSeverity": {
+          "$ref": "#/$defs/severity"
+        },
+        "cooldownS": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "alertImmediately": {
+          "type": "boolean",
+          "description": "실시간에서 창 종료를 기다리지 않고 alert.candidate를 내는 유형(v5.1, SPEC-037 R-11). 없으면 false"
+        },
+        "rejudgeIntervalS": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "상태형 유형의 재판정 간격(초)(v5.1, SPEC-023 R-17·R-18). null이거나 없으면 사건형(carry 없음)"
+        }
+      }
+    },
     "eventType": {
       "description": "이벤트 유형 8종과 other. fall(쓰러짐), fire_or_smoke(화재·연기), ppe_missing(보호구 미착용), object_removed(물건 제거), barrier_not_restored(방호 미복구), hazard_zone_access(위험구역 접근), equipment_abandoned(장비 방치: 장비 트랙이 사람 없이 정해진 시간 이상 정지), object_moved(안전시설 이동: 같은 클래스의 제거와 등장이 시간 창 안에서 짝지어짐), other(목록 밖)",
       "type": "string",

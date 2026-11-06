@@ -26,6 +26,16 @@
     "schemaVersion": {
       "const": 1
     },
+    "jobType": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "REANALYZE",
+        "REEMBED",
+        "STREAM"
+      ],
+      "description": "Job 유형(v5.1, ADR-0015). 없으면 FULL. STREAM이면 실시간 창(stream-ingestor)이고 track-stitcher·pipeline-service는 건너뛴다."
+    },
     "jobId": {
       "type": "string",
       "format": "uuid"
@@ -54,6 +64,11 @@
     },
     "taxonomyVersion": {
       "const": "v2"
+    },
+    "droppedCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "실행당 유형별 상한으로 잘린 후보 수(v5.1, SPEC-019 R-21)"
     },
     "candidates": {
       "type": "array",
@@ -106,6 +121,16 @@
             "exclusiveMinimum": -1,
             "maximum": 1,
             "description": "이 유형의 임계값(프로필 값)"
+          },
+          "mergedSegmentIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "maxItems": 512,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "연속 구간 병합으로 이 후보에 합쳐진 다른 구간 ID(v5.1, SPEC-019 R-20). 병합이 없으면 없음"
           },
           "frameKeys": {
             "type": "array",

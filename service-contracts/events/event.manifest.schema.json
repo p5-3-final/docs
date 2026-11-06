@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/event.manifest.schema.json",
   "title": "EventManifest",
-  "description": "청크 실행 하나의 event.candidate 판정이 끝났다. 실행마다 한 번, 그 실행의 event.analyzed를 모두 발행한 뒤 발행한다(같은 실행이면 같은 eventId). pipeline-service가 완료 판정에 세고 analysis-api가 저장 수와 비교한다. 벡터 후보(event.candidate.vector)는 세지 않는다. 발행: event-analyzer. 소비: pipeline-service, analysis-api (SPEC-023 R-12)",
+  "description": "청크 실행 하나의 event.candidate 판정이 끝났다. 실행마다 한 번, 그 실행의 event.analyzed를 모두 발행한 뒤 발행한다(같은 실행이면 같은 eventId). pipeline-service가 완료 판정에 세고 analysis-api가 저장 수와 비교한다. 벡터 후보(event.candidate.vector)는 세지 않는다. 발행: event-analyzer. 소비: pipeline-service, analysis-api, stream-service(STREAM만, SPEC-036 R-7) (SPEC-023 R-12)",
   "type": "object",
   "allOf": [
     {
@@ -28,6 +28,16 @@
     },
     "schemaVersion": {
       "const": 1
+    },
+    "jobType": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "REANALYZE",
+        "REEMBED",
+        "STREAM"
+      ],
+      "description": "Job 유형(v5.1, ADR-0015). 없으면 FULL. STREAM이면 실시간 창(stream-ingestor)이고 track-stitcher·pipeline-service는 건너뛴다."
     },
     "jobId": {
       "type": "string",
@@ -86,6 +96,21 @@
     },
     "taxonomyVersion": {
       "const": "v2"
+    },
+    "carriedCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "rule+carry로 발행한 수(v5.1, SPEC-023 R-20)"
+    },
+    "capReachedCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "실행당 호출 상한으로 unverified가 된 수(v5.1, SPEC-023 R-19·R-20)"
+    },
+    "budgetExceededCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "예산 초과로 unverified가 된 수(v5.1, SPEC-023 R-20)"
     }
   },
   "examples": [

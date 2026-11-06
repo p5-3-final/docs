@@ -29,6 +29,16 @@
     "schemaVersion": {
       "const": 1
     },
+    "jobType": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "REANALYZE",
+        "REEMBED",
+        "STREAM"
+      ],
+      "description": "Job 유형(v5.1, ADR-0015). 없으면 FULL. STREAM이면 실시간 창(stream-ingestor)이고 track-stitcher·pipeline-service는 건너뛴다."
+    },
     "jobId": {
       "type": "string",
       "format": "uuid"

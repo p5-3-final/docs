@@ -6,7 +6,7 @@ owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [SPEC-005, SPEC-017, SPEC-018, SPEC-027, SPEC-028, SPEC-031]
+related: [SPEC-005, SPEC-017, SPEC-018, SPEC-027, SPEC-028, SPEC-031, ADR-0015, SPEC-036]
 ---
 
 # SPEC-034 작업 세션·분석 이력 화면과 학습용 보존 설정 화면
@@ -23,6 +23,8 @@ related: [SPEC-005, SPEC-017, SPEC-018, SPEC-027, SPEC-028, SPEC-031]
   - 세션 상세는 역할별 영상과 각 영상의 분석 요약, 이어 온 위험, 재고 변화를 보여 준다.
 - 업로드할 때 세션·역할 고르기
 - "설정" 메뉴: 학습용 보존 기본값과 보존 중인 삭제 영상, 그리고 영상 상세의 보존 동의 바꾸기
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6.1절, [ADR-0015](../../adr/0015-realtime-window-pipeline.md)): 카메라 등록과 세션 관리 화면을 더한다. 작업 세션 화면과 같은 "세션" 메뉴 아래에 둔다.
 
 ## 2. 범위
 
@@ -91,6 +93,8 @@ related: [SPEC-005, SPEC-017, SPEC-018, SPEC-027, SPEC-028, SPEC-031]
 | R-10 | THE frontend SHALL 설정 화면에 보존 중인 삭제 영상을 영상 ID·삭제 시각·보존 만료 시각(`retainUntil`)과 함께 쪽 나눠 표시하고, 하나 철회와 전체 철회를 확인 창 뒤에 요청한다. | US-3 |
 | R-11 | THE frontend SHALL 영상 상세에 학습용 보존 동의를 켜고 끄기로 표시하고(소유자일 때만), 바꾸면 저장한 뒤 "영상을 지울 때의 값이 적용됨"을 표시한다. | US-3 |
 | R-12 | IF media API가 404를 돌려주면, THEN THE frontend SHALL 세션·영상을 찾을 수 없다는 안내를 표시하고, 5xx·네트워크 오류면 다시 시도 버튼을 표시한다. | US-1 |
+| R-13 | THE frontend SHALL 사이드바 "카메라" 화면에서 카메라 목록(이름, 상태, 현재 세션), 카메라 등록(이름·RTSP 주소 참조·프로필), 세션 start·stop을 제공한다. | US-1 |
+| R-14 | WHEN 카메라 세션이 24시간 회전으로 바뀌면, THE frontend SHALL 카메라 상세의 세션 이력에 이전 세션과 새 세션을 `previousSourceId`로 이어 표시한다. | US-1 |
 
 ### 비기능 요구사항
 
@@ -114,6 +118,7 @@ related: [SPEC-005, SPEC-017, SPEC-018, SPEC-027, SPEC-028, SPEC-031]
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
 | — | 없음. media-service(SPEC-017·SPEC-018)와 analysis-api 공개 API(SPEC-031) 기존 계약을 쓴다 | — |
+| `service-contracts/openapi/stream-service.yaml` | v5.1: 카메라·세션 API(SPEC-036) | 예(추가) |
 
 ## 7. 성공 지표
 

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>$title$</title>
+$header-includes$
+</head>
+<body>
+<div class="layout">
+$if(toc)$
+<nav id="TOC" aria-label="목차">
+<div class="eyebrow">목차</div>
+$toc$
+</nav>
+$endif$
+<main>
+<header class="title">
+<div class="eyebrow">architecture.md · version $version$ · $updated$ · scripts/render-architecture-html.sh가 생성</div>
+</header>
+$body$
+</main>
+</div>
+</body>
+</html>

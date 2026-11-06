@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/stream.command.schema.json",
+  "title": "StreamCommand",
+  "description": "카메라 수집 세션 시작 명령(v5.1, ADR-0015). 세션 start와 임대 복구(resume)마다 한 번 발행한다. stop·reload_profile은 Kafka가 아니라 Redis 세션 키 stream:session:<sourceId>:command로 전달한다(소비 그룹 메시지는 소유 Pod에 닿지 않기 때문). 발행: stream-service (SPEC-036 R-3, R-13). 소비: stream-ingestor (SPEC-037 R-1)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "action",
+    "cameraId",
+    "sessionId",
+    "jobId",
+    "normalizationId",
+    "rtspSecretRef",
+    "profile",
+    "trackIdEpoch",
+    "resume",
+    "zones"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "stream.command"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "start"
+      ]
+    },
+    "cameraId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sessionId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "stream-service 세션 ID. sourceId와 같다"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "STREAM Job ID. 창 산출물의 jobId"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "sourceId와 같다(아키텍처 4절)"
+    },
+    "rtspSecretRef": {
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9/_.:-]+$",
+      "description": "RTSP 주소와 자격 증명이 든 Secrets Manager 키 이름. 주소 자체를 싣지 않는다"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileVersion",
+        "windowS",
+        "overlapS",
+        "detectFps"
+      ],
+      "properties": {
+        "profileVersion": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$"
+        },
+        "windowS": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 30,
+          "description": "창 길이(초). 기본 20"
+        },
+        "overlapS": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "앞뒤 겹침(초). 기본 5"
+        },
+        "detectFps": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "description": "검출 fps. 기본 5"
+        }
+      }
+    },
+    "trackIdEpoch": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "이 명령으로 시작하는 Pod가 쓸 트랙 ID 대역. resume이면 이전 값 + 1"
+    },
+    "resume": {
+      "type": "boolean",
+      "description": "임대 소실 뒤 같은 세션을 이어받는 명령이면 true (SPEC-036 R-13)"
+    },
+    "zones": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "zoneId",
+          "name",
+          "kind",
+          "polygon"
+        ],
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hazard",
+              "aisle",
+              "storage",
+              "general"
+            ]
+          },
+          "polygon": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 64,
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "description": "정규화 좌표(0~1) 꼭짓점 목록"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192fb00-0000-5000-8000-000000000001",
+      "eventType": "stream.command",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T10:00:00Z",
+      "sourceId": "0192fb00-0000-7000-8000-000000000010",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "action": "start",
+      "cameraId": "0192fb00-0000-7000-8000-000000000020",
+      "sessionId": "0192fb00-0000-7000-8000-000000000010",
+      "jobId": "0192fb00-0000-7000-8000-000000000030",
+      "normalizationId": "0192fb00-0000-7000-8000-000000000010",
+      "rtspSecretRef": "cameras/0192fb00-0000-7000-8000-000000000020/rtsp",
+      "profile": {
+        "profileVersion": "ingest-default@1",
+        "windowS": 20,
+        "overlapS": 5,
+        "detectFps": 5
+      },
+      "trackIdEpoch": 0,
+      "resume": false,
+      "zones": [
+        {
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "name": "A동 크레인 하부",
+          "kind": "hazard",
+          "polygon": [
+            [0.1, 0.2],
+            [0.6, 0.2],
+            [0.6, 0.9],
+            [0.1, 0.9]
+          ]
+        }
+      ]
+    }
+  ]
+}

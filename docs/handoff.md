@@ -38,7 +38,7 @@ cd repos/ai && uv sync --all-packages
 
 | 경로 | 내용 |
 | --- | --- |
-| `references/` | 설계 원본(`검색·이벤트 VLM 아키텍처_v2.md`·`.html`). overview·ADR-0008이 이 문서에서 왔다 |
+| `references/` | 설계 원본(`검색·이벤트 VLM 아키텍처_v2.md`·`.html`). 아키텍처 v5.1(`architecture/architecture.md`)·ADR-0008이 이 문서에서 왔다 |
 | `17서비스 VLM 아키텍처.md` | 이전 설계 원본 |
 | `docs/architecture/rationale.md` | 사용자 작성 중 문서(추적하지 않음) |
 | `docs/architecture/benchmarks/` | 측정 보고서(커밋하지 않음, 4.6절) |
@@ -57,7 +57,7 @@ cd repos/ai && uv sync --all-packages
 | chunk-processor | ai (`services/chunk-processor`) |
 
 - 이 서비스들의 작업을 제안하거나, 다음 단계를 안내하거나, 확인 질문을 하지 않는다(사용자 지시: "앞으로 나한테 묻지마").
-- 이 서비스와 맞물리는 계약은 아키텍처 문서(`overview.md`)와 머지된 계약을 기준으로 맞춘다. 어긋나면 사용자에게만 보고한다.
+- 이 서비스와 맞물리는 계약은 아키텍처 문서(`architecture.md`)와 머지된 계약을 기준으로 맞춘다. 어긋나면 사용자에게만 보고한다.
 - **2026-11-06 결정**: 이 서비스들이 생산하는 이벤트·API 중 내 서비스가 입력으로 쓰는 것은 내가 아키텍처 문서대로 계약을 먼저 작성한다. 계약 설명에 "생산자 담당자 확인 필요"를 적는다. 생산자가 나중에 바꾸면 소비 쪽을 맞춘다.
 
 ### 2.2 내 담당 (사용자가 진행)
@@ -71,9 +71,11 @@ cd repos/ai && uv sync --all-packages
 | normalize | ai | SPEC-007 Implementing |
 | ai-gateway | ai | SPEC-009·011·012·016 Implementing, SPEC-020 R-20(`event_judge_escalate`) 완료 |
 | frame-encoder | ai | SPEC-019 Implementing |
-| event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로(SPEC-023)는 plan·tasks까지 머지 |
-| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지. 구현 전 결정은 6절 |
-| quality-service | backend | spec·계약·plan·tasks 머지. 구현 전 결정은 6절 |
+| event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로(SPEC-023)는 plan·tasks까지 머지. v5.1 추가 요구(SPEC-020 R-21~22, SPEC-023 R-17~24)는 plan·tasks 갱신 전 |
+| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지. v5.1 추가 요구(SPEC-022 R-23, SPEC-027 R-25~34, SPEC-028 R-19)는 plan·tasks 갱신 전. 구현 전 결정은 6절 |
+| quality-service | backend | spec·계약·plan·tasks 머지. v5.1 추가 요구(SPEC-029 R-27~28, 계약 2.0.0)는 plan·tasks 갱신 전. 구현 전 결정은 6절 |
+| stream-service | backend | SPEC-036 Approved(v5.1, ADR-0015). plan·구현은 Phase 2, 사용자 지시 뒤 |
+| stream-ingestor | ai | SPEC-037 Approved(v5.1, ADR-0015). plan·구현은 Phase 2, 사용자 지시 뒤 |
 | infra, gitops | infra, gitops | **사용자가 지시할 때만** 작업한다 |
 
 ### 2.3 AI 모델·학습은 별도 담당자
@@ -88,8 +90,8 @@ cd repos/ai && uv sync --all-packages
 | 원칙 | 내용 | 정한 날 |
 | --- | --- | --- |
 | 단계마다 머지 | ADR, spec, 계약, plan, 구현 묶음마다 PR → CI 통과 → squash merge를 **직접** 한 뒤 다음 단계로 간다. 팀원 리뷰는 기다리지 않는다. 쌓인 브랜치는 앞 PR 머지 뒤 main을 merge해서(강제 push 없이) 다음 PR을 연다 | 2026-11-02 |
-| 하위호환 안 남김 | 개발 단계라 계약·설정 형식을 바꿀 때 이전 버전을 남기지 않고 새 형식으로 바로 옮긴다. 다른 레포 CI가 깨지지 않게 변경 순서(소비 쪽 먼저)만 맞춘다. 근거 `architecture/v4-transition.md` 결정 6 | 2026-11-04 |
-| gRPC 안 씀 | 서비스 간 동기 호출은 HTTP/1.1 + JSON(ADR-0002, overview "통신 규칙" 내부 동기 호출 규약). gRPC를 다시 제안하지 않는다 | 2026-11-06 |
+| 하위호환 안 남김 | 개발 단계라 계약·설정 형식을 바꿀 때 이전 버전을 남기지 않고 새 형식으로 바로 옮긴다. 다른 레포 CI가 깨지지 않게 변경 순서(소비 쪽 먼저)만 맞춘다. 근거 `architecture/legacy/v4-transition.md` 결정 6 | 2026-11-04 |
+| gRPC 안 씀 | 서비스 간 동기 호출은 HTTP/1.1 + JSON(ADR-0002, 아키텍처 11.1절 내부 동기 호출 규약). gRPC를 다시 제안하지 않는다 | 2026-11-06 |
 | 내부 호출 클라이언트는 생성 | 내부 호출 클라이언트는 OpenAPI 계약에서 빌드 때 생성한다. Python은 datamodel-code-generator(요청·응답 모델 생성) + 얇은 httpx 호출부, Java는 openapi-generator Gradle 플러그인. 손으로 쓴 요청·응답 모델은 두지 않는다. 지금의 `libs/ai-client` 손 작성 모델은 SPEC-021에서 생성 모델로 바꾼다(구현 전) | 2026-11-06 |
 | 내부 호출 재시도·마감 | 호출자는 `X-Request-Deadline`(epoch ms)을 넣고 받는 쪽은 남은 시간이 없으면 504. 읽기 전용(parse·embed·analysis-api 읽기)은 503·연결 실패에 2회 지수 백오프 재시도. **analyze(VLM)는 연결 실패만 재시도**하고 502·503·시간 초과는 바로 `unknown`으로 기록 | 2026-11-06 |
 | 측정 보고서는 커밋 안 함 | 벤치마크·성능 측정 보고서는 로컬 파일로만 쓰고 경로만 알린다. tasks.md의 짧은 "측정 기록" 절은 예외로 커밋한다(SPEC-019·020 선례) | 2026-11-06 |
@@ -139,20 +141,21 @@ cd repos/ai && uv sync --all-packages
 ### 4.6 로컬 compose
 
 - `docker compose -f local/docker-compose.yml up -d <서비스>`. 워커를 추가하면 `kafka-init` 토픽 목록(재시도 `{토픽}.{그룹}.retry`, DLQ `{그룹}.dlq` 포함)과 `local/README.md` 표를 같이 고친다.
-- 메모리 상한은 overview "로컬 개발 환경" 표를 따른다(나머지 워커 256M).
+- 메모리 상한은 아키텍처 18.1절 표를 따른다(나머지 워커 256M).
 - SeaweedFS 키는 `local/seaweedfs/s3.json`의 로컬 전용 샘플값이다(비밀값 아님).
 
 ## 5. 이어서 할 일
 
-문서는 모두 머지했다. 아래 순서로 구현한다. 앞의 것이 뒤의 입력을 만든다.
+문서는 모두 머지했다. 기준은 아키텍처 v5.1(ADR-0015~0017)과 계약 묶음 4.0.0이다. 아래 순서로 구현하되, v5.1로 요구사항이 늘어난 spec은 구현 전에 그 레포의 plan·tasks를 먼저 갱신한다. 앞의 것이 뒤의 입력을 만든다.
 
 1. 6절의 사용자 결정(D-*)을 받고, "먼저 고칠 것"(C-1~C-4)과 정리할 계약 수정을 docs PR 하나로 반영한다(계약 묶음 minor·patch).
-2. SPEC-021(ai): 계약 lock 3.14.0으로 올리기(기존 계약 테스트 4건을 같이 맞춤), ai-gateway 마감, 생성 클라이언트, 재시도 규칙, embed·parse
+2. SPEC-021(ai): 계약 lock 4.0.0으로 올리기(기존 계약 테스트 4건을 같이 맞춤), ai-gateway 마감, 생성 클라이언트, 재시도 규칙, embed·parse
 3. SPEC-024 track-analyzer → SPEC-025 embedding-worker → SPEC-023 event-analyzer 탐지기 경로 → SPEC-022 track-stitcher → SPEC-026 grounding-worker → SPEC-027·028 aggregator
 4. SPEC-029·030 quality-service(backend), SPEC-030 evals(ai)
 5. SPEC-031~035 frontend(SPEC-031 T001에서 lock·생성 코드 갱신)
 6. 각 서비스 로컬 compose 추가와 측정
-7. 운영 배포(infra·gitops)는 사용자 지시 후
+7. Phase 2 실시간: SPEC-036 stream-service(backend) → SPEC-037 stream-ingestor(ai). 사용자 지시 후
+8. 운영 배포(infra·gitops)는 사용자 지시 후
 
 - 레포마다 plan의 "의존" 절을 먼저 읽는다. 두 plan이 같은 준비 태스크(lock 올리기 등)를 가리키면 먼저 구현하는 쪽이 한다.
 - 다른 담당자 서비스의 계약(생산자 확인 필요)을 생산자가 바꾸면 소비 쪽 plan·코드를 맞춘다.

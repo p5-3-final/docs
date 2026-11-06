@@ -64,4 +64,4 @@ backend `AGENTS.md`는 새 서비스 모듈을 추가할 때 ADR을 요구한다
 ## 참고
 
 - [서비스 카탈로그](../architecture/service-catalog.md)
-- [아키텍처 개요](../architecture/overview.md)
+- [아키텍처 v5](../architecture/architecture.md)

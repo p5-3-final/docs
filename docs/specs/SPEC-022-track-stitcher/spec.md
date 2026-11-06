@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, ADR-0009, ADR-0010, SPEC-013, SPEC-019]
+related: [ADR-0008, ADR-0009, ADR-0010, SPEC-013, SPEC-019, ADR-0015, SPEC-037]
 ---
 
 # SPEC-022 track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID)
@@ -21,7 +21,7 @@ chunk-processor는 영상을 청크(기본 2분, 앞뒤 5초 겹침)로 나눠 �
 - 트랙 속성(보호구·역할)
 - aggregator의 시간 기준 규칙(체류·배회·장비 방치)
 
-track-stitcher는 두 단계로 트랙을 잇는다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 7단계).
+track-stitcher는 두 단계로 트랙을 잇는다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 7단계).
 
 - 경계 연결: 인접 청크의 겹치는 5초에서 같은 클래스 트랙을 박스 IoU로 잇는다. 크롭 벡터를 기다리지 않아 빨리 끝난다.
 - 재등장 연결(Re-ID): 영상의 모든 청크가 모이고 크롭 벡터(frame-encoder, [SPEC-019](../SPEC-019-frame-encoder/spec.md))도 모이면, 같은 클래스 트랙을 외형 유사도와 시간 간격으로 잇는다.
@@ -29,6 +29,8 @@ track-stitcher는 두 단계로 트랙을 잇는다([아키텍처 개요](../../
 결과는 로컬 트랙 → 최종 트랙 번역표 하나다. 이를 `track.manifest`로 알리면 pipeline-service가 완료 판정에 세고, analysis-api가 최종 trackId를 정한다.
 
 입력 `chunk.boundary`·`track.detected`(origin chunk)는 chunk-processor(다른 담당자)가 만든다. 아직 계약이 없어 이 spec이 아키텍처 문서대로 소비 쪽에서 계약을 정한다(2026-11-06 사용자 결정, [handoff](../../handoff.md) 2.1). 생산자가 바꾸면 소비 쪽을 맞춘다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6절, [ADR-0015](../../adr/0015-realtime-window-pipeline.md)): 실시간 창은 같은 토픽으로 들어오지만 트랙 ID가 세션 전체에서 이어지므로 `jobType: STREAM`이면 건너뛴다.
 
 ## 2. 범위
 
@@ -121,6 +123,7 @@ pipeline-service와 analysis-api 담당자로서 Job마다 트랙 연결이 끝�
 | R-20 | IF 저장소·Redis·Kafka가 일시적으로 응답하지 않으면, THEN THE track-stitcher SHALL 메시지를 재시도 토픽으로 보내 다시 처리한다. | US-4 |
 | R-21 | THE track-stitcher SHALL 핸들러 안의 처리 시간을 단계 `stitcher.boundary`(비교한 트랙 쌍 수), `stitcher.reid`(비교한 트랙 수), `stitcher.finalize`(최종 트랙 수)로 남긴다(SPEC-013). | US-3 |
 | R-22 | IF 프로필이 없거나 기준값이 범위 밖(IoU·유사도 경계 0~1 밖, 간격·제한 시간 0 이하)이면, THEN THE track-stitcher SHALL 기동에 실패한다. | US-4 |
+| R-23 | WHEN `chunk.boundary`·`segment.embedded`의 `jobType`이 `STREAM`이면, THE track-stitcher SHALL 상태를 만들지 않고 메시지를 건너뛴 뒤 커밋하며, 건너뛴 수를 지표로 남긴다. 실시간은 stream-ingestor가 세션 전체에서 같은 트랙 ID를 유지하므로 번역표가 없다. | US-3 |
 
 ### 비기능 요구사항
 
@@ -154,8 +157,9 @@ pipeline-service와 analysis-api 담당자로서 Job마다 트랙 연결이 끝�
 | `service-contracts/asyncapi/track-stitcher.yaml` | 새 파일 | 예(추가) |
 | `service-contracts/asyncapi/chunk-processor.yaml` | `chunk.boundary`·`track.detected` 발행 채널(1.2.0) | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | `track-stitcher.queue_wait`·`track-stitcher.handle`·`stitcher.boundary`·`stitcher.reid`·`stitcher.finalize` | 예(추가) |
+| `service-contracts/events/chunk.boundary.schema.json`, `track.detected.schema.json` | v5.1: 선택 필드 `jobType`(없으면 `FULL`). `track.detected`는 origin `chunk`에 `trackIdEpoch` 선택 필드 | 예(선택 필드 추가) |
 
-계약 묶음 3.1.0 → 3.2.0
+계약 묶음 3.1.0 → 3.2.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

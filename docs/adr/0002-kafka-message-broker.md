@@ -59,5 +59,5 @@ related: [ADR-0001]
 
 ## 참고
 
-- [아키텍처 개요](../architecture/overview.md)
+- [아키텍처 v5](../architecture/architecture.md)
 - [서비스 카탈로그](../architecture/service-catalog.md)

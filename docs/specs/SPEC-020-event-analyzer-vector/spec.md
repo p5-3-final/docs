@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, ADR-0010, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, SPEC-019]
+related: [ADR-0008, ADR-0010, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, SPEC-019, ADR-0016]
 ---
 
 # SPEC-020 event-analyzer 벡터 후보 판정
@@ -15,7 +15,7 @@ related: [ADR-0008, ADR-0010, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, 
 
 ## 1. 배경과 목적
 
-frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷한 구간을 `event.candidate.vector`로 낸다([SPEC-019](../SPEC-019-frame-encoder/spec.md), ADR-0010 ③). 이 후보는 벡터 점수만으로 정한 것이라 실제로 일어났는지 확인해야 한다. event-analyzer가 후보마다 구간 프레임을 ai-gateway `/v1/analyze`(`event_judge`)로 판정해 `VLMAnalysis`를 만들고, 결과를 `event.analyzed`로 analysis-api·embedding-worker·quality-service에 보낸다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 8단계, "판정").
+frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷한 구간을 `event.candidate.vector`로 낸다([SPEC-019](../SPEC-019-frame-encoder/spec.md), ADR-0010 ③). 이 후보는 벡터 점수만으로 정한 것이라 실제로 일어났는지 확인해야 한다. event-analyzer가 후보마다 구간 프레임을 ai-gateway `/v1/analyze`(`event_judge`)로 판정해 `VLMAnalysis`를 만들고, 결과를 `event.analyzed`로 analysis-api·embedding-worker·quality-service에 보낸다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 8단계, "판정").
 
 - 단계 상향: 1차 판정이 severity `high`이거나 판단 불가(`eventDetected` null)이면 더 강한 모델(`event_judge_escalate`)로 다시 판정하고, 두 판정이 엇갈리면 `reviewRequired`를 붙인다. 높은 위험 후보만 비싼 모델을 쓰고, 모델이 엇갈린 후보를 사람이 검토하게 하려는 것이다. 벡터 후보도 탐지기 후보와 같은 방식으로 판정한다(overview 8단계).
 - 후보를 버리지 않는다: 모델 미설정·예산 초과면 `unverified`, ai-gateway가 끝까지 응답하지 않으면 `unknown`으로 기록해 발행한다.
@@ -24,6 +24,8 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 - `VLMAnalysis` 스키마는 ai-gateway 출력 스키마였는데, 다른 레포로 나가는 `event.analyzed`에 들어가므로 이 spec에서 docs 계약으로 옮긴다(ADR-0012 "다른 레포로 나가는 출력 형식").
 
 탐지기·규칙 후보(`event.candidate`)는 아직 계약과 생산자(chunk-processor, 다른 담당자)가 없어 이 spec에서 다루지 않는다. 그 경로는 같은 서비스에 이어서 붙인다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 8.4·17.3절, [ADR-0016](../../adr/0016-aggregator-fold-and-deterministic-caps.md)): `unverified`의 사유를 구분해 quality-service가 예산·상한 초과 재판정 큐를 만들 수 있게 한다.
 
 ## 2. 범위
 
@@ -114,6 +116,8 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 | R-18 | THE event-analyzer SHALL 한 메시지의 후보 판정을 설정한 수(기본 4)까지만 동시에 진행한다. | US-1 |
 | R-19 | THE event-analyzer SHALL 핸들러 안의 처리 시간을 단계 `analyzer.judge`(1차 판정, 후보 수를 count로), `analyzer.escalate`(재판정, 재판정 수를 count로)로 남긴다(SPEC-013). | US-1 |
 | R-20 | WHEN 허용된 호출자가 taskType `event_judge_escalate`로 분석을 요청하면, THE ai-gateway SHALL `event_judge`와 같은 입력·출력 형식과 같은 처리 순서(SPEC-009, SPEC-016)로, 프로필의 `event_judge_escalate` 모델과 그 taskType의 프롬프트 버전으로 처리한다. | US-2 |
+| R-21 | WHEN ai-gateway 응답의 `verificationStatus`가 `unverified`이면, THE event-analyzer SHALL 응답의 `unverifiedReason`(`budget_exceeded`·`model_unavailable`)을 `event.analyzed.unverifiedReason`에 그대로 싣는다. | US-3 |
+| R-22 | THE event-analyzer SHALL 입력 메시지의 `jobType`을 `event.analyzed`에 그대로 옮긴다. 없으면 싣지 않는다. | US-1 |
 
 ### 비기능 요구사항
 
@@ -143,8 +147,10 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 | `service-contracts/stages/v1/stages.schema.json` | `event-analyzer.queue_wait`·`event-analyzer.handle`·`analyzer.judge`·`analyzer.escalate` | 예(추가) |
 | `service-contracts/asyncapi/event-analyzer.yaml` | 새 파일: `event.candidate.vector` 소비, `event.analyzed` 발행 | 예(추가) |
 | `service-contracts/openapi/ai-gateway.yaml` | `TaskType`에 `event_judge_escalate`. `TaskType`·`EmbedTaskType`을 `x-extensible-enum`으로 전환([ADR-0014](../../adr/0014-ai-gateway-extensible-task-type.md)), 문서 버전 1.0.0 | 아니오(응답 enum 제약 제거 1회, 소비자 없음, 경로 `/v1` 유지) |
+| `service-contracts/events/event.analyzed.schema.json` | v5.1: 선택 필드 `unverifiedReason`(`budget_exceeded`·`model_unavailable`·`call_cap_reached`), `jobType` | 예(선택 필드 추가) |
+| `service-contracts/openapi/ai-gateway.yaml` | v5.1: `/v1/analyze` 응답에 선택 필드 `unverifiedReason`(생산자 ai-gateway, SPEC-016 R-22) | 예(응답 필드 추가) |
 
-계약 묶음 2.10.0 → 3.0.0
+계약 묶음 2.10.0 → 3.0.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

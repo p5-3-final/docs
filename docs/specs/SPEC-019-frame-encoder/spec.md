@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, ADR-0010, SPEC-011, SPEC-013]
+related: [ADR-0008, ADR-0010, SPEC-011, SPEC-013, ADR-0015, ADR-0016]
 ---
 
 # SPEC-019 frame-encoder 구간·크롭 벡터와 프로토타입 후보
@@ -15,7 +15,7 @@ related: [ADR-0008, ADR-0010, SPEC-011, SPEC-013]
 
 ## 1. 배경과 목적
 
-검색 경로는 영상의 10초 구간마다 벡터 하나를 만들어 문장·이미지 질의와 비교한다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 5·6단계). chunk-processor가 구간마다 블러 처리한 프레임 4장과 트랙 대표 크롭을 S3에 저장하고 `segment.ready`로 알리면, frame-encoder가 벡터를 만든다.
+검색 경로는 영상의 10초 구간마다 벡터 하나를 만들어 문장·이미지 질의와 비교한다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 5·6단계). chunk-processor가 구간마다 블러 처리한 프레임 4장과 트랙 대표 크롭을 S3에 저장하고 `segment.ready`로 알리면, frame-encoder가 벡터를 만든다.
 
 - 구간 벡터: 프레임 4장을 각각 인코딩해 정규화한 뒤 평균을 내고 다시 정규화한다. 한 장보다 구간 전체의 장면을 잘 나타낸다.
 - 크롭 벡터: 트랙 대표 크롭을 같은 인코더로 만든다. 이미지 검색과 트랙 재등장 연결(Re-ID)에 쓴다.
@@ -25,6 +25,8 @@ related: [ADR-0008, ADR-0010, SPEC-011, SPEC-013]
 frame-encoder는 ai-gateway와 같은 인코더 구현(`libs/encoders`)과 같은 모델 ID·가중치 manifest를 쓴다. 질의 벡터와 구간 벡터가 같은 공간에 있어야 검색이 맞기 때문이다(overview "인코더 일치"). 구간 인코딩은 처리량이 중요한 파이프라인 단계라, 사용자 요청에 바로 응답하는 ai-gateway와 따로 확장·장애 격리하려고 별도 워커로 둔다(2026-11-06 검토).
 
 `segment.ready`의 생산자는 chunk-processor(다른 담당자)다. 이 spec은 아키텍처 문서의 설명대로 메시지 형식을 계약으로 정하고, chunk-processor는 이 계약을 보고 발행을 구현한다. 지금은 발행하는 쪽이 없다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 8.1절, [ADR-0016](../../adr/0016-aggregator-fold-and-deterministic-caps.md)): 같은 장면이 연속 구간마다 후보로 나와 VLM 호출이 구간 수만큼 늘어나는 것을 막기 위해 연속 구간 병합과 실행당 유형별 상한을 더한다. 실시간 창도 같은 메시지로 들어오므로 `jobType`을 그대로 옮긴다([ADR-0015](../../adr/0015-realtime-window-pipeline.md)).
 
 ## 2. 범위
 
@@ -113,6 +115,9 @@ AI 담당자로서 탐지기 클래스가 없는 행동 유형도 후보로 받�
 | R-17 | IF 프레임·크롭 이미지가 저장소에 없거나 디코딩할 수 없으면, THEN THE frame-encoder SHALL 벡터 파일과 이벤트를 만들지 않고 메시지를 재시도 없이 DLQ로 보낸다. | US-4 |
 | R-18 | IF 저장소나 Kafka에 일시적으로 쓸 수 없으면, THEN THE frame-encoder SHALL 메시지를 재시도 토픽으로 보내 다시 처리한다. | US-1 |
 | R-19 | THE frame-encoder SHALL 핸들러 안의 처리 시간을 단계 `encoder.segments`(구간 벡터), `encoder.crops`(크롭 벡터), `encoder.store`(파일 저장), `encoder.prototype`(프로토타입 비교)으로 남긴다(SPEC-013). | US-1 |
+| R-20 | WHEN 같은 유형의 후보가 시작 시각순으로 이어지는 구간(앞 구간 끝 = 다음 구간 시작, 5초 간격 겹침 포함)에서 연속으로 나오면, THE frame-encoder SHALL 그 연속 묶음에서 점수가 가장 높은 구간 하나만 후보로 남기고 나머지 구간 ID를 `mergedSegmentIds`에 담는다([아키텍처 v5.1](../../architecture/architecture.md) 8.1절). | US-3 |
+| R-21 | THE frame-encoder SHALL 한 메시지에서 유형별 후보 수를 프로필 상한(기본 5) 이하로 자르고(점수 높은 순), 잘린 수를 `event.candidate.vector.droppedCount`에 남긴다. | US-3 |
+| R-22 | THE frame-encoder SHALL `segment.ready`의 `jobType`을 `segment.embedded`와 `event.candidate.vector`에 그대로 옮긴다. 없으면 싣지 않는다(`FULL`로 본다). | US-1 |
 
 ### 비기능 요구사항
 
@@ -144,8 +149,10 @@ AI 담당자로서 탐지기 클래스가 없는 행동 유형도 후보로 받�
 | `service-contracts/vectors/v1/vector-file.schema.json` | 새 파일 형식 | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | `frame-encoder.queue_wait`·`frame-encoder.handle`·`encoder.*` 4개 | 예(추가) |
 | `service-contracts/asyncapi/frame-encoder.yaml`, `asyncapi/chunk-processor.yaml` | frame-encoder 발행 2종, chunk-processor의 `segment.ready` 채널 | 예(추가) |
+| `service-contracts/events/event.candidate.vector.schema.json` | v5.1: 후보에 선택 필드 `mergedSegmentIds`, 메시지에 `droppedCount`·`jobType` | 예(선택 필드 추가) |
+| `service-contracts/events/segment.ready.schema.json`, `segment.embedded.schema.json` | v5.1: 선택 필드 `jobType`(`FULL`·`REANALYZE`·`REEMBED`·`STREAM`, 없으면 `FULL`) | 예(선택 필드 추가) |
 
-계약 묶음 2.9.1 → 2.10.0
+계약 묶음 2.9.1 → 2.10.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

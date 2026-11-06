@@ -1,11 +1,12 @@
 asyncapi: 3.0.0
 info:
   title: aggregator events
-  version: 1.1.0
+  version: 1.2.0
   description: |
     aggregator가 소비·발행하는 이벤트 (SPEC-027)
-    - 소비: analysis.completed, chunk.manifest (소비 그룹 aggregator)
-    - 발행: source.completed
+    - 소비: analysis.completed, chunk.manifest, event.analyzed, track.detected (소비 그룹 aggregator)
+    - 발행: source.completed, state.updated
+    v5.1(ADR-0016): event.analyzed를 직접 받아 업로드의 늦은 벡터 이벤트는 대기 집합·revision 재발행으로, 실시간(jobType STREAM)은 창마다 Kafka 입력만으로 증분 fold해 state.updated를 낸다(SPEC-027 R-25~R-34).
 defaultContentType: application/json
 servers:
   local:
@@ -25,6 +26,24 @@ channels:
     messages:
       sourceCompleted:
         $ref: '#/components/messages/SourceCompleted'
+  eventAnalyzed:
+    address: event.analyzed
+    description: event-analyzer가 발행하는 판정 결과(소비 그룹 aggregator). 업로드는 vector* 대기 집합, STREAM은 창별 대기 집합. 메시지 키는 sourceId다.
+    messages:
+      eventAnalyzed:
+        $ref: '#/components/messages/EventAnalyzed'
+  trackDetected:
+    address: track.detected
+    description: stream-ingestor가 발행하는 창 트랙 요약(소비 그룹 aggregator, jobType STREAM만). 메시지 키는 sourceId다.
+    messages:
+      trackDetected:
+        $ref: '#/components/messages/TrackDetected'
+  stateUpdated:
+    address: state.updated
+    description: 실시간 창마다 한 건. 메시지 키는 sourceId다.
+    messages:
+      stateUpdated:
+        $ref: '#/components/messages/StateUpdated'
   chunkManifest:
     address: chunk.manifest
     description: 청크 실행마다 한 건. 정적 객체 재고를 청크 재고 파일로 옮긴다(SPEC-028). 메시지 키는 sourceId다.
@@ -39,9 +58,30 @@ operations:
       $ref: '#/channels/chunkManifest'
     messages:
       - $ref: '#/channels/chunkManifest/messages/chunkManifest'
+  consumeEventAnalyzed:
+    action: receive
+    summary: 업로드 vector* 이벤트는 대기 집합에, 완료 뒤 도착은 revision 재발행, STREAM은 창별 대기 집합 (SPEC-027 R-25~R-29)
+    channel:
+      $ref: '#/channels/eventAnalyzed'
+    messages:
+      - $ref: '#/channels/eventAnalyzed/messages/eventAnalyzed'
+  consumeTrackDetected:
+    action: receive
+    summary: STREAM 창의 트랙을 창별 대기 집합에 모은다. 다른 jobType은 무시 (SPEC-027 R-29)
+    channel:
+      $ref: '#/channels/trackDetected'
+    messages:
+      - $ref: '#/channels/trackDetected/messages/trackDetected'
+  publishStateUpdated:
+    action: send
+    summary: analysis.completed(scope chunk)마다 증분 fold 결과 한 건 (SPEC-027 R-30)
+    channel:
+      $ref: '#/channels/stateUpdated'
+    messages:
+      - $ref: '#/channels/stateUpdated/messages/stateUpdated'
   consumeAnalysisCompleted:
     action: receive
-    summary: 영상 단위 집계 후 source.completed 발행 (SPEC-027)
+    summary: scope job이면 영상 단위 집계 후 source.completed, scope chunk면 증분 fold 후 state.updated (SPEC-027)
     channel:
       $ref: '#/channels/analysisCompleted'
     messages:
@@ -62,6 +102,45 @@ components:
         $ref: '#/components/schemas/KafkaHeaders'
       payload:
         $ref: '../events/chunk.manifest.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    EventAnalyzed:
+      name: event.analyzed
+      title: 이벤트 후보 판정 결과
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.analyzed.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    TrackDetected:
+      name: track.detected
+      title: 창 트랙 요약
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/track.detected.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    StateUpdated:
+      name: state.updated
+      title: 실시간 창 상태 갱신
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/state.updated.schema.json'
       bindings:
         kafka:
           key:

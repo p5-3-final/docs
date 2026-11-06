@@ -77,7 +77,7 @@ ai-gateway는 실행 중에 Prompt Registry(프롬프트, 입력·출력 스키�
   - 분류 체계를 바꾸면 docs PR 뒤에 ai 레포에서 사본을 갱신하는 PR이 따라야 한다. 그 사이 ai CI의 사본 검사가 실패해 갱신이 필요하다는 것을 알린다.
   - AI 담당자는 프롬프트를 ai 레포에서 고친다.
   - 묶음 업로드와 운영 설정은 저장소 쓰기 권한과 gitops 설정이 필요하다(infra·gitops).
-- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/v4-transition.md) A-0, A-2
+- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/legacy/v4-transition.md) A-0, A-2
   - ai: `services/ai-gateway/registry/`로 이전, 분류 체계 사본과 동기화 스크립트·CI 검사, 빌드의 docs 의존 제거
   - docs: `docs/contracts/prompts/` 삭제, SPEC-009·overview·계약 README 갱신
   - ai: 묶음 생성·업로드와 기동 시 받기(A-2, 저장소 권한은 infra 지시 후)

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 1.5.0
+  version: 1.6.0
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
     taskType별 입력 변수·출력 형식의 원본은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다(docs ADR-0012).
@@ -568,6 +568,10 @@ components:
           type: [string, 'null']
           description: 이 taskType의 입력·출력 스키마가 참조하는 분류 체계 버전(`service-contracts/taxonomy/<버전>/`). 참조하지 않으면 null (R-29)
           pattern: '^v[0-9]+$'
+        unverifiedReason:
+          type: [string, 'null']
+          enum: [budget_exceeded, model_unavailable, null]
+          description: '`output.verificationStatus`가 `unverified`인 이유(v5.1, SPEC-016 R-22). model_unavailable: 모델 미설정(R-8), budget_exceeded: 예산 초과(SPEC-016 R-11). 그 외는 null 또는 없음. 호출자는 event.analyzed.unverifiedReason에 그대로 싣는다'
         output:
           type: object
           description: 검증된 결과. 형식은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/output.schema.json`이다. `event_judge`·`event_judge_escalate`는 VLMAnalysis이고 원본은 `events/_vlm-analysis.schema.json`이다(ADR-0012, SPEC-020). (R-5~R-8)

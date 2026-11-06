@@ -1,12 +1,13 @@
 asyncapi: 3.0.0
 info:
   title: event-analyzer events
-  version: 1.1.0
+  version: 1.2.0
   description: |
     event-analyzer 워커가 이벤트 후보를 판정해 발행하는 이벤트 (SPEC-020 벡터 후보, SPEC-023 탐지기·규칙 후보).
     최소 한 번 전달이다. 같은 후보(candidateId)를 다시 처리하면 같은 eventId를 쓴다.
     메시지의 후보를 모두 판정한 뒤 후보마다 한 건씩 발행한다. 탐지기·규칙 후보 메시지(event.candidate)는 그 뒤 실행마다 event.manifest를 한 건 발행한다. 벡터 후보는 event.manifest 수에 넣지 않는다.
     payload의 원본은 `../events/*.schema.json`이고 판정 결과 형식은 `../events/_vlm-analysis.schema.json`이다.
+    v5.1(ADR-0016): 실시간 긴급 후보 alert.candidate를 받아 alert.raised(pending → confirmed·dismissed)를 낸다. 이벤트는 저장하지 않는다(SPEC-023 R-21~R-23).
 defaultContentType: application/json
 servers:
   local:
@@ -26,6 +27,18 @@ channels:
     messages:
       eventCandidate:
         $ref: '#/components/messages/EventCandidate'
+  alertCandidate:
+    address: alert.candidate
+    description: stream-ingestor가 발행하는 실시간 긴급 후보(소비 그룹 event-analyzer). 메시지 키는 sourceId다.
+    messages:
+      alertCandidate:
+        $ref: '#/components/messages/AlertCandidate'
+  alertRaised:
+    address: alert.raised
+    description: 긴급 알림. 후보마다 pending 1건과 confirmed 또는 dismissed 1건. 메시지 키는 sourceId다.
+    messages:
+      alertRaised:
+        $ref: '#/components/messages/AlertRaised'
   eventManifest:
     address: event.manifest
     description: 실행 하나의 탐지기·규칙 후보 판정 완료. 메시지 키는 sourceId다.
@@ -53,6 +66,20 @@ operations:
       $ref: '#/channels/eventCandidate'
     messages:
       - $ref: '#/channels/eventCandidate/messages/eventCandidate'
+  consumeAlertCandidate:
+    action: receive
+    summary: pending 알림을 먼저 내고 event_judge로 confirmed·dismissed를 낸다 (SPEC-023 R-21~R-23)
+    channel:
+      $ref: '#/channels/alertCandidate'
+    messages:
+      - $ref: '#/channels/alertCandidate/messages/alertCandidate'
+  publishAlertRaised:
+    action: send
+    summary: 긴급 후보마다 두 번(pending, 그 뒤 confirmed 또는 dismissed) (SPEC-023 R-21)
+    channel:
+      $ref: '#/channels/alertRaised'
+    messages:
+      - $ref: '#/channels/alertRaised/messages/alertRaised'
   publishEventManifest:
     action: send
     summary: 실행의 event.analyzed를 모두 발행한 뒤 한 번 (SPEC-023 R-12)
@@ -89,6 +116,32 @@ components:
         $ref: '#/components/schemas/KafkaHeaders'
       payload:
         $ref: '../events/event.candidate.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    AlertCandidate:
+      name: alert.candidate
+      title: 실시간 긴급 후보
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/alert.candidate.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    AlertRaised:
+      name: alert.raised
+      title: 긴급 알림
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/alert.raised.schema.json'
       bindings:
         kafka:
           key:
