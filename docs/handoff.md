@@ -90,7 +90,7 @@ cd repos/ai && uv sync --all-packages
 | 단계마다 머지 | ADR, spec, 계약, plan, 구현 묶음마다 PR → CI 통과 → squash merge를 **직접** 한 뒤 다음 단계로 간다. 팀원 리뷰는 기다리지 않는다. 쌓인 브랜치는 앞 PR 머지 뒤 main을 merge해서(강제 push 없이) 다음 PR을 연다 | 2026-11-02 |
 | 하위호환 안 남김 | 개발 단계라 계약·설정 형식을 바꿀 때 이전 버전을 남기지 않고 새 형식으로 바로 옮긴다. 다른 레포 CI가 깨지지 않게 변경 순서(소비 쪽 먼저)만 맞춘다. 근거 `architecture/v4-transition.md` 결정 6 | 2026-11-04 |
 | gRPC 안 씀 | 서비스 간 동기 호출은 HTTP/1.1 + JSON(ADR-0002, overview "통신 규칙" 내부 동기 호출 규약). gRPC를 다시 제안하지 않는다 | 2026-11-06 |
-| 내부 호출 클라이언트는 생성 | 내부 호출 클라이언트는 OpenAPI 계약에서 빌드 때 생성한다. Python은 datamodel-code-generator(요청·응답 모델 생성) + 얇은 httpx 호출부, Java는 openapi-generator Gradle 플러그인. 손으로 쓴 요청·응답 모델은 두지 않는다. 지금의 `libs/ai-client` 손 작성 모델은 SPEC-021에서 생성 모델로 바꾼다 | 2026-11-06 |
+| 내부 호출 클라이언트는 생성 | 내부 호출 클라이언트는 OpenAPI 계약에서 빌드 때 생성한다. Python은 datamodel-code-generator(요청·응답 모델 생성) + 얇은 httpx 호출부, Java는 openapi-generator Gradle 플러그인. 손으로 쓴 요청·응답 모델은 두지 않는다. 지금의 `libs/ai-client` 손 작성 모델은 SPEC-021에서 생성 모델로 바꾼다(구현 전) | 2026-11-06 |
 | 내부 호출 재시도·마감 | 호출자는 `X-Request-Deadline`(epoch ms)을 넣고 받는 쪽은 남은 시간이 없으면 504. 읽기 전용(parse·embed·analysis-api 읽기)은 503·연결 실패에 2회 지수 백오프 재시도. **analyze(VLM)는 연결 실패만 재시도**하고 502·503·시간 초과는 바로 `unknown`으로 기록 | 2026-11-06 |
 | 측정 보고서는 커밋 안 함 | 벤치마크·성능 측정 보고서는 로컬 파일로만 쓰고 경로만 알린다. tasks.md의 짧은 "측정 기록" 절은 예외로 커밋한다(SPEC-019·020 선례) | 2026-11-06 |
 | 질문은 꼭 필요할 때만 | 새 라이브러리, 계약 변경, DB 스키마 변경, 새 서비스 추가는 사용자에게 먼저 확인한다(루트 `AGENTS.md`). 합의된 범위 안의 커밋·push·PR·머지는 다시 묻지 않는다 | — |
@@ -168,13 +168,14 @@ cd repos/ai && uv sync --all-packages
 
 | spec | 대상 | 상태 |
 | --- | --- | --- |
-| SPEC-021 | track-stitcher | 작성 예정 |
-| SPEC-022 | event-analyzer 탐지기 후보 | 작성 예정 |
-| SPEC-023 | track-analyzer | 작성 예정 |
-| SPEC-024 | embedding-worker | 작성 예정 |
-| SPEC-025 | grounding-worker | 작성 예정 |
-| SPEC-026 | aggregator | 작성 예정 |
-| SPEC-027 | quality-service | 작성 예정 |
-| SPEC-028~ | frontend 나머지 화면 | 작성 예정 |
+| SPEC-021 | 내부 동기 호출 규약 적용(ai-gateway `X-Request-Deadline`·504, ai-client 생성 모델·재시도 규칙·embed·parse) | Approved |
+| SPEC-022 | track-stitcher | 작성 예정 |
+| SPEC-023 | event-analyzer 탐지기 후보 | 작성 예정 |
+| SPEC-024 | track-analyzer | 작성 예정 |
+| SPEC-025 | embedding-worker | 작성 예정 |
+| SPEC-026 | grounding-worker | 작성 예정 |
+| SPEC-027 | aggregator | 작성 예정 |
+| SPEC-028 | quality-service | 작성 예정 |
+| SPEC-029~ | frontend 나머지 화면 | 작성 예정 |
 
 번호는 작성하면서 바뀔 수 있다. 실제 번호와 상태는 [spec 목록](specs/README.md)이 원본이다.
