@@ -180,7 +180,7 @@ cd repos/ai && uv sync --all-packages
 | SPEC-030 | quality-service 데이터셋 가져오기·라벨 3종·temporal IoU·특징 내보내기·성능 Gate(media 내부 등록 API 포함) | Approved |
 | SPEC-031 | frontend 분석 결과(요약·이벤트·위험·스냅샷, 이벤트 메뉴)와 실시간 알림. analysis-api 공개 API 1부·notification SSE 계약 초안 | Approved |
 | SPEC-032 | frontend 클릭 조회·오버레이·객체 질문·위험구역 편집. analysis-api 공개 API 2부 계약 초안 | Approved |
-| SPEC-033 | frontend 검색·RAG·주석 클립 | 작성 예정 |
+| SPEC-033 | frontend 검색·RAG·주석 클립. search-service 공개 API 계약 초안 | Approved |
 | SPEC-034 | frontend 작업 세션·분석 이력·설정(학습용 보존) | 작성 예정 |
 | SPEC-035 | frontend 품질 화면(운영자) | 작성 예정 |
 

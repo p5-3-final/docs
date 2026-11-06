@@ -1,0 +1,718 @@
+openapi: 3.1.0
+info:
+  title: search-service API
+  version: 0.1.0
+  description: '문장·이미지로 장면 찾기, Video RAG, 이동·재생 기록, bbox 주석 클립. 다른 담당자 서비스이고, 이 파일은 화면 spec(SPEC-033)이 아키텍처 문서 "외부 API"·"검색 경로"대로 먼저 정한 경로만 담는다(생산자 담당자 확인 필요).
+
+    - api-gateway를 거친다. USER는 자기 영상만, OPERATOR는 모든 영상을 찾는다.
+
+    - 이벤트는 `../asyncapi/search-service.yaml`에 있다.
+
+    '
+servers:
+- url: /
+  description: api-gateway 경유
+tags:
+- name: search
+  description: 장면 찾기
+- name: rag
+  description: 영상에 질문
+paths:
+  /api/v1/search/sources/{sourceId}/moments:
+    get:
+      operationId: searchSourceMoments
+      summary: 영상 안에서 문장으로 장면 찾기
+      description: 질의 해석 → 재사용 확인 → 시각·텍스트 검색 → (정밀) 재순위화 → 결합. 상위 3개 구간에 bbox 주석을 요청하고 결과에 groundingId를 싣는다. 주석 완료는 SSE `grounding.completed`로 알린다 (SPEC-033 R-1~R-6)
+      tags:
+      - search
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
+      - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/Precise'
+      responses:
+        '200':
+          description: 검색 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MomentSearchResult'
+              example:
+                queryId: 0192f310-0000-7000-8000-000000000001
+                query: 안전모 안 쓴 작업자
+                canonicalQuery: person without a hard hat
+                parseMethod: industrial-rule
+                targets:
+                - person without a hard hat
+                scope: source
+                precise: true
+                embeddingModel: open_clip:MobileCLIP2-S0:dfndr2b:mean-4
+                notFound: false
+                degraded: null
+                reused: false
+                results:
+                - momentId: 0192f320-0000-5000-8000-000000000001
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  segmentId: 0192f0e0-0000-5000-8000-000000000011
+                  startMs: 40000
+                  endMs: 50000
+                  seekMs: 38000
+                  similarity: 0.31
+                  matchedBy:
+                  - visual
+                  - text
+                  rerankScore: 0.82
+                  thumbnailUrl: https://storage.example/vlm/...signed
+                  relatedEventId: null
+                  grounding:
+                    groundingId: 0192f300-0000-5000-8000-0000000000a1
+                    status: REQUESTED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/SourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/search/moments:
+    get:
+      operationId: searchAllMoments
+      summary: 내 영상 전체에서 장면 찾기
+      description: 요청자 영상 전체(OPERATOR는 전체)에서 찾는다. 정밀 검색은 없다 (SPEC-033 R-7)
+      tags:
+      - search
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/Q'
+      responses:
+        '200':
+          description: 검색 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MomentSearchResult'
+              example:
+                queryId: 0192f310-0000-7000-8000-000000000001
+                query: 안전모 안 쓴 작업자
+                canonicalQuery: person without a hard hat
+                parseMethod: industrial-rule
+                targets:
+                - person without a hard hat
+                scope: all
+                precise: false
+                embeddingModel: open_clip:MobileCLIP2-S0:dfndr2b:mean-4
+                notFound: false
+                degraded: null
+                reused: false
+                results:
+                - momentId: 0192f320-0000-5000-8000-000000000001
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  segmentId: 0192f0e0-0000-5000-8000-000000000011
+                  startMs: 40000
+                  endMs: 50000
+                  seekMs: 38000
+                  similarity: 0.31
+                  matchedBy:
+                  - visual
+                  - text
+                  rerankScore: null
+                  thumbnailUrl: https://storage.example/vlm/...signed
+                  relatedEventId: null
+                  grounding:
+                    groundingId: 0192f300-0000-5000-8000-0000000000a1
+                    status: NONE
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/search/moments/by-image:
+    post:
+      operationId: searchMomentsByImage
+      summary: 이미지로 장면 찾기
+      description: 올린 이미지를 질의 전용 폴더에 저장하고 이미지 벡터로 구간·크롭 벡터를 찾는다. bbox 주석은 요청하지 않는다 (SPEC-033 R-8)
+      tags:
+      - search
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageSearchRequest'
+      responses:
+        '200':
+          description: 검색 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MomentSearchResult'
+              example:
+                queryId: 0192f310-0000-7000-8000-000000000001
+                query: ''
+                canonicalQuery: ''
+                parseMethod: image
+                targets: []
+                scope: source
+                precise: false
+                embeddingModel: open_clip:MobileCLIP2-S0:dfndr2b:mean-4
+                notFound: false
+                degraded: null
+                reused: false
+                results:
+                - momentId: 0192f320-0000-5000-8000-000000000001
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  segmentId: 0192f0e0-0000-5000-8000-000000000011
+                  startMs: 40000
+                  endMs: 50000
+                  seekMs: 38000
+                  similarity: 0.31
+                  matchedBy:
+                  - image
+                  rerankScore: null
+                  thumbnailUrl: https://storage.example/vlm/...signed
+                  relatedEventId: null
+                  grounding:
+                    groundingId: 0192f300-0000-5000-8000-0000000000a1
+                    status: NONE
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/SourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/search/sources/{sourceId}/answer:
+    get:
+      operationId: answerSourceQuestion
+      summary: 영상에 질문(Video RAG)
+      description: 근거 구간·이벤트·상태를 모아 VLM이 근거만으로 답한다. 15초를 넘기거나 모델이 없으면 answer null과 근거만 준다 (SPEC-033 R-9, R-10)
+      tags:
+      - rag
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
+      - $ref: '#/components/parameters/Q'
+      responses:
+        '200':
+          description: 답
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerResult'
+              example:
+                queryId: 0192f310-0000-7000-8000-000000000001
+                question: 방호벽은 언제 치워졌나요?
+                answer: 1분 10초쯤 통로 입구의 방호벽이 옮겨졌습니다.
+                status: confirmed
+                evidence:
+                - momentId: 0192f320-0000-5000-8000-000000000001
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  segmentId: 0192f0e0-0000-5000-8000-000000000011
+                  startMs: 40000
+                  endMs: 50000
+                  seekMs: 38000
+                  similarity: 0.31
+                  matchedBy:
+                  - visual
+                  - text
+                  rerankScore: 0.82
+                  thumbnailUrl: https://storage.example/vlm/...signed
+                  relatedEventId: null
+                  grounding:
+                    groundingId: 0192f300-0000-5000-8000-0000000000a1
+                    status: NONE
+                relatedEvents:
+                - eventId: 0192f300-0000-5000-8000-000000000101
+                  eventType: object_moved
+                  startMs: 70000
+                  seekMs: 68000
+                  description: 통로 입구의 방호벽이 옮겨졌습니다.
+                limitations:
+                - 장면 외형 기준 근거
+                degraded: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/SourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/search/moments/{momentId}/feedback:
+    post:
+      operationId: sendMomentFeedback
+      summary: 이동·재생 기록과 맞음·틀림
+      description: 질의 로그에 남긴다. incorrect면 그 판정과 구간 주석을 무효화한다 (SPEC-033 R-11)
+      tags:
+      - search
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/MomentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+            example:
+              kind: incorrect
+      responses:
+        '204':
+          description: 기록함
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MomentNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/search/groundings/{groundingId}:
+    get:
+      operationId: getGroundingClip
+      summary: bbox 주석 클립
+      description: SSE `grounding.completed`를 받은 뒤 클립 서명 주소와 프레임별 객체 수를 읽는다 (SPEC-033 R-5)
+      tags:
+      - search
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/GroundingId'
+      responses:
+        '200':
+          description: 주석
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroundingClip'
+              example:
+                groundingId: 0192f300-0000-5000-8000-0000000000a1
+                segmentId: 0192f0e0-0000-5000-8000-000000000011
+                status: READY
+                targets:
+                - person without a hard hat
+                clipUrl: https://storage.example/vlm/...signed
+                colors:
+                  person without a hard hat: '#3fa2c1'
+                frames:
+                - ptsMs: 40000
+                  counts:
+                    person without a hard hat: 1
+        '404':
+          $ref: '#/components/responses/GroundingNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    SourceId:
+      name: sourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MomentId:
+      name: momentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    GroundingId:
+      name: groundingId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Q:
+      name: q
+      in: query
+      required: true
+      description: 검색 문장(한국어·영어), 1~200자
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+    Precise:
+      name: precise
+      in: query
+      required: false
+      description: 정밀 검색(VLM 재순위화). 사용자별 상한을 넘으면 degraded로 인코더 순위만
+      schema:
+        type: boolean
+        default: false
+  responses:
+    BadRequest:
+      description: 질의가 비었거나 너무 길거나 이미지 형식·크기 위반 (`SEARCH_QUERY_INVALID`, `SEARCH_IMAGE_INVALID`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: SEARCH_QUERY_INVALID
+    SourceNotFound:
+      description: 영상이 없거나 남의 영상이거나 아직 검색 색인이 없음 (`SEARCH_SOURCE_NOT_FOUND`, `SEARCH_NOT_INDEXED`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: SEARCH_SOURCE_NOT_FOUND
+    MomentNotFound:
+      description: 결과 항목이 없음 (`SEARCH_MOMENT_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: SEARCH_MOMENT_NOT_FOUND
+    GroundingNotFound:
+      description: 주석이 없음 (`SEARCH_GROUNDING_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: SEARCH_GROUNDING_NOT_FOUND
+  schemas:
+    Grounding:
+      type: object
+      additionalProperties: false
+      required:
+      - groundingId
+      - status
+      properties:
+        groundingId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - NONE
+          - REQUESTED
+          - READY
+          - FAILED
+          description: 상위 3개 결과만 REQUESTED 이상. 나머지는 NONE
+    MomentResult:
+      type: object
+      additionalProperties: false
+      required:
+      - momentId
+      - sourceId
+      - segmentId
+      - startMs
+      - endMs
+      - seekMs
+      - similarity
+      - matchedBy
+      - rerankScore
+      - thumbnailUrl
+      - relatedEventId
+      - grounding
+      properties:
+        momentId:
+          type: string
+          format: uuid
+          description: 결과 항목 ID. 이동·재생 기록과 맞음·틀림에 쓴다
+        sourceId:
+          type: string
+          format: uuid
+        segmentId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        startMs:
+          type: integer
+          minimum: 0
+        endMs:
+          type: integer
+          minimum: 0
+        seekMs:
+          type: integer
+          minimum: 0
+          description: max(0, startMs − 2000)
+        similarity:
+          type: number
+          description: RRF로 합친 유사도. 화면에는 "유사도"로만 표시한다(확률 아님)
+        matchedBy:
+          type: array
+          items:
+            type: string
+            enum:
+            - visual
+            - text
+            - image
+        rerankScore:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+          maximum: 1
+          description: 정밀 검색일 때만
+        thumbnailUrl:
+          type:
+          - string
+          - 'null'
+          format: uri
+        relatedEventId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: 텍스트·이벤트 인덱스에서 찾았으면 그 이벤트
+        grounding:
+          $ref: '#/components/schemas/Grounding'
+    Degraded:
+      type:
+      - object
+      - 'null'
+      additionalProperties: false
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+          enum:
+          - rerank_timeout
+          - circuit_open
+          - precise_quota_exceeded
+          - ai_unavailable
+          description: 정밀 검색·질의 벡터를 쓰지 못해 인코더 순위나 텍스트 검색만으로 답했음
+    MomentSearchResult:
+      type: object
+      additionalProperties: false
+      required:
+      - queryId
+      - query
+      - canonicalQuery
+      - parseMethod
+      - targets
+      - scope
+      - precise
+      - embeddingModel
+      - notFound
+      - degraded
+      - reused
+      - results
+      properties:
+        queryId:
+          type: string
+          format: uuid
+        query:
+          type: string
+        canonicalQuery:
+          type: string
+        parseMethod:
+          type: string
+          enum:
+          - industrial-rule
+          - english-phrase
+          - llm
+          - safe-fallback
+          - image
+        targets:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        scope:
+          type: string
+          enum:
+          - source
+          - all
+        precise:
+          type: boolean
+        embeddingModel:
+          type: string
+        notFound:
+          type: boolean
+          description: 정밀 검색에서 기준 점수를 넘은 결과가 없음("찾지 못함"). 결과는 참고용으로 그대로 준다
+        degraded:
+          $ref: '#/components/schemas/Degraded'
+        reused:
+          type: boolean
+          description: 저장된 결과를 재사용했으면 true
+        results:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/MomentResult'
+    AnswerResult:
+      type: object
+      additionalProperties: false
+      required:
+      - queryId
+      - question
+      - answer
+      - status
+      - evidence
+      - relatedEvents
+      - limitations
+      - degraded
+      properties:
+        queryId:
+          type: string
+          format: uuid
+        question:
+          type: string
+        answer:
+          type:
+          - string
+          - 'null'
+          description: VLM 미설정·시간 초과면 null이고 근거만 준다
+        status:
+          type: string
+          enum:
+          - confirmed
+          - unverified
+        evidence:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/MomentResult'
+        relatedEvents:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - eventId
+            - eventType
+            - startMs
+            - seekMs
+            - description
+            properties:
+              eventId:
+                type: string
+                format: uuid
+              eventType:
+                type: string
+              startMs:
+                type: integer
+                minimum: 0
+              seekMs:
+                type: integer
+                minimum: 0
+              description:
+                type:
+                - string
+                - 'null'
+        limitations:
+          type: array
+          items:
+            type: string
+            maxLength: 300
+          description: 답의 한계(근거 부족, 장면 외형 기준 등)
+        degraded:
+          $ref: '#/components/schemas/Degraded'
+    FeedbackRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      properties:
+        kind:
+          type: string
+          enum:
+          - jumped
+          - played
+          - correct
+          - incorrect
+        playedMs:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          description: played일 때 재생한 길이
+    GroundingClip:
+      type: object
+      additionalProperties: false
+      required:
+      - groundingId
+      - segmentId
+      - status
+      - targets
+      - clipUrl
+      - colors
+      - frames
+      properties:
+        groundingId:
+          type: string
+          format: uuid
+        segmentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - REQUESTED
+          - READY
+          - FAILED
+        targets:
+          type: array
+          items:
+            type: string
+        clipUrl:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: READY면 주석 클립 서명 주소(1시간)
+        colors:
+          type: object
+          additionalProperties:
+            type: string
+          description: 대상어별 박스 색
+        frames:
+          type:
+          - array
+          - 'null'
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - ptsMs
+            - counts
+            properties:
+              ptsMs:
+                type: integer
+                minimum: 0
+              counts:
+                type: object
+                additionalProperties:
+                  type: integer
+    ImageSearchRequest:
+      type: object
+      required:
+      - image
+      properties:
+        image:
+          type: string
+          format: binary
+          description: jpg·png·webp, 5MB 이하
+        sourceId:
+          type: string
+          format: uuid
+          description: 없으면 내 영상 전체
+security:
+- bearerAuth: []
