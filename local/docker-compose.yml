@@ -202,7 +202,7 @@ services:
         limits:
           memory: 768M
 
-  # 워커가 구독·발행하는 토픽(SPEC-007 normalize, SPEC-009 ai-gateway, SPEC-019 frame-encoder). 미리 만들어야 재시도 토픽을 바로 구독한다.
+  # 워커가 구독·발행하는 토픽(SPEC-007 normalize, SPEC-009 ai-gateway, SPEC-019 frame-encoder, SPEC-020 event-analyzer). 미리 만들어야 재시도 토픽을 바로 구독한다.
   # stage.timing은 처리 단계 측정 묶음이다(SPEC-013). 보존 7일은 docs overview "처리 단계 측정"과 같다.
   kafka-init:
     image: apache/kafka:4.3.2@sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7
@@ -214,7 +214,8 @@ services:
         video.uploaded.normalize.retry normalize.dlq
         video.deleted.ai-gateway.retry ai-gateway.dlq
         segment.ready segment.embedded event.candidate.vector
-        segment.ready.frame-encoder.retry frame-encoder.dlq; do
+        segment.ready.frame-encoder.retry frame-encoder.dlq
+        event.analyzed event.candidate.vector.event-analyzer.retry event-analyzer.dlq; do
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
         --topic "$$topic" --partitions 3 --replication-factor 1 || exit 1; done &&
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
@@ -301,6 +302,35 @@ services:
         limits:
           # docs overview "로컬 메모리" 표
           memory: 1G
+
+  # event-analyzer(SPEC-020). event.candidate.vector를 ai-gateway로 판정해 event.analyzed를 발행한다.
+  # 판정 모델은 ai-gateway 프로필이 정한다(기본 mock, Ollama는 AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml).
+  event-analyzer:
+    build:
+      context: ../repos/ai
+      dockerfile: services/event-analyzer/Dockerfile
+      target: runtime
+    image: vlm/event-analyzer:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      EVENT_ANALYZER_AI_GATEWAY_URL: http://ai-gateway:8000
+      # 처리 시간 측정 묶음을 stage.timing에 발행한다. 기본은 JSON 로그(SPEC-013 R-5).
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      ai-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          # docs overview "로컬 메모리" 표의 나머지 워커
+          memory: 256M
 
   # ai-gateway(SPEC-009). 마이그레이션을 먼저 한 번 실행하고 서버를 띄운다.
   # 기본은 모델 없이 흐름만 보는 mock 프로필이다. Ollama를 쓰려면 호스트에서 Ollama를 띄우고

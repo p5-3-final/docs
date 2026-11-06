@@ -1,7 +1,7 @@
 ---
 id: SPEC-020
 title: event-analyzer 벡터 후보 판정
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
