@@ -1,9 +1,9 @@
 asyncapi: 3.0.0
 info:
   title: media-service events
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    media-service가 발행하는 이벤트 (SPEC-003).
+    media-service가 발행하는 이벤트 (SPEC-003, SPEC-017, SPEC-018).
     상태 변경과 같은 트랜잭션에서 Outbox에 기록한 뒤 발행한다. 최소 한 번 전달이므로 소비자는 `eventId`로 중복을 흡수한다.
     payload의 원본은 `../events/*.schema.json`이다.
 defaultContentType: application/json
@@ -15,16 +15,22 @@ servers:
 channels:
   videoUploaded:
     address: video.uploaded
-    description: 영상 업로드 완료. 메시지 키는 sourceId다.
+    description: 영상 업로드 완료. 메시지 키는 sourceId다. 작업 세션에 속한 영상이면 sessionId·role을 싣는다(SPEC-017).
     messages:
       videoUploaded:
         $ref: '#/components/messages/VideoUploaded'
   videoDeleted:
     address: video.deleted
-    description: 영상 삭제. 메시지 키는 sourceId다.
+    description: 영상 삭제. 메시지 키는 sourceId다. 보존에 동의한 영상이면 보존 키·보존 만료 시각을 싣는다(SPEC-018).
     messages:
       videoDeleted:
         $ref: '#/components/messages/VideoDeleted'
+  videoRetentionRevoked:
+    address: video.retention.revoked
+    description: 지운 영상의 학습용 보존 동의 철회. 메시지 키는 sourceId다. 받은 서비스는 그 보존 키의 보존 데이터를 지운다.
+    messages:
+      videoRetentionRevoked:
+        $ref: '#/components/messages/VideoRetentionRevoked'
 operations:
   publishVideoUploaded:
     action: send
@@ -40,6 +46,13 @@ operations:
       $ref: '#/channels/videoDeleted'
     messages:
       - $ref: '#/channels/videoDeleted/messages/videoDeleted'
+  publishVideoRetentionRevoked:
+    action: send
+    summary: 지운 영상의 보존 동의를 철회하면 영상마다 발행 (SPEC-018 R-14, R-16)
+    channel:
+      $ref: '#/channels/videoRetentionRevoked'
+    messages:
+      - $ref: '#/channels/videoRetentionRevoked/messages/videoRetentionRevoked'
 components:
   messages:
     VideoUploaded:
@@ -62,6 +75,19 @@ components:
         $ref: '#/components/schemas/KafkaHeaders'
       payload:
         $ref: '../events/video.deleted.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    VideoRetentionRevoked:
+      name: video.retention.revoked
+      title: 보존 동의 철회
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/video.retention.revoked.schema.json'
       bindings:
         kafka:
           key:

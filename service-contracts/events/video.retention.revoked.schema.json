@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/video.retention.revoked.schema.json",
+  "title": "VideoRetentionRevoked",
+  "description": "사용자가 지운 영상의 학습용 보존 동의를 철회했다. 영상마다 한 번 발행한다(재시도 시 같은 eventId). 받은 서비스는 retentionKey로 남긴 보존 데이터를 모두 지운다. 보존 데이터가 없으면 아무것도 하지 않는다. 소비자는 sourceId와 retentionKey를 함께 저장하지 않는다. 발행: media-service. 소비: 보존 데이터를 가진 모든 서비스 (SPEC-018 R-14, R-16, R-18, ADR-0011)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": ["retentionKey"],
+  "properties": {
+    "eventType": {
+      "const": "video.retention.revoked"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "retentionKey": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "철회한 영상의 보존 키. video.deleted의 retention.retentionKey와 같은 값이다."
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f0d3-0000-7000-8000-000000000005",
+      "eventType": "video.retention.revoked",
+      "schemaVersion": 1,
+      "occurredAt": "2026-12-01T08:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "retentionKey": "3f1c9a5e7b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a"
+    }
+  ]
+}

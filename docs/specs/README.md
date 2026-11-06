@@ -21,5 +21,7 @@
 
 | [SPEC-015](SPEC-015-job-execution-status/spec.md) | Job 실행 집계와 소유자 상태 조회 | Implementing | backend, docs | backend 담당자 | 2026-11-05 |
 | [SPEC-016](SPEC-016-ai-gateway-cache-budget/spec.md) | ai-gateway 결과 캐시·예산·호출 한도 | Implementing | ai, docs | | 2026-11-06 |
+| [SPEC-017](SPEC-017-media-work-session/spec.md) | 작업 세션 | Approved | backend, docs | | 2026-11-06 |
+| [SPEC-018](SPEC-018-media-retention-consent/spec.md) | 학습용 보존 동의와 보존 키 | Approved | backend, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
