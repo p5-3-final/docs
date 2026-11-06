@@ -29,5 +29,6 @@
 | [SPEC-022](SPEC-022-track-stitcher/spec.md) | track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID) | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-023](SPEC-023-event-analyzer-detector/spec.md) | event-analyzer 탐지기·규칙 후보 판정과 event.manifest | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-024](SPEC-024-track-analyzer/spec.md) | track-analyzer 트랙 속성 분석과 객체 자유 질문 | Approved | ai, docs | | 2026-11-06 |
+| [SPEC-025](SPEC-025-embedding-worker/spec.md) | embedding-worker 이벤트·트랙·구간 주석 텍스트 벡터 | Approved | ai, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)

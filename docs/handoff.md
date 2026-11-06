@@ -172,7 +172,7 @@ cd repos/ai && uv sync --all-packages
 | SPEC-022 | track-stitcher(`chunk.boundary`·`track.detected`·`track.manifest`, 트랙 파일 2종 계약 포함) | Approved |
 | SPEC-023 | event-analyzer 탐지기·규칙 후보(`event.candidate`·`event.manifest`, `event.analyzed` 판정 방식 `rule*`) | Approved |
 | SPEC-024 | track-analyzer(`attribute.requested`·`track.analyzed`, ai-gateway `track_attribute`·`object_question`, 트랙 요약 파일 대표 크롭) | Approved |
-| SPEC-025 | embedding-worker | 작성 예정 |
+| SPEC-025 | embedding-worker(`segment.annotated`·`embedding.ready`, 텍스트 벡터 파일) | Approved |
 | SPEC-026 | grounding-worker | 작성 예정 |
 | SPEC-027 | aggregator | 작성 예정 |
 | SPEC-028 | quality-service | 작성 예정 |

@@ -1,0 +1,50 @@
+asyncapi: 3.0.0
+info:
+  title: search-service events
+  version: 0.1.0
+  description: |
+    search-service가 발행하는 이벤트. 다른 담당자 서비스이고, 이 파일은 소비 쪽 spec이 아키텍처 문서대로 먼저 정한 채널만 담는다(생산자 담당자 확인 필요).
+    - segment.annotated: 정밀 검색 구간 주석 (SPEC-025)
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  segmentAnnotated:
+    address: segment.annotated
+    description: 신뢰도 높은 재순위화 판정마다 한 건. 메시지 키는 sourceId다.
+    messages:
+      segmentAnnotated:
+        $ref: '#/components/messages/SegmentAnnotated'
+operations:
+  publishSegmentAnnotated:
+    action: send
+    summary: 구간 주석 저장과 함께 발행 (SPEC-025)
+    channel:
+      $ref: '#/channels/segmentAnnotated'
+    messages:
+      - $ref: '#/channels/segmentAnnotated/messages/segmentAnnotated'
+components:
+  messages:
+    SegmentAnnotated:
+      name: segment.annotated
+      title: 구간 주석
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/segment.annotated.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. 입력 메시지를 처리한 trace를 이어 간다(원칙 VI).

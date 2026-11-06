@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/segment.annotated.schema.json",
+  "title": "SegmentAnnotated",
+  "description": "정밀 검색에서 신뢰도 높게 확인된 구간 주석 하나. 주석마다 한 번 발행한다(같은 annotationId면 같은 eventId). 발행: search-service(다른 담당자 확인 필요). 소비: embedding-worker (SPEC-025)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "annotationId",
+    "jobId",
+    "segmentId",
+    "startMs",
+    "endMs",
+    "text",
+    "canonicalQuery",
+    "score"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "segment.annotated"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "annotationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "주석 ID. 표준 질의와 segmentId로 결정적이다"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "segmentId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "startMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "endMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "구간을 설명하는 문장(재순위화 판정 근거)"
+    },
+    "canonicalQuery": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ai-gateway /v1/parse의 canonicalQuery"
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "재순위화 점수"
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-000000000a51",
+      "eventType": "segment.annotated",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:20:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "annotationId": "0192f100-0000-5000-8000-000000000a52",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "segmentId": "0192f100-0000-7000-8000-0000000000a1",
+      "startMs": 0,
+      "endMs": 10000,
+      "text": "지게차 옆에서 작업자가 넘어지는 장면",
+      "canonicalQuery": "v1:video_retrieval|person falling|fall|industrial-rule|v1@4d1c0a9e7b2f|v2",
+      "score": 0.86
+    }
+  ]
+}
