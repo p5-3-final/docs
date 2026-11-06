@@ -26,5 +26,6 @@
 | [SPEC-019](SPEC-019-frame-encoder/spec.md) | frame-encoder 구간·크롭 벡터와 프로토타입 후보 | Implementing | ai, docs | | 2026-11-06 |
 | [SPEC-020](SPEC-020-event-analyzer-vector/spec.md) | event-analyzer 벡터 후보 판정 | Implementing | ai, docs | | 2026-11-06 |
 | [SPEC-021](SPEC-021-internal-call-rules/spec.md) | 내부 동기 호출 규약 적용 (ai-gateway 마감 시간, 생성 클라이언트, 재시도 규칙) | Approved | ai, docs | | 2026-11-06 |
+| [SPEC-022](SPEC-022-track-stitcher/spec.md) | track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID) | Approved | ai, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)

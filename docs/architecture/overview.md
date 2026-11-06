@@ -403,8 +403,8 @@ sequenceDiagram
 | `segment.embedded` | sourceId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embeddingModel`·차원) |
 | `segment.indexed` | sourceId | search-service → pipeline-service (COPY 적재 완료·개수) |
 | `chunk.manifest` | sourceId | chunk-processor → pipeline-service · aggregator (구간·후보·트랙 수, 탐지기 능력, `unsupported_events`, v4 정적 객체 재고: 클래스·위치·구역·처음·마지막 관측) |
-| `chunk.boundary` | sourceId | chunk-processor → track-stitcher |
-| `track.detected` · `track.manifest` | sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service |
+| `chunk.boundary` | sourceId | chunk-processor → track-stitcher (실행마다 1건, 트랙 0개여도 발행: 소유·처리 범위, 정규화 사본 길이, 트랙 요약 파일 `tracks/v1/chunk-tracks` 경로, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
+| `track.detected` · `track.manifest` | sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service (`track.detected`는 origin `chunk`: 실행마다 트랙 요약·검출 박스 파일, origin `stitcher`: 인접 청크 쌍마다 경계 연결 묶음. `track.manifest`는 Job마다 1건: 로컬→최종 번역표 `tracks/v1/track-mapping` 경로와 개수, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
 | `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙, 클릭, 자유 질문) |
 | `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service |
 | `event.candidate` | sourceId | chunk-processor → event-analyzer (청크당 1건, 0건 포함, `unsupported_events`, 상한 초과 시 S3 경로) |
