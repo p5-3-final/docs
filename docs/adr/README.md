@@ -18,3 +18,6 @@
 | [ADR-0012](0012-prompt-registry-source.md) | Prompt Registry 원본을 ai 레포에 두고 버전을 고정한 묶음으로 배포한다 | Accepted | 2026-11-04 |
 | [ADR-0013](0013-service-contracts-release.md) | 서비스 간 계약을 버전 릴리스로 배포하고 쓰는 쪽은 잠금 파일로 고정한다 | Accepted | 2026-11-04 |
 | [ADR-0014](0014-ai-gateway-extensible-task-type.md) | ai-gateway taskType을 늘어날 수 있는 열린 목록(x-extensible-enum)으로 둔다 | Accepted | 2026-11-06 |
+| [ADR-0015](0015-realtime-window-pipeline.md) | 실시간 수집을 같은 파이프라인의 창 단위 처리로 통합하고 STREAM Job은 stream-service가 소유한다 | Accepted | 2026-11-06 |
+| [ADR-0016](0016-aggregator-fold-and-deterministic-caps.md) | 상태 전이는 aggregator fold 한 곳에서 계산하고, 늦은 이벤트는 revision 재발행, 호출 carry·상한은 결정적 규칙으로 둔다 | Accepted | 2026-11-06 |
+| [ADR-0017](0017-architecture-single-document.md) | 아키텍처 문서를 v5 단일 문서로 재편하고 html 사본을 같은 폴더에서 생성한다 | Accepted | 2026-11-06 |

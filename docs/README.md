@@ -6,8 +6,7 @@
 | [principles.md](principles.md) | 모든 plan 작성 전 | 팀 합의 + ADR |
 | [product/prd.md](product/prd.md) | 기능을 기획할 때 | PM 역할 |
 | [product/glossary.md](product/glossary.md) | 도메인 용어가 헷갈릴 때 | 누구나 |
-| [architecture/architecture.md](architecture/architecture.md) | 아키텍처 v5 단일 기준. 업로드·실시간 통합 파이프라인, 토픽, AI 호출, 완료 판정, 비용. 브라우저로 보려면 같은 폴더의 `architecture.html` | 구조·계약·spec을 바꾸기 전에 먼저 고치고 `scripts/render-architecture-html.sh`로 html을 같이 갱신한다 |
-| [architecture/architecture.md](architecture/architecture.md) | 전체 구조 파악 | 아키텍처 변경 시 |
+| [architecture/architecture.md](architecture/architecture.md) | 아키텍처 v5.1 단일 기준. 업로드·실시간 통합 파이프라인, 토픽, AI 호출, 완료 판정, 비용. 브라우저로 보려면 같은 폴더의 `architecture.html` | 구조·계약·spec을 바꾸기 전에 먼저 고치고 `scripts/render-architecture-html.sh`로 html을 같이 갱신한다 |
 | [architecture/processing-flow.md](architecture/processing-flow.md) | 업로드 후 처리 순서·토픽·AI 호출·AI 담당자 교체 지점을 한 장으로 확인 | 처리 흐름이나 AI 호출 자리가 바뀔 때 |
 | [architecture/service-catalog.md](architecture/service-catalog.md) | 서비스 담당자, 포트, DB 확인 | 서비스 추가·변경 시 |
 | [architecture/delivery-and-data.md](architecture/delivery-and-data.md) | 무엇을 어디에 올리고 어떻게 배포·보관·삭제하는지 확인 | 배포 흐름이나 저장 위치가 바뀔 때 |
