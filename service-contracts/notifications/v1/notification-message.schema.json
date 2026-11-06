@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/notifications/v1/notification-message.schema.json",
+  "title": "NotificationMessage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "sourceId",
+    "occurredAt",
+    "data"
+  ],
+  "description": "notification-service SSE 메시지 data 한 건(openapi/notification-service.yaml). type에 따라 data 형식이 다르다. 발행: notification-service(다른 담당자, 생산자 확인 필요). 소비: frontend (SPEC-031)",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "job.status",
+        "source.completed",
+        "track.analyzed",
+        "grounding.completed",
+        "ping"
+      ]
+    },
+    "sourceId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/JobStatusData"
+        },
+        {
+          "$ref": "#/$defs/SourceCompletedData"
+        },
+        {
+          "$ref": "#/$defs/TrackAnalyzedData"
+        },
+        {
+          "$ref": "#/$defs/GroundingCompletedData"
+        },
+        {
+          "type": "object",
+          "maxProperties": 0
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "JobStatusData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jobId",
+        "status",
+        "progressPercent",
+        "successPercent",
+        "terminal"
+      ],
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "description": "job 분석 상태(PLANNED·RUNNING·ANALYZED·COMPLETED·COMPLETED_WITH_ERRORS·TIMED_OUT·CANCELLED)"
+        },
+        "progressPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "successPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "terminal": {
+          "type": "boolean"
+        }
+      }
+    },
+    "SourceCompletedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jobId",
+        "summaryStatus",
+        "confirmedEvents",
+        "activeRisksAtEnd"
+      ],
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "summaryStatus": {
+          "type": "string"
+        },
+        "confirmedEvents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeRisksAtEnd": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "TrackAnalyzedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "trackId",
+        "reason",
+        "outcome"
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "trackId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "event",
+            "click",
+            "question"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "READY",
+            "FAILED"
+          ]
+        }
+      }
+    },
+    "GroundingCompletedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "groundingId",
+        "segmentId",
+        "outcome"
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "groundingId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "segmentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "READY",
+            "FAILED"
+          ]
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "job.status",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "occurredAt": "2026-11-06T10:00:00Z",
+      "data": {
+        "jobId": "0192f0d5-0000-7000-8000-000000000001",
+        "status": "RUNNING",
+        "progressPercent": 40,
+        "successPercent": 100,
+        "terminal": false
+      }
+    }
+  ]
+}
