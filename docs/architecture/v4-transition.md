@@ -79,7 +79,7 @@ auth-service는 v4 변경이 없다. 외부 로그인(OIDC)은 v3부터의 남�
 
 | 서비스 | 반영할 항목 |
 | --- | --- |
-| frame-encoder | ③ 유형별 텍스트 프로토타입 비교 후 `event.candidate.vector` 발행, ② manifest, ⑩ `encoder.*` 단계 |
+| frame-encoder | ③ 유형별 텍스트 프로토타입 비교 후 `event.candidate.vector` 발행, ② manifest, ⑩ `encoder.*` 단계. [SPEC-019](../specs/SPEC-019-frame-encoder/spec.md) |
 | event-analyzer | `event.candidate`·`event.candidate.vector` 두 토픽 구독, 판정 방식 `vector+vlm` 기록 |
 | aggregator | ④ 세션 초기 상태, ⑤ 재고 비교와 `state_compare`, ⑥ 노출 지표, 새 유형 2종, `risk_forecast`(1단계 규칙 점수) |
 | quality | ⑨ 라벨 3종·외부 데이터셋 가져오기·특징 내보내기, ⑩ `stage_timing` 적재·리포트·성능 회귀 CI Gate |

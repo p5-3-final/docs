@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/segment.embedded.schema.json",
+  "title": "SegmentEmbedded",
+  "description": "청크의 구간·크롭 벡터 파일을 저장했다. segment.ready 하나에 한 번 발행한다(같은 실행이면 같은 eventId·같은 파일). 구간·크롭이 0개여도 발행한다. 소비자는 vectorsKey의 파일(vectors/v1/vector-file.schema.json)을 읽는다. embeddingModel이나 dimension이 자기 활성 설정과 다르면 적재하지 않는다. 발행: frame-encoder. 소비: search-service, track-stitcher (SPEC-019 R-4)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "jobId",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "vectorsKey",
+    "segmentCount",
+    "cropCount",
+    "embeddingModel",
+    "dimension"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "segment.embedded"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "vectorsKey": {
+      "type": "string",
+      "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/vectors[.]json$",
+      "description": "벡터 파일 경로"
+    },
+    "segmentCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cropCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "embeddingModel": {
+      "type": "string",
+      "pattern": "^[^:\\s]+:[^:\\s]+:[^:\\s]+:[^:\\s]+$",
+      "description": "인코더 모델 ID `<라이브러리>:<아키텍처>:<가중치>:<집계>`. ai-gateway 질의 벡터와 같아야 비교할 수 있다."
+    },
+    "dimension": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000e2",
+      "occurredAt": "2026-11-06T09:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "eventType": "segment.embedded",
+      "schemaVersion": 1,
+      "vectorsKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/vectors.json",
+      "segmentCount": 1,
+      "cropCount": 1,
+      "embeddingModel": "open_clip:MobileCLIP2-S0:dfndr2b:mean-4",
+      "dimension": 512
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/vectors/v1/vector-file.schema.json",
+  "title": "Vector file v1",
+  "description": "frame-encoder가 실행마다 S3에 저장하는 구간·크롭 벡터 파일(JSON 문서 하나, UTF-8). 경로는 segment.embedded의 vectorsKey다. search-service가 읽어 자기 DB에 적재한다. 벡터 파일은 DB 적재 확인 후 30일 보관한다(docs overview \"보존\") (SPEC-019 R-3).",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "embeddingModel",
+    "dimension",
+    "segments",
+    "crops"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "embeddingModel": {
+      "type": "string",
+      "pattern": "^[^:\\s]+:[^:\\s]+:[^:\\s]+:[^:\\s]+$",
+      "description": "인코더 모델 ID `<라이브러리>:<아키텍처>:<가중치>:<집계>`. ai-gateway 질의 벡터와 같아야 비교할 수 있다."
+    },
+    "dimension": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+    },
+    "segments": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": ["segmentId", "startMs", "endMs", "static", "vector"],
+        "additionalProperties": false,
+        "properties": {
+          "segmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "static": {
+            "type": "boolean"
+          },
+          "vector": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4096,
+            "items": {
+              "type": "number"
+            },
+            "description": "구간 벡터: 프레임 4장 벡터를 각각 정규화해 평균한 뒤 다시 정규화"
+          }
+        }
+      }
+    },
+    "crops": {
+      "type": "array",
+      "maxItems": 512,
+      "items": {
+        "type": "object",
+        "required": ["cropId", "trackLocalId", "ptsMs", "vector"],
+        "additionalProperties": false,
+        "properties": {
+          "cropId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trackLocalId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "ptsMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "vector": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4096,
+            "items": {
+              "type": "number"
+            },
+            "description": "길이(L2 노름) 1인 벡터. 길이는 dimension과 같다."
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "embeddingModel": "open_clip:MobileCLIP2-S0:dfndr2b:mean-4",
+      "dimension": 4,
+      "segments": [
+        {
+          "segmentId": "0192f100-0000-7000-8000-0000000000a1",
+          "startMs": 0,
+          "endMs": 10000,
+          "static": false,
+          "vector": [0.5, 0.5, 0.5, 0.5]
+        }
+      ],
+      "crops": [
+        {
+          "cropId": "0192f100-0000-7000-8000-0000000000c1",
+          "trackLocalId": "t3",
+          "ptsMs": 4200,
+          "vector": [1.0, 0.0, 0.0, 0.0]
+        }
+      ]
+    }
+  ]
+}
