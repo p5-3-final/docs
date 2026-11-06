@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/chunk.manifest.schema.json",
   "title": "ChunkManifest",
-  "description": "청크 실행 하나의 산출물 개수·탐지기 능력·정적 객체 재고. 실행마다 마지막에 한 번 발행한다. 실행 완료 계약이 아니다(실행 완료는 chunk.execution.finished). 발행: chunk-processor(다른 담당자, 생산자 확인 필요). 소비: aggregator (SPEC-028), pipeline-service",
+  "description": "청크 실행 하나의 산출물 개수·탐지기 능력·정적 객체 재고. 실행마다 마지막에 한 번 발행한다. 실행 완료 계약이 아니다(실행 완료는 chunk.execution.finished). 발행: chunk-processor(다른 담당자, 생산자 확인 필요), stream-ingestor(jobType STREAM, SPEC-037). 소비: aggregator (SPEC-028), pipeline-service, stream-service(STREAM만, SPEC-036)",
   "type": "object",
   "allOf": [
     {
@@ -27,6 +27,30 @@
     },
     "schemaVersion": {
       "const": 1
+    },
+    "jobType": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "REANALYZE",
+        "REEMBED",
+        "STREAM"
+      ],
+      "description": "Job 유형(v5.1, ADR-0015). 없으면 FULL. STREAM이면 실시간 창(stream-ingestor)이고 track-stitcher·pipeline-service는 건너뛴다."
+    },
+    "trackIdEpoch": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "실시간(STREAM) 트랙 ID 대역 번호(v5.1, SPEC-037 R-9)"
+    },
+    "last": {
+      "type": "boolean",
+      "description": "실시간(STREAM) 세션의 마지막 창(v5.1, SPEC-037 R-14). stream-service가 이 창까지 완료되면 analysis.completed(scope: job)를 낸다"
+    },
+    "gapMs": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "실시간(STREAM)에서 RTSP 재연결 뒤 첫 창에 기록하는 끊긴 시간(v5.1, SPEC-037 R-17)"
     },
     "jobId": {
       "type": "string",

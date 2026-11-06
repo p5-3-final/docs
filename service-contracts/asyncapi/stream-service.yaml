@@ -1,0 +1,286 @@
+asyncapi: 3.0.0
+info:
+  title: stream-service events
+  version: 1.0.0
+  description: |
+    stream-service가 발행·소비하는 이벤트 (SPEC-036, ADR-0015).
+    - 발행: stream.command(start), analysis.completed(jobType STREAM, scope chunk·job), version.activated(세션 시작)
+    - 소비: chunk.manifest, segment.indexed, event.manifest, event.analyzed, state.updated, alert.raised, video.deleted (소비 그룹 stream-service). jobType이 STREAM이 아닌 메시지는 무시한다.
+    stop·reload_profile·활성 위험 구역은 Kafka가 아니라 Redis 세션 키(stream:session:<sourceId>:command, …:active-risk-zones)로 전달한다.
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  streamCommand:
+    address: stream.command
+    description: 세션 start·임대 복구마다 한 건(소비 그룹 stream-ingestor). stop·reload는 Redis 세션 키다. 메시지 키는 sourceId다.
+    messages:
+      streamCommand:
+        $ref: '#/components/messages/StreamCommand'
+  analysisCompleted:
+    address: analysis.completed
+    description: jobType STREAM. 창마다 scope chunk 한 건, stop 뒤 scope job 한 건. 메시지 키는 sourceId다.
+    messages:
+      analysisCompleted:
+        $ref: '#/components/messages/AnalysisCompleted'
+  versionActivated:
+    address: version.activated
+    description: 세션 시작에 sequence 1 한 건(생산자 analysis-api와 공유, 생산자 확인 필요). 메시지 키는 sourceId다.
+    messages:
+      versionActivated:
+        $ref: '#/components/messages/VersionActivated'
+  chunkManifest:
+    address: chunk.manifest
+    description: stream-ingestor가 창마다 발행(소비 그룹 stream-service). jobType STREAM만 처리하고 나머지는 무시한다.
+    messages:
+      chunkManifest:
+        $ref: '#/components/messages/ChunkManifest'
+  segmentIndexed:
+    address: segment.indexed
+    description: search-service가 실행마다 발행(소비 그룹 stream-service, 생산자 확인 필요). jobType STREAM만.
+    messages:
+      segmentIndexed:
+        $ref: '#/components/messages/SegmentIndexed'
+  eventManifest:
+    address: event.manifest
+    description: event-analyzer가 실행마다 발행(소비 그룹 stream-service). jobType STREAM만.
+    messages:
+      eventManifest:
+        $ref: '#/components/messages/EventManifest'
+  eventAnalyzed:
+    address: event.analyzed
+    description: event-analyzer가 후보마다 발행(소비 그룹 stream-service). jobType STREAM만 타임라인에 저장.
+    messages:
+      eventAnalyzed:
+        $ref: '#/components/messages/EventAnalyzed'
+  stateUpdated:
+    address: state.updated
+    description: aggregator가 창마다 발행(소비 그룹 stream-service). sequence가 클 때만 적용.
+    messages:
+      stateUpdated:
+        $ref: '#/components/messages/StateUpdated'
+  alertRaised:
+    address: alert.raised
+    description: event-analyzer가 긴급 후보마다 발행(소비 그룹 stream-service).
+    messages:
+      alertRaised:
+        $ref: '#/components/messages/AlertRaised'
+  videoDeleted:
+    address: video.deleted
+    description: media-service가 발행(소비 그룹 stream-service). 세션·창·라이브 행을 지운다.
+    messages:
+      videoDeleted:
+        $ref: '#/components/messages/VideoDeleted'
+operations:
+  publishStreamCommand:
+    action: send
+    summary: 세션 start 트랜잭션의 Outbox, 임대 소실 복구 (SPEC-036 R-3, R-13)
+    channel:
+      $ref: '#/channels/streamCommand'
+    messages:
+      - $ref: '#/channels/streamCommand/messages/streamCommand'
+  publishAnalysisCompleted:
+    action: send
+    summary: 창의 segment.indexed·event.manifest가 모이면 scope chunk, 마지막 창 뒤 scope job (SPEC-036 R-8, R-9, R-11)
+    channel:
+      $ref: '#/channels/analysisCompleted'
+    messages:
+      - $ref: '#/channels/analysisCompleted/messages/analysisCompleted'
+  publishVersionActivated:
+    action: send
+    summary: 세션 시작에 한 번 (SPEC-036 R-3)
+    channel:
+      $ref: '#/channels/versionActivated'
+    messages:
+      - $ref: '#/channels/versionActivated/messages/versionActivated'
+  consumeChunkManifest:
+    action: receive
+    summary: 첫 manifest에 LIVE 전이, 창 행 기록 (SPEC-036 R-6, R-7)
+    channel:
+      $ref: '#/channels/chunkManifest'
+    messages:
+      - $ref: '#/channels/chunkManifest/messages/chunkManifest'
+  consumeSegmentIndexed:
+    action: receive
+    summary: 창 행에 적재 신호 기록 (SPEC-036 R-7)
+    channel:
+      $ref: '#/channels/segmentIndexed'
+    messages:
+      - $ref: '#/channels/segmentIndexed/messages/segmentIndexed'
+  consumeEventManifest:
+    action: receive
+    summary: 창 행에 판정 완료 신호 기록 (SPEC-036 R-7)
+    channel:
+      $ref: '#/channels/eventManifest'
+    messages:
+      - $ref: '#/channels/eventManifest/messages/eventManifest'
+  consumeEventAnalyzed:
+    action: receive
+    summary: 세션 타임라인 저장 (SPEC-036 R-15)
+    channel:
+      $ref: '#/channels/eventAnalyzed'
+    messages:
+      - $ref: '#/channels/eventAnalyzed/messages/eventAnalyzed'
+  consumeStateUpdated:
+    action: receive
+    summary: 라이브 상태 갱신과 Redis 활성 위험 구역 반영 (SPEC-036 R-16, R-17)
+    channel:
+      $ref: '#/channels/stateUpdated'
+    messages:
+      - $ref: '#/channels/stateUpdated/messages/stateUpdated'
+  consumeAlertRaised:
+    action: receive
+    summary: 알림 생성·상태 갱신 (SPEC-036 R-18)
+    channel:
+      $ref: '#/channels/alertRaised'
+    messages:
+      - $ref: '#/channels/alertRaised/messages/alertRaised'
+  consumeVideoDeleted:
+    action: receive
+    summary: 세션 데이터 삭제 (SPEC-036 R-22)
+    channel:
+      $ref: '#/channels/videoDeleted'
+    messages:
+      - $ref: '#/channels/videoDeleted/messages/videoDeleted'
+components:
+  messages:
+    StreamCommand:
+      name: stream.command
+      title: 수집 세션 시작 명령
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/stream.command.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    AnalysisCompleted:
+      name: analysis.completed
+      title: 분석 적재 완료(STREAM)
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/analysis.completed.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    VersionActivated:
+      name: version.activated
+      title: 활성 버전 전환
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/version.activated.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    ChunkManifest:
+      name: chunk.manifest
+      title: 창 산출물 목록
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/chunk.manifest.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    SegmentIndexed:
+      name: segment.indexed
+      title: 구간 벡터 적재 완료
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/segment.indexed.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    EventManifest:
+      name: event.manifest
+      title: 창 후보 판정 완료
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.manifest.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    EventAnalyzed:
+      name: event.analyzed
+      title: 이벤트 후보 판정 결과
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.analyzed.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    StateUpdated:
+      name: state.updated
+      title: 실시간 창 상태 갱신
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/state.updated.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    AlertRaised:
+      name: alert.raised
+      title: 긴급 알림
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/alert.raised.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    VideoDeleted:
+      name: video.deleted
+      title: 영상 삭제
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/video.deleted.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. 입력 메시지를 처리한 trace를 이어 간다(원칙 VI).

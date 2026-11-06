@@ -202,6 +202,30 @@
         {
           "const": "aggregate.forecast",
           "description": "risk_forecast 호출. 위험 수를 count로 남긴다 (SPEC-028)"
+        },
+        {
+          "const": "aggregate.fold",
+          "description": "실시간 창 하나의 증분 fold. 창의 확정 이벤트 수를 count로 남긴다 (SPEC-027 R-34)"
+        },
+        {
+          "const": "analyzer.alert",
+          "description": "alert.candidate를 받아 첫 alert.raised를 발행할 때까지 (SPEC-023 R-24)"
+        },
+        {
+          "const": "ingest.window",
+          "description": "stream-ingestor: 창 마감부터 5개 토픽 발행까지. 구간 수를 count로 남긴다 (SPEC-037 R-20)"
+        },
+        {
+          "const": "ingest.alert",
+          "description": "stream-ingestor: 최소 관측 초과 프레임 처리부터 alert.candidate 발행까지 (SPEC-037 R-20)"
+        },
+        {
+          "const": "stream.window-complete",
+          "description": "stream-service: 창의 마지막 적재 신호 도착부터 analysis.completed(scope chunk) 발행까지 (SPEC-036 R-25)"
+        },
+        {
+          "const": "stream.state-apply",
+          "description": "stream-service: state.updated 수신부터 라이브 상태·Redis 활성 위험 구역 반영까지 (SPEC-036 R-25)"
         }
       ]
     }

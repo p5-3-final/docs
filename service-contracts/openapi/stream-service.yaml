@@ -1,0 +1,1274 @@
+openapi: 3.1.0
+info:
+  title: stream-service API
+  version: 1.0.0
+  description: |
+    카메라 등록·구역 정의, 수집 세션 start·stop, 세션 중 라이브 상태·타임라인·알림 조회, 재생 주소 (SPEC-036, ADR-0015).
+    공개 API는 api-gateway를 거치고, USER는 자기 카메라만, OPERATOR는 모든 카메라를 본다. 남의 카메라·세션은 404다.
+    세션 1개 = 소스 1개(sourceId = sessionId)이고, 세션은 최대 길이(기본 24시간) 뒤 자동으로 회전한다.
+    `/internal/**`은 api-gateway가 라우팅하지 않는다. 클러스터 안에서 NetworkPolicy와 호출자 헤더 허용 목록으로 막는다.
+servers:
+- url: /
+  description: api-gateway 경유. 내부 경로는 클러스터 내부 주소 http://stream-service:8089
+tags:
+- name: cameras
+  description: 카메라 등록과 구역
+- name: sessions
+  description: 수집 세션
+- name: live
+  description: 세션 중 라이브 조회
+- name: internal
+  description: 클러스터 내부 전용
+paths:
+  /api/v1/stream/cameras:
+    post:
+      operationId: createCamera
+      summary: 카메라 등록
+      description: RTSP 주소와 자격 증명은 Secrets Manager 키 이름(`rtspSecretRef`)으로만 받는다 (SPEC-036 R-1)
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCreate'
+            example:
+              name: A동 크레인
+              rtspSecretRef: cameras/a-dong-crane/rtsp
+              profileVersion: ingest-default@1
+      responses:
+        '201':
+          description: 등록됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+              example:
+                cameraId: 0192fb00-0000-7000-8000-000000000020
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                name: A동 크레인
+                rtspSecretRef: cameras/a-dong-crane/rtsp
+                profileVersion: ingest-default@1
+                status: LIVE
+                activeSessionId: 0192fb00-0000-7000-8000-000000000010
+                createdAt: '2026-11-06T09:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+    get:
+      operationId: listCameras
+      summary: 카메라 목록
+      description: 내 카메라(OPERATOR는 전체). 정렬은 createdAt 오름차순
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 카메라 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Camera'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - cameraId: 0192fb00-0000-7000-8000-000000000020
+                  ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                  name: A동 크레인
+                  rtspSecretRef: cameras/a-dong-crane/rtsp
+                  profileVersion: ingest-default@1
+                  status: LIVE
+                  activeSessionId: 0192fb00-0000-7000-8000-000000000010
+                  createdAt: '2026-11-06T09:00:00Z'
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/stream/cameras/{cameraId}:
+    get:
+      operationId: getCamera
+      summary: 카메라 상세
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      responses:
+        '200':
+          description: 카메라
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+              example:
+                cameraId: 0192fb00-0000-7000-8000-000000000020
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                name: A동 크레인
+                rtspSecretRef: cameras/a-dong-crane/rtsp
+                profileVersion: ingest-default@1
+                status: LIVE
+                activeSessionId: 0192fb00-0000-7000-8000-000000000010
+                createdAt: '2026-11-06T09:00:00Z'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateCamera
+      summary: 카메라 수정
+      description: 이름·Secrets 키·프로필. 진행 중 세션에는 다음 세션부터 적용된다
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCreate'
+            example:
+              name: A동 크레인(동편)
+              rtspSecretRef: cameras/a-dong-crane/rtsp
+              profileVersion: ingest-default@1
+      responses:
+        '200':
+          description: 수정됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+              example:
+                cameraId: 0192fb00-0000-7000-8000-000000000020
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                name: A동 크레인
+                rtspSecretRef: cameras/a-dong-crane/rtsp
+                profileVersion: ingest-default@1
+                status: LIVE
+                activeSessionId: 0192fb00-0000-7000-8000-000000000010
+                createdAt: '2026-11-06T09:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteCamera
+      summary: 카메라 삭제
+      description: 활성 세션이 있으면 409 `STREAM_CAMERA_SESSION_ACTIVE`. 지난 세션(소스)은 media-service 삭제 규칙을 따른다
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      responses:
+        '204':
+          description: 삭제됨
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/stream/cameras/{cameraId}/zones:
+    get:
+      operationId: getCameraZones
+      summary: 카메라 구역 목록
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      responses:
+        '200':
+          description: 구역 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+              example:
+                zones:
+                - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  name: A동 크레인 하부
+                  kind: hazard
+                  polygon:
+                  - - 0.1
+                    - 0.2
+                  - - 0.6
+                    - 0.2
+                  - - 0.6
+                    - 0.9
+                  - - 0.1
+                    - 0.9
+                updatedAt: '2026-11-06T09:30:00Z'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: replaceCameraZones
+      summary: 카메라 구역을 통째로 바꾼다
+      description: 다음 세션 시작부터 적용된다. 진행 중 세션은 시작 때의 구역을 유지한다 (SPEC-036 R-2)
+      tags:
+      - cameras
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneList'
+            example:
+              zones:
+              - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                name: A동 크레인 하부
+                kind: hazard
+                polygon:
+                - - 0.1
+                  - 0.2
+                - - 0.6
+                  - 0.2
+                - - 0.6
+                  - 0.9
+                - - 0.1
+                  - 0.9
+              updatedAt: '2026-11-06T09:30:00Z'
+      responses:
+        '200':
+          description: 저장됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+              example:
+                zones:
+                - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  name: A동 크레인 하부
+                  kind: hazard
+                  polygon:
+                  - - 0.1
+                    - 0.2
+                  - - 0.6
+                    - 0.2
+                  - - 0.6
+                    - 0.9
+                  - - 0.1
+                    - 0.9
+                updatedAt: '2026-11-06T09:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/stream/cameras/{cameraId}/sessions:
+    post:
+      operationId: startSession
+      summary: 수집 세션 시작
+      description: 세션을 STARTING으로 만들고 sourceId·jobId를 발급하며 stream.command(start)와 version.activated를 발행한다. 활성 세션이 있으면 409 `STREAM_SESSION_ALREADY_ACTIVE` (SPEC-036 R-3, R-4)
+      tags:
+      - sessions
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      responses:
+        '201':
+          description: 시작됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                sessionId: 0192fb00-0000-7000-8000-000000000010
+                sourceId: 0192fb00-0000-7000-8000-000000000010
+                jobId: 0192fb00-0000-7000-8000-000000000030
+                cameraId: 0192fb00-0000-7000-8000-000000000020
+                status: LIVE
+                previousSourceId: null
+                startedAt: '2026-11-06T10:00:00Z'
+                closedAt: null
+                lastWindowSequence: 16
+                partialWindows: 0
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      operationId: listCameraSessions
+      summary: 카메라의 세션 이력
+      description: 최근 세션부터. 24시간 회전으로 이어진 세션은 previousSourceId로 연결된다 (SPEC-036 R-12)
+      tags:
+      - sessions
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/CameraId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 세션 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - sessionId: 0192fb00-0000-7000-8000-000000000010
+                  sourceId: 0192fb00-0000-7000-8000-000000000010
+                  jobId: 0192fb00-0000-7000-8000-000000000030
+                  cameraId: 0192fb00-0000-7000-8000-000000000020
+                  status: LIVE
+                  previousSourceId: null
+                  startedAt: '2026-11-06T10:00:00Z'
+                  closedAt: null
+                  lastWindowSequence: 16
+                  partialWindows: 0
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/stream/sessions/{sessionId}:
+    get:
+      operationId: getSession
+      summary: 세션 상세
+      tags:
+      - sessions
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: 세션
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                sessionId: 0192fb00-0000-7000-8000-000000000010
+                sourceId: 0192fb00-0000-7000-8000-000000000010
+                jobId: 0192fb00-0000-7000-8000-000000000030
+                cameraId: 0192fb00-0000-7000-8000-000000000020
+                status: LIVE
+                previousSourceId: null
+                startedAt: '2026-11-06T10:00:00Z'
+                closedAt: null
+                lastWindowSequence: 16
+                partialWindows: 0
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: stopSession
+      summary: 수집 세션 중지
+      description: 세션을 STOPPING으로 바꾸고 Redis 세션 키에 stop을 쓴다. 마지막 창까지 완료되면 CLOSED가 된다. 이미 STOPPING·CLOSED면 409 `STREAM_SESSION_NOT_LIVE` (SPEC-036 R-10, R-11)
+      tags:
+      - sessions
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SessionId'
+      responses:
+        '202':
+          description: 중지 요청됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                sessionId: 0192fb00-0000-7000-8000-000000000010
+                sourceId: 0192fb00-0000-7000-8000-000000000010
+                jobId: 0192fb00-0000-7000-8000-000000000030
+                cameraId: 0192fb00-0000-7000-8000-000000000020
+                status: STOPPING
+                previousSourceId: null
+                startedAt: '2026-11-06T10:00:00Z'
+                closedAt: null
+                lastWindowSequence: 16
+                partialWindows: 0
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/stream/sessions/{sessionId}/playback:
+    get:
+      operationId: getSessionPlayback
+      summary: 라이브·과거 재생 주소
+      description: LIVE면 라이브 HLS 서명 주소, 종료 뒤면 창 파일 범위 재생 주소. 서명 주소는 짧게 만료된다 (SPEC-036 R-20)
+      tags:
+      - live
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: 재생 주소
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playback'
+              example:
+                mode: live
+                hlsUrl: https://storage.example/vlm/sources/0192fb00-0000-7000-8000-000000000010/live/hls/index.m3u8?signed
+                expiresAt: '2026-11-06T10:10:00Z'
+                windows: []
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/stream/sessions/{sessionId}/state:
+    get:
+      operationId: getSessionState
+      summary: 세션 현재 상태
+      description: 마지막 state.updated(sequence) 기준의 구역별 상태·활성 위험·노출 지표. 세션이 CLOSED면 analysis-api 보관 결과를 보도록 410 `STREAM_SESSION_ARCHIVED` (SPEC-036 R-16, R-19)
+      tags:
+      - live
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: 현재 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionState'
+              example:
+                sequence: 16
+                asOfMs: 320000
+                zones:
+                - zoneId: global
+                  zoneName: null
+                  currentState: 작업자 쓰러짐
+                  updatedAtMs: 302800
+                activeRisks:
+                - riskId: 0192fb00-0000-5000-8000-0000000000d1
+                  zoneId: global
+                  riskType: fall
+                  reason: 쓰러진 작업자
+                  firstSeenMs: 302800
+                  lastSeenMs: 320000
+                  activeSeconds: 17.2
+                  exposureCount: 1
+                  exposureSeconds: 17.2
+                partialWindows: 0
+                gapMsTotal: 0
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Archived'
+  /api/v1/stream/sessions/{sessionId}/events:
+    get:
+      operationId: listSessionEvents
+      summary: 세션 타임라인
+      description: 세션 중 event.analyzed 요약과 규칙 이벤트. 시각 범위로 거르고 startMs 오름차순. CLOSED면 410 (SPEC-036 R-15, R-19)
+      tags:
+      - live
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SessionId'
+      - name: fromMs
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+      - name: toMs
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 이벤트 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LiveEvent'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - eventId: 0192fb00-0000-5000-8000-0000000000c1
+                  chunkId: 0192fb00-0000-5000-8000-00000000000f
+                  eventType: fall
+                  startMs: 302400
+                  endMs: 302800
+                  severity: high
+                  verificationStatus: confirmed
+                  judgmentMethod: rule+vlm
+                  unverifiedReason: null
+                  trackId: 0192fb00-0000-5000-8000-0000000000a1
+                  zoneId: null
+                  description: 작업자 한 명이 바닥에 쓰러져 움직이지 않습니다.
+                  evidenceFrameUrls:
+                  - https://storage.example/vlm/...signed
+                page:
+                  page: 0
+                  size: 50
+                  totalElements: 1
+                  totalPages: 1
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          $ref: '#/components/responses/Archived'
+  /api/v1/stream/sessions/{sessionId}/alerts:
+    get:
+      operationId: listSessionAlerts
+      summary: 세션 긴급 알림 목록
+      description: alert.raised로 만든 알림. candidateId마다 하나이고 최신 상태만 보인다. 최근 것부터 (SPEC-036 R-18, R-19)
+      tags:
+      - live
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SessionId'
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - pending
+          - confirmed
+          - dismissed
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 알림 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - candidateId: 0192fb00-0000-5000-8000-0000000000c1
+                  status: confirmed
+                  eventType: fall
+                  reason: severity_high
+                  severity: high
+                  observedMs: 302800
+                  pendingAt: '2026-11-06T10:05:04Z'
+                  decidedAt: '2026-11-06T10:05:08Z'
+                  dismissReason: null
+                  description: 작업자 한 명이 바닥에 쓰러져 움직이지 않습니다.
+                  evidenceFrameUrls:
+                  - https://storage.example/vlm/...signed
+                page:
+                  page: 0
+                  size: 50
+                  totalElements: 1
+                  totalPages: 1
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /internal/v1/stream/sessions/{sessionId}/zones:
+    get:
+      operationId: getSessionZonesInternal
+      summary: 세션 시작 때의 구역 목록 (내부 전용)
+      description: aggregator가 STREAM 세션의 구역을 세션당 한 번 읽는다 (SPEC-036 R-21, SPEC-027 R-33)
+      tags:
+      - internal
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/SessionId'
+      - $ref: '#/components/parameters/XCaller'
+      - $ref: '#/components/parameters/XRequestDeadline'
+      responses:
+        '200':
+          description: 구역 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+              example:
+                zones:
+                - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  name: A동 크레인 하부
+                  kind: hazard
+                  polygon:
+                  - - 0.1
+                    - 0.2
+                  - - 0.6
+                    - 0.2
+                  - - 0.6
+                    - 0.9
+                  - - 0.1
+                    - 0.9
+                updatedAt: '2026-11-06T09:30:00Z'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '504':
+          description: 마감 시간 초과 `STREAM_DEADLINE_EXCEEDED`
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Gateway Timeout
+                status: 504
+                code: STREAM_DEADLINE_EXCEEDED
+                detail: 남은 시간이 없다
+components:
+  parameters:
+    CameraId:
+      name: cameraId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    XCaller:
+      name: X-Caller
+      in: header
+      required: true
+      description: 호출하는 서비스 이름. 허용 호출자 목록(설정)에 있어야 한다
+      schema:
+        type: string
+        pattern: ^[a-z][a-z0-9-]{1,62}$
+      example: aggregator
+    XRequestDeadline:
+      name: X-Request-Deadline
+      in: header
+      required: false
+      description: 호출자가 결과를 기다리는 마감 시각(Unix epoch 밀리초). 남은 시간이 없으면 504 `STREAM_DEADLINE_EXCEEDED`
+      schema:
+        type: string
+        pattern: ^[0-9]{1,16}$
+      example: '1793947448160'
+  responses:
+    BadRequest:
+      description: 요청 검증 실패 `STREAM_INVALID_REQUEST`
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: STREAM_INVALID_REQUEST
+            detail: polygon은 꼭짓점 3개 이상이어야 한다
+    NotFound:
+      description: 없거나 남의 카메라·세션 `STREAM_NOT_FOUND`
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: STREAM_NOT_FOUND
+            detail: 세션을 찾을 수 없다
+    Conflict:
+      description: 상태 충돌 `STREAM_SESSION_ALREADY_ACTIVE`, `STREAM_SESSION_NOT_LIVE`, `STREAM_CAMERA_SESSION_ACTIVE`
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            code: STREAM_SESSION_ALREADY_ACTIVE
+            detail: 이 카메라에 진행 중인 세션이 있다
+    Archived:
+      description: 세션이 닫혀 라이브 읽기 모델이 없다 `STREAM_SESSION_ARCHIVED`. analysis-api 결과를 본다
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Gone
+            status: 410
+            code: STREAM_SESSION_ARCHIVED
+            detail: 세션이 닫혔다. 분석 결과 API를 쓴다
+  schemas:
+    CameraCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - rtspSecretRef
+      - profileVersion
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        rtspSecretRef:
+          type: string
+          maxLength: 200
+          pattern: ^[A-Za-z0-9/_.:-]+$
+          description: RTSP 주소·자격 증명이 든 Secrets Manager 키 이름. 주소 자체는 받지 않는다
+        profileVersion:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$
+    Camera:
+      type: object
+      additionalProperties: false
+      required:
+      - cameraId
+      - ownerId
+      - name
+      - rtspSecretRef
+      - profileVersion
+      - status
+      - activeSessionId
+      - createdAt
+      properties:
+        cameraId:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        rtspSecretRef:
+          type: string
+          maxLength: 200
+          pattern: ^[A-Za-z0-9/_.:-]+$
+        profileVersion:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$
+        status:
+          type: string
+          enum:
+          - IDLE
+          - STARTING
+          - LIVE
+          - STOPPING
+          - FAILED
+          description: 활성 세션의 상태. 없으면 IDLE
+        activeSessionId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    Zone:
+      type: object
+      additionalProperties: false
+      required:
+      - zoneId
+      - name
+      - kind
+      - polygon
+      properties:
+        zoneId:
+          type: string
+          format: uuid
+          description: 새 구역은 클라이언트가 UUID를 만든다. 같은 ID면 갱신
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        kind:
+          type: string
+          enum:
+          - hazard
+          - aisle
+          - storage
+          - general
+        polygon:
+          type: array
+          minItems: 3
+          maxItems: 64
+          items:
+            type: array
+            minItems: 2
+            maxItems: 2
+            items:
+              type: number
+              minimum: 0
+              maximum: 1
+          description: 정규화 좌표(0~1) 꼭짓점
+    ZoneList:
+      type: object
+      additionalProperties: false
+      required:
+      - zones
+      - updatedAt
+      properties:
+        zones:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Zone'
+        updatedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    Session:
+      type: object
+      additionalProperties: false
+      required:
+      - sessionId
+      - sourceId
+      - jobId
+      - cameraId
+      - status
+      - previousSourceId
+      - startedAt
+      - closedAt
+      - lastWindowSequence
+      - partialWindows
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+          description: sessionId와 같다
+        jobId:
+          type: string
+          format: uuid
+          description: STREAM Job
+        cameraId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - STARTING
+          - LIVE
+          - STOPPING
+          - CLOSED
+          - FAILED
+        previousSourceId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: 24시간 회전으로 이어진 직전 세션
+        startedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        lastWindowSequence:
+          type: integer
+          minimum: 0
+        partialWindows:
+          type: integer
+          minimum: 0
+    Playback:
+      type: object
+      additionalProperties: false
+      required:
+      - mode
+      - hlsUrl
+      - expiresAt
+      - windows
+      properties:
+        mode:
+          type: string
+          enum:
+          - live
+          - archive
+        hlsUrl:
+          type:
+          - string
+          - 'null'
+          format: uri
+          description: live일 때 라이브 HLS 서명 주소
+        expiresAt:
+          type: string
+          format: date-time
+        windows:
+          type: array
+          maxItems: 5000
+          description: archive일 때 창 파일 서명 주소 목록
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - chunkId
+            - startMs
+            - endMs
+            - url
+            properties:
+              chunkId:
+                type: string
+                format: uuid
+              startMs:
+                type: integer
+                minimum: 0
+              endMs:
+                type: integer
+                minimum: 0
+              url:
+                type: string
+                format: uri
+    SessionState:
+      type: object
+      additionalProperties: false
+      required:
+      - sequence
+      - asOfMs
+      - zones
+      - activeRisks
+      - partialWindows
+      - gapMsTotal
+      properties:
+        sequence:
+          type: integer
+          minimum: 0
+          description: 반영한 마지막 state.updated.sequence. 0이면 아직 없음
+        asOfMs:
+          type: integer
+          minimum: 0
+        zones:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - zoneId
+            - zoneName
+            - currentState
+            - updatedAtMs
+            properties:
+              zoneId:
+                type: string
+              zoneName:
+                type:
+                - string
+                - 'null'
+              currentState:
+                type:
+                - string
+                - 'null'
+                maxLength: 500
+              updatedAtMs:
+                type: integer
+                minimum: 0
+        activeRisks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - riskId
+            - zoneId
+            - riskType
+            - reason
+            - firstSeenMs
+            - lastSeenMs
+            - activeSeconds
+            - exposureCount
+            - exposureSeconds
+            properties:
+              riskId:
+                type: string
+                format: uuid
+              zoneId:
+                type: string
+              riskType:
+                type: string
+                maxLength: 64
+              reason:
+                type:
+                - string
+                - 'null'
+                maxLength: 500
+              firstSeenMs:
+                type: integer
+                minimum: 0
+              lastSeenMs:
+                type: integer
+                minimum: 0
+              activeSeconds:
+                type: number
+                minimum: 0
+              exposureCount:
+                type: integer
+                minimum: 0
+              exposureSeconds:
+                type: number
+                minimum: 0
+        partialWindows:
+          type: integer
+          minimum: 0
+        gapMsTotal:
+          type: integer
+          minimum: 0
+    LiveEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - eventId
+      - chunkId
+      - eventType
+      - startMs
+      - endMs
+      - severity
+      - verificationStatus
+      - judgmentMethod
+      - unverifiedReason
+      - trackId
+      - zoneId
+      - description
+      - evidenceFrameUrls
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        chunkId:
+          type: string
+          format: uuid
+        eventType:
+          $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+        startMs:
+          type: integer
+          minimum: 0
+        endMs:
+          type: integer
+          minimum: 0
+        severity:
+          type:
+          - string
+          - 'null'
+          enum:
+          - low
+          - medium
+          - high
+          - null
+        verificationStatus:
+          type: string
+          enum:
+          - confirmed
+          - rejected
+          - unverified
+          - unknown
+        judgmentMethod:
+          type: string
+          maxLength: 50
+        unverifiedReason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - budget_exceeded
+          - model_unavailable
+          - call_cap_reached
+          - null
+        trackId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        zoneId:
+          type:
+          - string
+          - 'null'
+        description:
+          type:
+          - string
+          - 'null'
+          maxLength: 2000
+        evidenceFrameUrls:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            format: uri
+    Alert:
+      type: object
+      additionalProperties: false
+      required:
+      - candidateId
+      - status
+      - eventType
+      - reason
+      - severity
+      - observedMs
+      - pendingAt
+      - decidedAt
+      - dismissReason
+      - description
+      - evidenceFrameUrls
+      properties:
+        candidateId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - pending
+          - confirmed
+          - dismissed
+        eventType:
+          $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+        reason:
+          type: string
+          enum:
+          - severity_high
+          - active_risk_zone
+        severity:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+        observedMs:
+          type: integer
+          minimum: 0
+        pendingAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        dismissReason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - rejected
+          - unverified
+          - unknown
+          - null
+        description:
+          type:
+          - string
+          - 'null'
+          maxLength: 2000
+        evidenceFrameUrls:
+          type: array
+          maxItems: 4
+          items:
+            type: string
+            format: uri
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+- bearerAuth: []

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: quality-service API
-  version: 1.2.0
+  version: 2.0.0
   description: '검토 큐, Golden Set 버전, 평가 실행과 CI Gate, 처리 단계 리포트 (SPEC-029). 외부 데이터셋 가져오기, 특징 내보내기, 처리 단계 성능 Gate (SPEC-030).
 
     - `/api/v1/quality/**`는 api-gateway를 거치고 OPERATOR 역할만 쓴다. 역할 검사는 서비스가 `X-User-Roles`로 한다.
@@ -27,6 +27,8 @@ tags:
   description: 외부 데이터셋 가져오기
 - name: exports
   description: 특징 내보내기
+- name: alert-reports
+  description: 실시간 긴급 알림 지표 (SPEC-029 R-28, v5.1)
 paths:
   /api/v1/quality/review-items:
     get:
@@ -1143,6 +1145,50 @@ paths:
           $ref: ./_common.yaml#/components/responses/Unauthenticated
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/v1/quality/alert-reports:
+    get:
+      operationId: getAlertReport
+      summary: 긴급 알림 지연·기각 비율 리포트
+      description: alert.raised의 pending 발행 시각과 confirmed·dismissed 시각으로 계산한 일 단위 지표 (SPEC-029 R-28, v5.1)
+      tags:
+      - alert-reports
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - name: cameraId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 알림 지표
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertReport'
+              example:
+                from: '2026-11-01'
+                to: '2026-11-06'
+                cameraId: null
+                days:
+                - date: '2026-11-06'
+                  pendingCount: 14
+                  confirmedCount: 9
+                  dismissedCount: 5
+                  firstAlertP50Ms: 1200.0
+                  firstAlertP95Ms: 1900.0
+                  judgeP50Ms: 3100.0
+                  judgeP95Ms: 4800.0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/v1/quality/dataset-imports:
     post:
       operationId: createDatasetImport
@@ -1527,6 +1573,10 @@ components:
         enum:
         - review_required
         - sample
+        - budget_exceeded
+        - call_cap_reached
+        - model_unavailable
+        - alert_dismissed
     EventType:
       name: eventType
       in: query
@@ -1816,10 +1866,14 @@ components:
           maxLength: 50
         reason:
           type: string
-          enum:
+          x-extensible-enum:
           - review_required
           - sample
-          description: 'review_required: event.analyzed의 reviewRequired, sample: 표본 추출'
+          - budget_exceeded
+          - call_cap_reached
+          - model_unavailable
+          - alert_dismissed
+          description: '열린 목록(ADR-0014). review_required: event.analyzed의 reviewRequired, sample: 표본 추출, budget_exceeded·call_cap_reached·model_unavailable: event.analyzed.unverifiedReason(v5.1, SPEC-029 R-27), alert_dismissed: alert.raised dismissed(SPEC-029 R-28)'
         reviewReasons:
           type: array
           items:
@@ -2223,6 +2277,71 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StageStat'
+    AlertReport:
+      type: object
+      additionalProperties: false
+      required:
+      - from
+      - to
+      - cameraId
+      - days
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        cameraId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        days:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - date
+            - pendingCount
+            - confirmedCount
+            - dismissedCount
+            - firstAlertP50Ms
+            - firstAlertP95Ms
+            - judgeP50Ms
+            - judgeP95Ms
+            properties:
+              date:
+                type: string
+                format: date
+              pendingCount:
+                type: integer
+                minimum: 0
+              confirmedCount:
+                type: integer
+                minimum: 0
+              dismissedCount:
+                type: integer
+                minimum: 0
+              firstAlertP50Ms:
+                type:
+                - number
+                - 'null'
+                description: alert.candidate occurredAt부터 pending alert.raised occurredAt까지
+              firstAlertP95Ms:
+                type:
+                - number
+                - 'null'
+              judgeP50Ms:
+                type:
+                - number
+                - 'null'
+                description: pending부터 confirmed·dismissed까지
+              judgeP95Ms:
+                type:
+                - number
+                - 'null'
     StageTrend:
       type: object
       additionalProperties: false
