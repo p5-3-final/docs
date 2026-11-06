@@ -67,13 +67,13 @@ cd repos/ai && uv sync --all-packages
 | 서비스 | 레포 | 상태(2026-11-06) |
 | --- | --- | --- |
 | api-gateway, auth-service, media-service | backend | SPEC-001·003·006·017·018 Implementing |
-| frontend | frontend | SPEC-002·005·006·007 화면 Implementing. 나머지 화면은 7절 |
+| frontend | frontend | SPEC-002·005·006 화면 Implementing. 나머지 화면(SPEC-031~035)은 plan·tasks까지 머지 |
 | normalize | ai | SPEC-007 Implementing |
 | ai-gateway | ai | SPEC-009·011·012·016 Implementing, SPEC-020 R-20(`event_judge_escalate`) 완료 |
 | frame-encoder | ai | SPEC-019 Implementing |
 | event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로는 7절 |
-| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | 문서 작성 중(7절) |
-| quality-service | backend | 문서 작성 중(7절) |
+| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지(7절). 구현 전 결정은 8절 |
+| quality-service | backend | spec·계약·plan·tasks 머지(7절). 구현 전 결정은 8절 |
 | infra, gitops | infra, gitops | **사용자가 지시할 때만** 작업한다 |
 
 ### 2.3 AI 모델·학습은 별도 담당자
@@ -147,24 +147,30 @@ cd repos/ai && uv sync --all-packages
 | 영역 | 내용 | 레포 PR |
 | --- | --- | --- |
 | 계약 묶음 | 3.0.0 (ai-gateway OpenAPI 1.0.0, `event.analyzed`, `_vlm-analysis`) | docs #109 |
+| 계약 묶음 | 3.14.0 (SPEC-021~035 계약 전체). 각 레포 lock은 아직 이전 버전이고, 구현 첫 태스크에서 올린다 | docs #115~#130 |
+| plan·tasks | ai SPEC-021~028·030, backend SPEC-029·030, frontend SPEC-031~035 | ai #40·#41, backend #52, frontend #34 |
 | event-analyzer | 벡터 후보 판정·재판정·발행, 재시도, DLQ, 단계 측정 | ai #38, #39 |
 | libs/ai-client | `/v1/analyze` REST 클라이언트(재시도 포함). `/v1/embed`·`/v1/parse` 메서드는 아직 없음 | ai #38 |
 | 로컬 compose | event-analyzer, 토픽 | docs #113 |
 
 ## 6. 이어서 할 일
 
-7절의 문서를 모두 머지한 뒤 아래 순서로 구현한다. 앞의 것이 뒤의 입력을 만든다.
+문서는 모두 머지했다. 아래 순서로 구현한다. 앞의 것이 뒤의 입력을 만든다.
 
-1. ai-gateway 새 taskType(track_attribute, object_question, source_summary, state_compare, risk_forecast)과 `libs/ai-client` `/v1/embed`
-2. track-analyzer → embedding-worker → event-analyzer 탐지기 경로 → track-stitcher → grounding-worker → aggregator
-3. quality-service(backend)
-4. frontend 화면
-5. 각 서비스 로컬 compose 추가와 측정
-6. 운영 배포(infra·gitops)는 사용자 지시 후
+1. 8절의 사용자 결정(D-*)을 받고, "먼저 고칠 것"(C-1~C-4)과 정리할 계약 수정을 docs PR 하나로 반영한다(계약 묶음 minor·patch).
+2. SPEC-021(ai): 계약 lock 3.14.0으로 올리기(기존 계약 테스트 4건을 같이 맞춤), ai-gateway 마감, 생성 클라이언트, 재시도 규칙, embed·parse
+3. SPEC-024 track-analyzer → SPEC-025 embedding-worker → SPEC-023 event-analyzer 탐지기 경로 → SPEC-022 track-stitcher → SPEC-026 grounding-worker → SPEC-027·028 aggregator
+4. SPEC-029·030 quality-service(backend), SPEC-030 evals(ai)
+5. SPEC-031~035 frontend(SPEC-031 T001에서 lock·생성 코드 갱신)
+6. 각 서비스 로컬 compose 추가와 측정
+7. 운영 배포(infra·gitops)는 사용자 지시 후
+
+- 레포마다 plan의 "의존" 절을 먼저 읽는다. 두 plan이 같은 준비 태스크(lock 올리기 등)를 가리키면 먼저 구현하는 쪽이 한다.
+- 다른 담당자 서비스의 계약(생산자 확인 필요)을 생산자가 바꾸면 소비 쪽 plan·코드를 맞춘다.
 
 ## 7. 문서 작성 현황
 
-2026-11-06에 사용자가 "담당 서비스 전부 문서부터 작성하고 한 번에 구현"하기로 했다. 범위: ai 워커 6개, quality-service, frontend 나머지 화면. 깊이: spec + 계약 + 각 레포 plan·tasks.
+2026-11-06에 사용자가 "담당 서비스 전부 문서부터 작성하고 한 번에 구현"하기로 했다. 범위: ai 워커 6개, quality-service, frontend 나머지 화면. 깊이: spec + 계약 + 각 레포 plan·tasks. 모두 머지했고, plan을 쓰며 나온 결정 사항은 8절에 있다.
 
 | spec | 대상 | 상태 |
 | --- | --- | --- |
@@ -184,11 +190,96 @@ cd repos/ai && uv sync --all-packages
 | SPEC-034 | frontend 작업 세션·분석 이력·설정(학습용 보존). 계약 변경 없음 | Approved |
 | SPEC-035 | frontend 품질 화면(운영자). quality-service 검토 항목 서명 주소 필드 | Approved |
 
-plan 단계에서 사용자에게 먼저 확인할 것(새 라이브러리 도입 규칙):
-
-- grounding-worker(SPEC-026)의 개방 어휘 탐지기 실행 라이브러리. YOLOE의 공식 구현인 `ultralytics`는 AGPL-3.0이라 배포 형태에 따라 소스 공개 의무가 생긴다. 대안(ONNX로 내보낸 가중치를 `onnxruntime`으로 실행)과 함께 물어본다.
-- quality-service(SPEC-029)는 backend의 새 서비스 모듈이다. catalog와 ADR-0008에 이미 있는 배포 단위라 새 서비스 결정은 아니다. 다만 모듈 뼈대(Flyway `quality_db`, 생성 코드 설정)는 기존 서비스와 같은 방식인지 plan에서 확인한다.
-- aggregator(SPEC-027)는 analysis-api가 아직 없어 로컬에서 계약 예시로 응답하는 자리 표시 서버가 필요하다. 도구(예: 계약 기반 mock 서버)를 새로 들일지 테스트용 작은 HTTP 서버를 직접 둘지 확인한다.
-- 영상 디코딩·인코딩. normalize는 FFmpeg·ffprobe 프로세스를 부르므로 같은 방식(새 라이브러리 없음)을 기본안으로 제안한다.
+plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 
 번호는 작성하면서 바뀔 수 있다. 실제 번호와 상태는 [spec 목록](specs/README.md)이 원본이다.
+
+## 8. 구현 전에 정할 사항 (2026-11-06 plan 작성 결과)
+
+모든 spec(SPEC-021~035)과 각 레포 plan·tasks를 머지했다(ai #40·#41, backend·frontend 아래 표). plan을 쓰며 나온 결정 사항과 spec·계약 불일치를 여기에 모았다.
+
+- 각 plan에는 기본안이 이미 적혀 있다. 사용자가 다르게 정하지 않으면 기본안대로 구현한다.
+- "계약·spec 수정"은 구현 전에 docs PR을 먼저 연다.
+- 정한 항목은 이 표의 "결정" 칸을 채우고 해당 plan을 같은 흐름에서 고친다.
+
+### 8.1 사용자 결정이 필요한 항목
+
+| # | spec | 항목 | 기본안 | 결정 |
+| --- | --- | --- | --- | --- |
+| D-1 | SPEC-026 | grounding 탐지기 실행 라이브러리 | 미정. `ultralytics`(AGPL-3.0, 구현 가장 짧음), `onnxruntime`(ONNX 내보내기·가중치 라이선스 확인 필요, AI 담당자 작업), `transformers` OWLv2(CPU에서 느림) 중 선택. 결정 전에는 `MockDetector`로 R-1~R-18을 구현하고 실제 탐지기 태스크(T026~T028, T033)는 보류 | |
+| D-2 | SPEC-026 | 영상 처리 | FFmpeg·ffprobe 프로세스 호출. runtime 이미지에 `ffmpeg`, `fonts-dejavu-core`(drawtext용)를 넣음 | |
+| D-3 | SPEC-021 | 생성 코드의 `Any` | 계약의 자유 객체(`variables`, `output`)가 `dict[str, Any]`로 생성되면 생성 파일만 `Any` 금지의 예외로 문서화 | |
+| D-4 | SPEC-021 | 생성 코드 검사 예외 | 생성 결과가 ruff·mypy를 통과하지 못하면 생성 파일 경로를 설정 단위 예외로 둠(`lint.md`에 추가 필요) | |
+| D-5 | SPEC-021 | datamodel-code-generator 하위 의존성 | 개발 의존성으로만 lock에 추가 | |
+| D-6 | SPEC-022 | numpy 직접 의존 | 표준 라이브러리로 계산하고, NFR-1(30초)을 넘으면 numpy를 직접 의존으로 씀(lock에는 있음) | |
+| D-7 | SPEC-022 | Re-ID 끄기 설정(`reidSkippedReason: disabled`) | 두지 않음 | |
+| D-8 | SPEC-023 | 규칙 템플릿 범위 | 기동할 때 탐지 가능 유형 8종 모두에 템플릿·기본 severity를 요구 | |
+| D-9 | SPEC-023 | 구역 이름이 null일 때 템플릿 값 | 프로필 `[rule_text] missing_zone_name` | |
+| D-10 | SPEC-023 | 근거 프레임 경로 검사 | `event.candidate` 근거 프레임이 메시지 실행 폴더 안인지 계약 모델에서 검사 | |
+| D-11 | SPEC-024 | 이미지 하한 | ai-gateway 프로필 스키마에 `min_images`(기본 0)를 추가(프로필 스키마 변경). 결정 전 T009 보류 | |
+| D-12 | SPEC-025 | 트랙 항목의 시각·클래스 출처 | track-stitcher 번역표(`tracks/v1/track-mapping`)를 읽음. 대안은 `track.analyzed`에 필드 추가(계약 변경) | |
+| D-13 | SPEC-025 | 이벤트 시각 | spec R-7의 "초 단위 값은 ms로"는 계약에 늘 있는 `startMs`·`endMs`를 쓴다는 뜻으로 해석 | |
+| D-14 | SPEC-025 | R-9에 없는 502·504·그 밖의 5xx | 재시도 토픽 | |
+| D-15 | SPEC-027 | analysis-api 자리 표시 서버 | 미정. A 계약 기반 mock 도구(새 도구), B `libs/testing`에 작은 FastAPI 앱(기존 의존성), C 자리 표시 서버 없이 MockTransport 테스트만. 단위·e2e는 MockTransport라 구현을 막지 않음 | |
+| D-16 | SPEC-027 | 직전 영상 `final-state`가 404 `ANALYSIS_SOURCE_NOT_FOUND` | 빈 초기 상태 | |
+| D-17 | SPEC-028 | `not_restored` 판정 이미지(직전 영상 프레임을 ai-gateway가 받지 않음) | 미정. A aggregator가 프레임을 현재 job 폴더로 복사, B 계약 변경, C 이미지 1장 판정(spec 수정). 결정 전 T018 보류 | |
+| D-18 | SPEC-028 | `risk_forecast` 모델 미설정 결과 | `_risk-forecast`의 `horizons` 최소 개수를 0으로(계약 minor). 결정 전 T022 보류 | |
+| D-19 | SPEC-028 | 규칙 점수 공식 | λ = 분당 진입 수/60 × min(1, 활성 초/saturation_s), p = 1 − exp(−λh). 실제 값·공식 교체는 AI 담당자 몫 | |
+| D-20 | SPEC-028 | 호출 상한을 넘은 통로·위험구역 장비 방치 | `unverified`로 기록하고 상태 계산에서 뺌 | |
+| D-21 | SPEC-030 | 상태 변화 종류 대응 | 라벨 `added`↔결과 `appeared`, `removed`↔`removed`, `moved`↔`moved`. `restored`·`not_restored`는 짝 없음 | |
+| D-22 | SPEC-031 | SSE 처리 방식 | `fetch` 스트림 + 직접 만든 해석기(새 의존성 없음). 이유: `EventSource`는 `Last-Event-ID`를 못 넣고, 티켓이 1회용이라 자동 재연결이 실패함. 대안은 계약에 `lastEventId` 쿼리 추가 | |
+| D-23 | SPEC-031·032 | 자체 플레이어 컨트롤 | 이벤트 표시·클릭 조회를 위해 기본 컨트롤 대신 직접 만듦(SPEC-006 화면 모양이 바뀜) | |
+| D-24 | SPEC-032·035 | 다각형 편집·추이 그래프 | 새 라이브러리 없이 SVG로 직접 | |
+| D-25 | frontend | 개발용 mock 모드 | `VITE_API_MOCKING=true`일 때만 MSW 브라우저 워커(기존 의존성), `public/mockServiceWorker.js` 커밋 | |
+| D-26 | SPEC-030 | Resilience4j 도입(quality → media 첫 서비스 간 호출) | backend AGENTS.md는 서비스 간 호출에 Resilience4j를 쓰라고 하지만 아직 쓰는 곳이 없다. 결정 전에는 T009의 재시도 부분을 보류 | |
+| D-27 | SPEC-029 | 생성 코드가 `-Werror`에 걸릴 때 | 생성 소스만 lint를 완화하는 설정 단위 예외(`lint.md`에 추가 필요). T003에서 실제로 걸리는지 확인한 뒤 묻는다 | |
+| D-28 | SPEC-029 R-24 | 추이 조회에 `versionKey`만 있을 때 | 400 | |
+| D-29 | SPEC-030 | media 보존 등급 `DATASET`의 삭제 동작 | 이번에는 등급만 저장한다. 운영자가 삭제할 때 `video.deleted`를 낼지 막을지는 미정 | |
+| D-30 | SPEC-030 | 같은 매니페스트 다시 가져오기 | importId를 manifestKey로 결정적으로 만들어 같은 videoId를 보장한다. 대신 같은 경로의 가져오기 이력은 한 행에 덮어쓴다 | |
+
+### 8.2 spec·계약 수정이 필요한 항목
+
+먼저 고칠 것(구현을 막음)
+
+| # | spec·계약 | 문제 | 수정안 |
+| --- | --- | --- | --- |
+| C-1 | SPEC-022, `tracks/v1/chunk-tracks` | `boundaryBoxes`가 겹침 구간 박스만 담는다. 그래서 앞 청크 박스는 경계 뒤 5초에만, 뒤 청크 박스는 경계 앞 5초에만 있어 공통 관측이 거의 없다. IoU 연결(R-4·R-6)이 동작하지 않는다 | 박스를 경계 양쪽 창 전체로 넓힌다. 생산자가 chunk-processor라 생산자 확인 필요 표시를 유지한다. plan은 고친 계약을 전제로 쓰였다 |
+| C-2 | SPEC-022, `track.detected` `stitched` | "앞 청크에서 이미 이어진 구성원도 포함"이라는 설명 때문에 도착 순서에 따라 내용·trackId가 달라진다. US-1 AC3·NFR-2와 충돌한다 | 쌍의 두 구성원만 담는다. 여러 경계를 잇는 묶음은 manifest 번역표가 정한다 |
+| C-3 | SPEC-028 R-7 | 직전 영상 프레임(`sources/<previousSourceId>/`)을 ai-gateway가 받지 않는다(D-17) | D-17을 정한 뒤 spec이나 계약을 고친다 |
+| C-4 | `_risk-forecast` | `horizons` 최소 1개라 모델 미설정 `fallback.json`을 만들 수 없다(D-18) | `minItems: 0` |
+
+정리할 것(구현은 기본안으로 진행)
+
+| # | 대상 | 문제 | 수정안 |
+| --- | --- | --- | --- |
+| C-5 | SPEC-025 제외 항목 | "같은 항목·다른 모델이면 다른 파일"이라고 적었지만 경로·`vectorKey`에 모델이 없어 덮어쓴다 | spec을 "eventId만 다르고 파일은 마지막 모델 결과로 덮어씀. 모델 교체 중 공존은 REEMBED spec에서"로 고치거나 경로에 모델 단계를 넣는다(계약 변경) |
+| C-6 | SPEC-025 R-9 | `AI_MODEL_NOT_CONFIGURED`·`AI_BUDGET_EXCEEDED`는 503이라 ai-client가 2회 헛재시도한 뒤 DLQ로 간다 | 그대로 두거나 SPEC-021 R-10에서 이 두 코드를 재시도하지 않게 한다 |
+| C-7 | 서비스 카탈로그 embedding-worker 행 | 저장소 "—", "묶음" 임베딩으로 적혀 spec(S3 저장, 묶음 제외)과 다르다 | 카탈로그를 고친다 |
+| C-8 | SPEC-026 R-17 | `grounding.completed`에 기준 신뢰도를 기록하라고 하지만 계약에 필드가 없다 | R-17을 결과 파일만으로 줄인다 |
+| C-9 | SPEC-026 R-9 | eventId가 groundingId·탐지기 버전뿐이라, FAILED 뒤 READY나 다른 requestId의 결과가 같은 eventId가 된다 | eventId에 requestId·outcome을 넣는다 |
+| C-10 | SPEC-026 R-10 | 영상 길이 비교에 허용 오차가 없다 | 프레임 간격 하나만큼 넘는 것은 허용한다 |
+| C-11 | `groundings/v1` `sampleFps` | 이름은 fps인데 설명은 "간격"이다 | 설명을 "초당 샘플 수"로 고친다(patch) |
+| C-12 | 모델 manifest(`models/`) | `kind: detector`가 `classes` 1개 이상을 요구한다. 개방 어휘 탐지기 manifest를 어떻게 쓸지 정해지지 않았다 | AI 담당자와 정한다 |
+| C-13 | `event.manifest`·AsyncAPI·`detectorCandidate` 설명 | 요구사항 번호가 틀렸다(R-12→R-10, R-10→R-9) | 설명을 고친다(patch) |
+| C-14 | `track.manifest` 설명 | "SPEC-022 R-10~R-14"가 spec과 맞지 않는다 | R-12·R-13으로 고친다 |
+| C-15 | `event.manifest` 크기 | 후보 20,000개면 `analyzedEventIds`가 약 0.8MB라 Kafka 기본 상한 1MB에 가깝다 | 운영 토픽 `max.message.bytes`를 확인하거나 상한을 줄인다 |
+| C-16 | SPEC-021 R-1·R-3 | 마감을 반영할 "외부 모델" 범위가 모호하다 | plan은 공급자 Adapter 경로에만 반영하고, 인코더 경로는 받을 때 검사만 한다. 마감 초과 504는 호출 로그에 남기지 않는다. 의도와 다르면 spec을 고친다 |
+| C-17 | `openapi/ai-gateway.yaml` `/v1/parse` | 503 응답이 없는데 R-10은 parse 503 재시도를 요구한다 | 인프라 503으로 보고 재시도한다. 계약에 503을 더할지 정한다 |
+| C-18 | quality-service `/internal/v1/quality/stage-gates` | `X-Request-Deadline` 헤더가 없다(내부 호출 규약) | 계약에 헤더를 더한다(minor) |
+| C-19 | SPEC-029·SPEC-030 | 평가 잡 본체(Golden Set 읽기, 예측 모으기, 결과 제출)를 맡은 ai spec이 없다 | evals 평가 잡 spec을 새로 쓴다 |
+| C-20 | `notifications/v1/notification-message` | OpenAPI가 참조하지 않아 생성 타입이 없다 | frontend는 Zod로 옮기고 예시 파싱 테스트를 한다. 생성하려면 계약에서 참조를 더한다 |
+| C-21 | analysis·quality OpenAPI의 `type: object` 필드(`analysis`, `forecast`, `attributes`, `answer`) | 생성 타입이 비어 있다. 검사 도구가 `$id` 기준 상대 `$ref`를 풀지 못해 `object`로 둔 것이다 | frontend는 events JSON Schema를 Zod로 옮긴다. 계약을 `$ref`로 바꾸려면 검사 도구 문제를 먼저 푼다 |
+| C-22 | SPEC-031 R-15 | 화면을 열 때 이미 분석 중이면 다음 `job.status`가 올 때까지 진행률을 알 수 없다 | 진행 상태 공개 API(pipeline, 다른 담당자)가 필요하다 |
+| C-23 | 분석 결과 좌표·시각 | 정규화 사본 기준인데 플레이어는 원본을 재생한다 | 같은 타임라인·비율로 가정한다. 어긋나면 HLS(정규화) 재생으로 바꾼다 |
+| C-24 | SPEC-031 | 진행 막대 표시가 요약 `timeline`에 모든 이벤트가 있다고 가정한다 | analysis 계약 설명에 명시한다 |
+| C-25 | SPEC-033 R-7 | 검색 결과에 영상 이름이 없어 결과마다 `getVideo`를 부른다 | search 계약에 `fileName`을 더하는 것을 검토한다 |
+| C-26 | SPEC-033 | "이 영상" 범위의 영상 고르기가 spec에 없고, 주석 `frames[].ptsMs` 기준(원본·클립)이 계약에 없다 | plan 기본안(내 READY 영상 고르기, 원본 기준)으로 진행하고 계약 설명을 고친다 |
+| C-27 | SPEC-034 | "확정 이벤트"를 판정 `confirmed`로 가정했다. 규칙·재고 이벤트가 `confirmed`로 저장되는지 계약에 없다 | analysis 계약 설명에 명시한다 |
+| C-28 | SPEC-035 R-17·R-19 | 특징 내보내기 목록 API가 없다 | quality 계약에 목록 API를 더한다(minor, 내 서비스) |
+| C-29 | SPEC-035 | uncertain 라벨과 라벨 없음이 같은 409 코드다 | `QUALITY_REVIEW_UNCERTAIN` 코드를 나눈다 |
+| C-30 | quality `GateResult.failures[].value` | 기준에만 있는 지표(R-18)는 값이 없는데 필드가 필수 number다 | `number`·`null`로 바꾼다(backend SPEC-029 T025 대기) |
+| C-31 | 가져오기 매니페스트·`RegisterDatasetVideoRequest`의 `video/webm` | `video.uploaded`·media 파일 정책은 webm을 받지 않는다 | media가 400으로 거절하고 영상별 오류로 남긴다. 계약 enum에서 webm을 뺄지 정한다 |
+| C-32 | media `registerDatasetVideo` 400 코드 이름 | 기존 코드는 `MEDIA_UNSUPPORTED_FORMAT`·`MEDIA_FILE_SIZE_INVALID`다 | 계약 설명을 기존 코드로 고친다 |
+| C-33 | media `registerDatasetVideo` | `X-Request-Deadline`·504가 없다 | 계약에 더한다 |
+| C-34 | quality 계약 설명의 요구사항 번호, `ReviewItem` 예시 | 번호가 틀렸다(R-8→R-9, R-12~R-15→R-13~R-15). 예시 `judgments_disagree`가 이벤트 enum `judgment_disagreement`와 다르다 | 설명과 예시를 고친다(patch) |
+| C-35 | backend Docker 이미지 빌드 | 빌드 컨텍스트에 계약 파일이 없어 생성 코드를 빌드하지 못한다 | `CONTRACTS_DIR` 빌드 인자(SPEC-029 T037) |
