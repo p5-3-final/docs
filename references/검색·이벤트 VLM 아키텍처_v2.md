@@ -1,4 +1,4 @@
-Video × VLM Pipeline · 산업안전 CCTV · MSA 19개 배포 단위 · 검색 · 이벤트 2경로 · v4 (v3 + 평가 · 상태 변화 · 예측 준비)
+Video × VLM Pipeline · 산업안전 CCTV · MSA 19개 배포 단위 · 검색 · 이벤트 2경로 · v4 (v3 + 평가 · 상태 변화 · 예측 준비) · 내부 동기 통신 gRPC
 
 # VLM 영상 분석 아키텍처 · 검색 경로와 이벤트 경로 (산업안전)
 
@@ -7,6 +7,8 @@ Video × VLM Pipeline · 산업안전 CCTV · MSA 19개 배포 단위 · 검색 
 v3는 연구용 프로토타입 `vlm_project`의 인코더 · 탐지기 선택, 판정 규칙, 정직성 원칙을 MSA 구조에 옮긴 판입니다. VLM만은 GPU 노드를 쓸 수 없어 vlm_project의 로컬 Qwen3-VL 대신 v2대로 OpenAI를 운영에 쓰고, Qwen3-VL은 로컬 개발과 어댑터 선택지로 남깁니다. v2와 달라진 점은 "이전 설계와 비교"에 있습니다.
 
 v4는 v3 구조를 그대로 둔 채, 팀의 세 단계 목표(1차 기본 탐지 성능, 2차 영상 기반 위험 이벤트 평가, 3차 작업 전후 상태 변화)와 그 뒤의 예측을 받칠 수 있도록 **서버 쪽 준비 항목**을 더한 판입니다. 모델 · 학습 · 데이터셋 · 프롬프트는 AI 담당자 몫이고, v4 항목은 서버 구조(계약, 토픽, 프로필 스키마, 저장 · 보존, 세션, 잡 틀, 단계별 처리 시간 측정)만 다룹니다. v3와 달라진 점은 "v4 변경: 평가 · 상태 변화 · 예측 준비"에 모았고, 본문에서 바뀐 항목에는 **[v4]** 표시를 붙였습니다.
+
+**[gRPC]** 내부 서비스 사이의 동기 호출(Search · 워커 → AI Gateway, Aggregator · Search → Analysis 내부 읽기, Chunk Processor → 추론 경계)은 HTTP(JSON)에서 gRPC로 바꿉니다. 상태 변경은 Kafka, 브라우저는 REST · SSE 그대로입니다. 달라진 점은 "내부 통신 변경: 서비스 간 동기 호출을 gRPC로"에 모았고, 본문에서 바뀐 항목에는 **[gRPC]** 표시를 붙였습니다.
 
 ## 설계 원칙 (vlm_project에서 가져옴)
 
@@ -27,7 +29,7 @@ Spring 서버는 사용자 요청, 업무 상태, 저장과 조회를 맡습니�
 | --- | --- | --- |
 | 맡는 일 | 사용자 요청, 업무 상태(업로드 · 작업 · 버전), 권한, 저장, 조회, 품질 검토 | 영상 디코딩, 객체 탐지 · 추적, 이미지 벡터, VLM 호출, bbox 주석 |
 | 서버 형태 | HTTP API 서버 (Analysis Loader만 컨슈머 전용) | AI Gateway 1개는 HTTP 서버, 나머지 9개는 Kafka 워커 |
-| 통신 | 외부 요청은 API Gateway를 거친 REST, 서버 간은 Kafka. Search만 AI Gateway를 동기 호출 | Kafka로 받고 Kafka로 내보냄. AI가 필요하면 AI Gateway에 내부 HTTP 요청 |
+| 통신 | **[gRPC]** 외부 요청은 API Gateway를 거친 REST, 서버 간은 Kafka. Search만 AI Gateway · Analysis 내부 읽기를 gRPC로 동기 호출 | Kafka로 받고 Kafka로 내보냄. AI가 필요하면 AI Gateway에 내부 gRPC 요청 |
 | DB 접근 | 각자 자기 스키마를 직접 읽고 씀 (Outbox 포함) | PostgreSQL에 직접 쓰지 않음. 결과는 Kafka 이벤트나 S3 파일로 내보내고 저장은 데이터를 소유한 Spring 서버가 함. 예외는 자기 스키마(ai)를 가진 AI Gateway |
 | 스케일 기준 | HPA (CPU · 요청 수) | KEDA (Kafka 처리 대기량), AI Gateway는 HPA |
 | 컨테이너 이미지 | 서비스마다 하나 (공통 라이브러리 공유) | 워커마다 하나 (ADR-0001). 무거운 의존성(PyTorch, ultralytics, FFmpeg)이 가벼운 워커에 섞이지 않게 함 |
@@ -102,7 +104,7 @@ Spring 서버는 사용자 요청, 업무 상태, 저장과 조회를 맡습니�
 - 받는 것: 검색 · 이미지 검색 · RAG 요청, segment.embedded · embedding.ready · grounding.completed · version.activated
 - 내보내는 것: 검색 결과, segment.indexed (적재 완료), grounding.requested, segment.annotated
 - 저장: search 스키마 (구간 벡터 · 텍스트 인덱스 · 결과 재사용 · 주석 클립 경로 · 질의 로그)
-- AI 호출: AI Gateway 동기 호출 (Spring 서버 중 유일)
+- AI 호출: **[gRPC]** AI Gateway gRPC 동기 호출 (Spring 서버 중 유일)
 
 **Quality** Spring Boot + Python 평가 잡
 
@@ -124,15 +126,15 @@ Spring 서버는 사용자 요청, 업무 상태, 저장과 조회를 맡습니�
 - 저장: 없음 (Redis pub/sub)
 - AI 호출: 없음
 
-**Python 서버 10개** Python 3.12 · HTTP 서버 1개 + Kafka 워커 9개
+**Python 서버 10개** Python 3.12 · gRPC 서버 1개 + Kafka 워커 9개
 
-AI 관문 · HTTP 서버 (1개)
+AI 관문 · gRPC 서버 (1개)
 
-**AI Gateway** FastAPI · 내부 전용 HTTP
+**AI Gateway** **[gRPC]** gRPC 서버(grpc.aio) · 내부 전용. HTTP는 health · metrics만
 
 모델 호출의 유일한 문입니다. 작업 유형에 맞는 모델과 프롬프트를 고르고, 결과 캐시 · 예산 · 호출 한도를 관리하며, 출력 스키마를 검증합니다. 질의용 MobileCLIP2 텍스트 · 이미지 인코더와 규칙 사전 기반 질의 해석기도 여기서 돌립니다. 외부 AI로 나가는 유일한 문이고, 블러 사본 경로만 받습니다.
 
-- 받는 것: Python 워커와 Search의 내부 HTTP 요청
+- 받는 것: **[gRPC]** Python 워커와 Search의 내부 gRPC 요청 (`Parse` · `Embed` · `Analyze`)
 - 내보내는 것: 판정 · 속성 · 재순위화 · RAG 답변 · 요약 · 질의 해석 · 벡터 결과 (응답)
 - 저장: ai 스키마 (호출 로그 · 예산 · 결과 캐시 · 프롬프트 버전 적용 이력)
 - AI 호출: OpenAI (운영: luna · terra · sol, text-embedding-3-small) · Ollama Qwen3-VL (로컬) · Mock (CI 전용)
@@ -217,7 +219,7 @@ AI 호출 워커 · 응답 대기 위주 (4개)
 
 마무리 담당입니다. 청크 경계에서 나뉜 이벤트를 합치고, 확정 이벤트를 시간순으로 훑어 상태 스냅샷과 위험 상태(활성 · 해소) 전이를 계산하며, 배회 · 체류처럼 시간이 기준인 규칙을 영상 전체 기준으로 판단하고, 타임라인과 텍스트 요약을 만듭니다.
 
-- 받는 것: analysis.completed, Analysis 내부 읽기 API (이벤트 · 트랙 · 구역 · 구역 진입 · 이탈 시각)
+- 받는 것: analysis.completed, **[gRPC]** Analysis 내부 읽기 gRPC `GetSourceContext` (이벤트 · 트랙 · 구역 · 구역 진입 · 이탈 시각)
 - 내보내는 것: source.completed (병합 결과 · 시간 규칙 이벤트 · 상태 스냅샷 · 위험 상태 · 요약 포함)
 - 저장: 없음 (Analysis가 저장)
 - AI 호출: source_summary (luna, 텍스트만)
@@ -410,6 +412,87 @@ v3 구조(검색 · 이벤트 2경로, 청크 병렬, 탐지기 능력 선언, �
 
 프로토타입 문장과 임계값, 클래스 대응표의 내용, 데이터셋 선정과 라벨링, 파인튜닝, 프롬프트 문안, 예측 모델 학습은 AI 담당자 몫입니다. 서버는 위 아홉 항목으로 '자리'만 만듭니다.
 
+## 내부 통신 변경: 서비스 간 동기 호출을 gRPC로
+
+내부 서비스 사이의 **동기 호출**을 HTTP(JSON)에서 **gRPC**로 바꿉니다. 바뀌는 것은 '동기 호출' 다섯 가지뿐입니다. 상태 변경을 Kafka 이벤트로만 전달하는 원칙, 브라우저가 쓰는 REST · SSE, 외부 AI 호출은 그대로입니다. 본문에서 바뀐 행과 문장에는 **[gRPC]** 표시를 붙였습니다.
+
+**[gRPC]** **원칙은 하나입니다.** 서비스 사이의 **동기 호출은 gRPC**, **상태 변경은 Kafka**, **브라우저는 REST · SSE**. 내부 동기 호출은 지금도 다섯 곳뿐이라 바꾸는 범위가 작고, 모두 계약(`.proto`)을 먼저 고친 뒤 양쪽 코드를 생성해서 맞춥니다.
+
+### 무엇이 바뀌나
+
+| 호출 | 지금 (v4) | 변경 (gRPC) | 비고 |
+| --- | --- | --- | --- |
+| **[gRPC]** Search → AI Gateway(질의 해석 · 질의 벡터 · 재순위화 · RAG) | 내부 HTTP `/v1/parse` · `/v1/embed` · `/v1/analyze` | gRPC 서비스 `vlm.ai_gateway.v1.AiGateway`의 `Parse` · `Embed` · `Analyze` | Java → Python. 검색 응답 지연에 가장 직접 영향 |
+| **[gRPC]** 워커(Event Analyzer · Track Analyzer · Embedding Worker · Aggregator) · Quality 평가 잡 → AI Gateway | 내부 HTTP (같은 경로) | 같은 gRPC 서비스. 클라이언트는 ai `libs/grpc` 하나 | Python → Python |
+| **[gRPC]** Aggregator → Analysis 내부 읽기(이벤트 · 트랙 · 구역 · 진입 · 이탈 시각) | HTTP `/internal/analysis/sources/{id}` | gRPC 서비스 `vlm.analysis.v1.AnalysisInternal`의 `GetSourceContext` | Python → Java |
+| **[gRPC]** Search → Analysis 내부 읽기 (RAG 근거) | HTTP (같은 경로) | 같은 gRPC 서비스 | Java → Java |
+| **[gRPC]** Chunk Processor → 추론 경계(ADR-0009의 `POST /v1/inferences` 기본안) | HTTP 기본안 (미구현) | gRPC 서비스 `vlm.inference.v1.Inference`의 `Submit`. ADR-0009의 HTTP 기본안을 갱신 | backend → AI. 결과 스키마는 추론 경계 spec에서 확정 |
+
+### 바뀌지 않는 것
+
+| 구분 | 그대로인 이유 |
+| --- | --- |
+| 브라우저 → API Gateway → Spring 서버 | REST · SSE(HTTP/1.1, OpenAPI) 그대로. gRPC-web은 쓰지 않습니다. 브라우저 쪽 계약과 Frontend 코드는 바뀌지 않습니다. |
+| 서비스 ↔ 서비스 상태 변경 | Kafka 이벤트만. gRPC로 쓰기 요청을 하지 않습니다. 토픽 · 봉투 · 파티션 키 · Outbox 모두 그대로입니다. |
+| API Gateway → Auth JWKS | 표준 HTTP 문서(JWKS)라 그대로 둡니다. |
+| 외부 AI (OpenAI · Ollama) | 공급자가 정한 HTTP. AI Gateway 안의 Adapter만 압니다. |
+| health · metrics | Spring actuator, Prometheus 스크레이프는 HTTP 유지. gRPC 서버는 `grpc.health.v1`을 추가로 구현합니다. |
+
+### 왜 gRPC인가 (쉽게)
+
+내부 호출이 다섯 곳뿐인데 왜 바꾸는지, 이득을 하나씩 풀어 씁니다. 핵심은 '서로 다른 언어로 만든 서비스가 같은 계약을 강제로 지키게 하는 것'입니다.
+
+1. **계약이 곧 코드가 됩니다**: 지금은 OpenAPI 문서를 보고 Java(Search)와 Python(워커)이 각자 클라이언트를 손으로 씁니다. 필드 이름이나 타입이 어긋나도 실행해 보기 전엔 모릅니다. gRPC는 `.proto` 파일 하나에서 양쪽 서버 · 클라이언트 코드를 생성하므로, 계약과 다른 호출은 컴파일(Java) 또는 import(Python) 단계에서 걸립니다. 서비스를 여러 사람이 다른 언어로 만드는 이 프로젝트에 가장 큰 이득입니다.
+2. **검색 왕복이 가벼워집니다**: 검색 한 번에 AI Gateway를 두세 번 부릅니다(질의 해석 → 질의 벡터 → 선택 재순위화). HTTP/1.1 + JSON은 호출마다 연결 · 헤더 · 텍스트 직렬화 비용을 냅니다. gRPC는 HTTP/2 연결 하나를 유지하며 여러 호출을 다중화하고 바이너리로 보내서, 작은 호출이 많은 검색 경로의 지연이 줄어듭니다. 벡터(512 float)도 JSON 문자열이 아니라 바이너리 배열로 갑니다.
+3. **타임아웃이 호출 체인을 따라 전달됩니다**: 검색은 5~8초, RAG는 15초 안에 답해야 합니다. HTTP에서는 서비스마다 타임아웃을 따로 설정하고, 앞 서비스가 이미 포기한 요청을 뒤 서비스가 계속 처리하는 낭비가 생깁니다. gRPC의 데드라인은 호출자가 정한 '언제까지'가 메타데이터로 다음 서비스까지 전달되어, 남은 시간이 없으면 뒤 서비스가 즉시 멈춥니다.
+4. **오류 의미가 언어와 무관하게 같습니다**: 예산 초과, 입력 거부, 서킷 열림을 HTTP 상태 코드(429 · 400 · 503)와 본문 형식으로 서비스마다 다르게 표현하고 있었습니다. gRPC 상태 코드(`RESOURCE_EXHAUSTED`, `INVALID_ARGUMENT`, `UNAVAILABLE`)는 Java · Python 라이브러리가 같은 예외로 바꿔 주므로 재시도 · 서킷 규칙을 한 번만 정하면 됩니다.
+5. **호환성 검사를 도구가 합니다**: OpenAPI는 `oasdiff`로 깨짐을 검사하듯, proto는 `buf breaking`이 필드 번호 재사용 · 타입 변경 같은 깨짐을 계약 PR에서 잡습니다. 계약 릴리스 규칙(VERSION · 잠금 파일)은 기존 그대로 씁니다.
+6. **실시간(Phase 2)의 스트림 자리가 생깁니다**: 지금은 모두 단건 호출(unary)만 쓰지만, 같은 계약 형식으로 서버 스트리밍을 더할 수 있어 Phase 2의 프레임 · 알림 스트림을 다른 기술 없이 받칠 수 있습니다. 지금 만들지는 않습니다.
+
+### 규칙
+
+| 항목 | 규칙 |
+| --- | --- |
+| **[gRPC]** 계약 위치 · 버전 | `service-contracts/proto/<service>/v1/*.proto`, 패키지 `vlm.<service>.v1`. OpenAPI · AsyncAPI와 같은 `VERSION` · 릴리스 · 잠금 파일 규칙을 따릅니다. 검사는 `buf lint` · `buf breaking`. |
+| **[gRPC]** 코드 생성 | 빌드 때 생성하고 커밋하지 않습니다. Java는 protobuf-gradle-plugin + grpc-java + Spring gRPC(backend `libs/common-grpc`), Python은 grpcio-tools(ai `libs/grpc`). 서버는 Python `grpc.aio`, Java Spring gRPC. |
+| **[gRPC]** 메시지 내용 | ID · S3 경로 · 작은 값만 싣습니다. 프레임 · 벡터 파일 · 검출 박스처럼 큰 데이터는 지금처럼 S3 경로로 넘기고, 메시지 상한은 기본 4MB를 유지합니다. 질의 벡터처럼 작은 벡터는 `repeated float`로 본문에 둡니다. |
+| **[gRPC]** 메타데이터 | `traceparent`(W3C), 호출자 ServiceAccount 토큰, `x-request-id`를 모든 호출에 싣습니다. 인터셉터가 자동으로 넣고 읽습니다. |
+| **[gRPC]** 데드라인 | 호출마다 필수입니다. Search → AI Gateway 5~8초, RAG 15초, Aggregator → Analysis 10초, 워커 → AI Gateway 60초(VLM 왕복 포함). 값은 기존 설계의 타임아웃과 같고, 서버는 남은 데드라인을 하위 호출(AI Gateway → 외부 AI)에 그대로 넘깁니다. |
+| **[gRPC]** 재시도 · 서킷 | 읽기 전용 호출(`Parse`, `Embed`, `GetSourceContext`)만 `UNAVAILABLE`에 지수 백오프로 2회 재시도합니다. `Analyze`(VLM 호출)는 비용 때문에 자동 재시도하지 않고 호출자가 결정합니다(기존 원칙). 서킷 브레이커는 클라이언트 쪽에 그대로 둡니다. |
+| **[gRPC]** 오류 모델 | `INVALID_ARGUMENT`(입력 검증 실패 · 원본 경로 거부), `NOT_FOUND`, `RESOURCE_EXHAUSTED`(예산 · 토큰 버킷), `DEADLINE_EXCEEDED`, `UNAVAILABLE`(서킷 열림). **모델 미설정(`unverified`)과 출력 검증 실패(`unknown`)는 오류가 아니라 응답 본문의 상태**로 돌려줍니다. 정직성 원칙은 전송 방식과 무관하게 유지합니다. |
+| **[gRPC]** 부하 분산 | HTTP/2 연결이 길게 유지되어 ClusterIP(L4)로는 한 Pod에 몰립니다. 서버는 headless Service로 두고 클라이언트가 `dns:///` 리졸버 + `round_robin`으로 Pod에 직접 분산합니다. 서버의 `MaxConnectionAge`를 5분으로 두어 스케일 아웃 뒤 연결이 다시 퍼지게 합니다. AI Gateway HPA가 의미 있으려면 꼭 필요합니다. |
+| **[gRPC]** health · readiness | `grpc.health.v1`을 구현하고 Kubernetes gRPC probe를 씁니다. 모델 로드 · 체크섬 확인이 끝나기 전에는 `NOT_SERVING`입니다(기존 `/ready` 규칙과 같음). |
+| **[gRPC]** 보안 | NetworkPolicy로 호출자를 제한하고 메타데이터의 ServiceAccount 토큰을 서버가 검증합니다(기존 규칙). 클러스터 안은 평문 h2c로 시작하고 mTLS는 서비스 메시를 도입할 때 검토합니다. |
+| **[gRPC]** 관측 | OpenTelemetry gRPC 인터셉터로 span을 남기고, ⑩ 처리 단계 측정의 `StageTiming`은 gRPC 호출도 같은 방식으로 잽니다. AI Gateway 호출 ID와 `ai_call_log` 연결은 그대로입니다. |
+| **[gRPC]** 스트리밍 | v1은 unary(단건)만 씁니다. 서버 스트리밍은 Phase 2 실시간(프레임 · 알림)에서 검토하고 지금은 만들지 않습니다. |
+| **[gRPC]** 로컬 | compose에 gRPC 포트(AI Gateway · Analysis 9090)만 더합니다. 로컬에서만 server reflection을 켜 `grpcurl`로 호출을 확인합니다. 운영은 reflection을 끕니다. |
+
+### 영향
+
+- docs: proto 계약 3개(`ai_gateway` · `analysis` · `inference`), ADR 1건(내부 동기 통신 gRPC), ADR-0009의 추론 경계 HTTP 기본안 갱신, SPEC-009 · 011 · 012(AI Gateway HTTP 엔드포인트 → gRPC)
+- ai: `libs/grpc`(생성 코드 · 인터셉터 · 채널 관리), AI Gateway gRPC 서버(FastAPI는 health · metrics만 남김), 워커 4개 클라이언트
+- backend: `libs/common-grpc`, Search 클라이언트(AI Gateway · Analysis), Analysis 내부 읽기 gRPC 서버, Chunk Processor 추론 클라이언트
+- gitops: headless Service, gRPC probe, 포트. infra 변경은 없음
+- 개발 단계이므로 HTTP 엔드포인트를 병행 유지하지 않고 바로 옮깁니다. 계약을 먼저 머지한 뒤 각 서비스 담당자가 자기 서비스를 바꿉니다.
+
+### 순서
+
+1. proto 계약과 ADR을 docs에 먼저 올립니다. `buf` 검사를 docs CI에 더합니다.
+2. AI Gateway 서버 + Search 클라이언트. 검색 지연에 가장 효과가 크고, 두 언어 사이 생성 코드 · 인터셉터 · 부하 분산을 여기서 검증합니다.
+3. Analysis 내부 읽기 서버 + Aggregator · Search 클라이언트.
+4. 워커 4개 클라이언트(공통 라이브러리 교체만).
+5. Chunk Processor → 추론 경계. ADR-0009 갱신과 추론 경계 spec이 확정된 뒤에 합니다.
+
+### 비용과 위험 (숨기지 않음)
+
+| 항목 | 내용 · 대응 |
+| --- | --- |
+| 빌드 · 의존성 | Java · Python 양쪽에 gRPC 의존성과 코드 생성 단계가 생깁니다. 공통 라이브러리에 모아 서비스 코드에는 생성 스텁 호출만 남깁니다. |
+| 부하 분산 함정 | L4 ClusterIP를 그대로 쓰면 스케일 아웃이 효과가 없습니다. headless + 클라이언트 round_robin을 규칙으로 고정합니다. |
+| 디버깅 도구 | `curl`이 아니라 `grpcurl` · reflection(로컬만)으로 확인합니다. |
+| 이미 구현된 것의 재작업 | AI Gateway의 HTTP `/v1/analyze` · `/v1/embed` · `/v1/parse`(SPEC-009 · 011 · 012)를 gRPC로 옮깁니다. 처리 로직 · 프로필 · Registry는 그대로이고 전송 계층만 바뀝니다. |
+| 다른 담당자 서비스 | Search · Analysis · Aggregator 코드가 바뀝니다. 계약을 먼저 합의 · 머지하고 각자 작업합니다. |
+
 ## 서비스 경계
 
 | 서비스 | 기능 그룹 | 소유 데이터 | 동기 API (Gateway 경유) | 이벤트 | 기술 | 단계 |
@@ -417,7 +500,7 @@ v3 구조(검색 · 이벤트 2경로, 청크 병렬, 탐지기 능력 선언, �
 | Auth | 회원 · 로그인 · 외부 로그인(OIDC) · 토큰 발급 · 역할 | user, external_identity, refresh_token, signing_key, login_audit | `/api/auth/**`, 내부 `/.well-known/jwks.json` | 없음 | Spring (Spring Security) | MVP |
 | Media | 업로드 · 완료 확인 · 사전 견적 · 원본 관리 · **[v4]** 작업 세션(전 · 중 · 후 역할) | source, video, **[v4]** work_session | `/api/media/**` | pub video.uploaded(**[v4]** sessionId · role) · video.deleted(**[v4]** 보존 등급) | Spring | MVP |
 | Pipeline | 청크 스케줄러 · 공정성 · 완료 판정 · 재판정 · 재임베딩 | job, chunk, item_progress, profile | `/api/jobs/**` | sub video.normalized · chunk.manifest · track.manifest · event.manifest · segment.indexed pub chunk.requested · analysis.completed · job.status | Spring | MVP |
-| Analysis | 이벤트 타임라인 · 이벤트 상세 · 위험 상태 · 상태 스냅샷 · 구역 정의 · 트랙 · 클릭 조회 · 자유 질문 · 오버레이 · 요약 · 활성 버전 · 이벤트 검토 | object_track, track_attribute, track_event, detection, state_snapshot, risk_state, zone, summary, active_version | `/api/analysis/**`, 내부 읽기 `/internal/analysis/sources/{id}` | sub track.detected · track.analyzed · event.analyzed · source.completed · video.deleted pub attribute.requested · version.activated | Spring (API · Loader 분리 배포) | MVP |
+| Analysis | 이벤트 타임라인 · 이벤트 상세 · 위험 상태 · 상태 스냅샷 · 구역 정의 · 트랙 · 클릭 조회 · 자유 질문 · 오버레이 · 요약 · 활성 버전 · 이벤트 검토 | object_track, track_attribute, track_event, detection, state_snapshot, risk_state, zone, summary, active_version | `/api/analysis/**`, **[gRPC]** 내부 읽기 gRPC `AnalysisInternal.GetSourceContext` | sub track.detected · track.analyzed · event.analyzed · source.completed · video.deleted pub attribute.requested · version.activated | Spring (API · Loader 분리 배포) | MVP |
 | Search | 문장으로 장면 찾기 · 이미지로 장면 찾기 · 영상 간 검색 · Video RAG · bbox 주석 요청 · 검색 결과 재사용 · 프레임 주석 | segment_vector, crop_vector, text_index, query_cache, rerank_result, segment_judgment, segment_annotation, grounding_result, query_log, active_version | `/api/search/**` | sub segment.embedded · embedding.ready · grounding.completed · version.activated · video.deleted pub segment.indexed · grounding.requested · segment.annotated | Spring (AI Gateway 동기 호출) | MVP |
 | Notification | 실시간 알림 | 없음 (Redis pub/sub) | `/api/notify/**` (SSE) | sub job.status · source.completed · track.analyzed · grounding.completed | Spring WebFlux | MVP |
 | Quality | 이벤트 · 검색 품질 검증 · 검토 큐 · Golden Set · CI Gate · **[v4]** 외부 데이터셋 가져오기 · 특징 내보내기 · 처리 단계 성능 리포트 | golden_set_version, label(**[v4]** bbox · 구간 · 상태 변화), query_truth, eval_run(**[v4]** 데이터셋 · 프로필 · 모델 버전 고정), review, **[v4]** dataset_import, feature_export, stage_timing | `/api/quality/**` (운영자) | sub event.analyzed (표본) | Spring + Python 평가 잡 | MVP |
@@ -505,8 +588,9 @@ v3 구조(검색 · 이벤트 2경로, 청크 병렬, 탐지기 능력 선언, �
 
 | 외부 → 서비스 | 모든 요청은 API Gateway를 거칩니다. Gateway가 JWKS로 JWT를 검증하고 사용자 ID와 역할을 헤더로 전달합니다. 클라이언트가 보낸 같은 이름의 헤더는 지웁니다. |
 | --- | --- |
-| 서비스 ↔ 서비스 | 상태 변경은 Kafka 이벤트로만 전달합니다. 서비스끼리 REST로 쓰기 요청을 하지 않습니다. 내부 읽기 전용 API는 허용합니다(Aggregator → Analysis, Search → Analysis(RAG 근거), Gateway → Auth JWKS). 읽기 API는 호출하는 쪽이 없어도 제공하는 쪽이 동작하고, 응답이 없으면 호출하는 쪽은 재시도만 합니다. |
-| 동기 예외 | Search → AI Gateway만 동기 호출입니다(질의 해석, 질의 벡터, 선택 재순위화, RAG 답변). 검색은 타임아웃(5~8초)을 넘기면 인코더 순위로 응답하고, 서킷이 열리면 재순위화 없이 응답합니다. RAG는 타임아웃(15초)을 넘기면 답변 `null`과 근거만 돌려줍니다. |
+| 서비스 ↔ 서비스 | **[gRPC]** 상태 변경은 Kafka 이벤트로만 전달합니다. 서비스끼리 동기 호출로 쓰기 요청을 하지 않습니다. 내부 읽기 전용 호출은 gRPC로 허용합니다(Aggregator → Analysis, Search → Analysis(RAG 근거)). Gateway → Auth JWKS만 표준 HTTP입니다. 읽기 호출은 호출하는 쪽이 없어도 제공하는 쪽이 동작하고, 응답이 없으면 호출하는 쪽은 재시도만 합니다. |
+| 동기 예외 | **[gRPC]** Search → AI Gateway만 Spring의 동기 호출입니다(질의 해석, 질의 벡터, 선택 재순위화, RAG 답변). gRPC 데드라인으로 검색 5~8초, RAG 15초를 호출 체인에 전달합니다. 검색은 데드라인을 넘기면 인코더 순위로 응답하고, 서킷이 열리면 재순위화 없이 응답합니다. RAG는 데드라인을 넘기면 답변 `null`과 근거만 돌려줍니다. |
+| 내부 동기 호출 프로토콜 | **[gRPC]** 내부 동기 호출은 모두 gRPC(HTTP/2, protobuf)입니다. 계약은 `service-contracts/proto/`, 데드라인 필수, 메타데이터에 `traceparent`와 호출자 토큰, headless Service + 클라이언트 round_robin. 세부 규칙은 "내부 통신 변경" 절에 있습니다. |
 | 시작 신호 | 같은 작업을 시작시키는 신호가 여러 개여도 하나의 조건부 상태 전이로 모읍니다. |
 | 여러 Pod | 모든 서비스는 여러 Pod로 실행된다는 전제입니다. 청크는 행 잠금(`FOR UPDATE SKIP LOCKED`)으로 한 Pod만 가져가고, 주기 작업은 분산 락으로 한 Pod만 실행합니다. |
 | 파티션 키 | 청크 단위 작업은 chunkId, 트랙은 trackId, 주석은 groundingId로 흩어 병렬화하고, 경계 연결과 엔티티 상태만 sourceId로 묶습니다. |
@@ -568,7 +652,7 @@ v3 구조(검색 · 이벤트 2경로, 청크 병렬, 탐지기 능력 선언, �
 | --- | --- | --- |
 | 1 | Search | 질의 해석(위와 같음). route가 `video_retrieval`이어도 이 엔드포인트로 왔으면 RAG로 처리 |
 | 2 | Search | 시각 검색 top-k(기본 5)로 근거 구간을 찾고 대표 프레임 경로를 모음 |
-| 3 | Search → Analysis 내부 읽기 API | 영상의 이벤트(설명문 · 위험 사유 · 조치 제안), 상태 스냅샷, 활성 · 해소 위험 상태를 읽음. 이벤트는 질문 어휘와의 겹침 점수(vlm_project의 lexical ranking)와 텍스트 인덱스 점수를 RRF로 합쳐 상위 k개만 |
+| 3 | **[gRPC]** Search → Analysis 내부 읽기 gRPC `GetSourceContext` | 영상의 이벤트(설명문 · 위험 사유 · 조치 제안), 상태 스냅샷, 활성 · 해소 위험 상태를 읽음. 이벤트는 질문 어휘와의 겹침 점수(vlm_project의 lexical ranking)와 텍스트 인덱스 점수를 RRF로 합쳐 상위 k개만 |
 | 4 | Search ↔ AI Gateway | `video_rag`(luna): 질문 + 근거 구간 프레임(최대 4장 × 구간 수 상한) + 이벤트 · 상태 · 위험 JSON → "근거에서만 답하고 불확실하면 명시" 지시 |
 | 5 | Search | 답변, 상태(`confirmed` · `unverified`), 근거 구간(이동 시각), 관련 이벤트, 제한 사항을 반환. VLM 미설정 · 타임아웃이면 답변 `null`, 상태 `unverified`, 근거만 반환 |
 | 6 | Search | 표준 질의 + sourceId + 분석 버전 + 모델 · 프롬프트 버전 키로 결과 저장 |
@@ -848,9 +932,9 @@ Kafka 보존 기간은 30일이고 별도 아카이브는 두지 않습니다.
 
 ## AI Gateway 구조
 
-| 공통 인터페이스 | `/v1/analyze`(taskType, S3 경로, 입력 변수), `/v1/embed`(텍스트 · 시각 텍스트 · 이미지), `/v1/parse`(질의 해석). OpenAI SDK, MobileCLIP2 인코더, 규칙 사전은 Gateway 안에만 있습니다. |
+| 공통 인터페이스 | **[gRPC]** gRPC 서비스 `vlm.ai_gateway.v1.AiGateway`: `Analyze`(taskType, S3 경로, 입력 변수), `Embed`(텍스트 · 시각 텍스트 · 이미지), `Parse`(질의 해석). 계약은 `service-contracts/proto/ai_gateway/v1/`. OpenAI SDK, MobileCLIP2 인코더, 규칙 사전은 Gateway 안에만 있습니다. |
 | --- | --- |
-| 호출자 | 워커(Event Analyzer, Track Analyzer, Embedding Worker, Aggregator)와 Search(동기), Quality 평가 잡. NetworkPolicy와 ServiceAccount 토큰으로 제한하고 호출자별 사용량을 기록합니다. |
+| 호출자 | **[gRPC]** 워커(Event Analyzer, Track Analyzer, Embedding Worker, Aggregator)와 Search, Quality 평가 잡이 gRPC로 호출합니다. NetworkPolicy와 메타데이터의 ServiceAccount 토큰으로 제한하고 호출자별 사용량을 기록합니다. 데드라인은 호출자가 정하고 Gateway는 남은 시간을 외부 AI 호출에 넘깁니다. |
 | 이미지 전달 | 호출자는 S3 경로만 넘기고 Gateway가 블러 사본을 읽어 모델에 전달합니다. 원본 경로는 거부합니다. |
 | 처리 순서 | Prompt Registry → 결과 캐시(Redis → DB) → 예산 · 사용자별 상한 → 토큰 버킷 → Adapter → 출력 스키마 검증(Pydantic) → 필요 시 단계 상향 → 결과 · 호출 로그 저장. |
 | 출력 검증 | 응답에서 JSON 객체를 추출하고 taskType별 Pydantic 모델로 검증합니다. 실패하면 원문을 보관하고 `unknown`으로 돌려주며, 재시도는 호출자가 결정합니다. |
@@ -1107,6 +1191,12 @@ Phase 1+ · **[v4]** 평가 · 상태 변화 · 예측 준비 (서버 담당)
 - ⑨ Quality 데이터 틀 — 1 · 2 · 3차 평가 · 예측
 - ⑩ 처리 단계 성능 측정 — 전 단계 · 평가 (단계 ID 계약 · 공통 라이브러리 · `stage.timing` · Quality 리포트 · 성능 회귀 CI Gate)
 - 분류 체계 v2(8종 + 클래스 대응표), ADR 3건(벡터 후보 경로 · 재고 비교 · 보존 등급)
+
+Phase 1+ · **[gRPC]** 내부 동기 통신 gRPC (서버 담당)
+
+- proto 계약 3개(`ai_gateway` · `analysis` · `inference`) + `buf` 검사, ADR 1건, ADR-0009 추론 경계 갱신
+- AI Gateway gRPC 서버 + Search 클라이언트 → Analysis 내부 읽기 → 워커 클라이언트 → 추론 경계
+- 공통 라이브러리(ai `libs/grpc`, backend `libs/common-grpc`): 인터셉터(traceparent · 토큰 · 데드라인), round_robin 채널, health
 
 Phase 2 · 실시간 스트리밍
 
