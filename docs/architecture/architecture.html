@@ -3052,9 +3052,12 @@ quality-service</td>
 <tr>
 <td>analysis-api</td>
 <td>같은 jobId의 <code>source.completed</code>가 <code>revision</code>을
-올려 다시 오면 결정적 ID로 upsert한다</td>
-<td>늦은 벡터 이벤트가 보관 결과에 반영되지 않는다(결과 파일에는
-있다)</td>
+올려 다시 오면 결정적 ID로 upsert한다. 요약 응답에
+<code>partial</code>·<code>missingCounts</code>·<code>revision</code>·<code>unverifiedCounts</code>,
+이벤트 응답에 <code>unverifiedReason</code>을 그대로 노출한다(계약
+analysis-service 0.5.0 선택 필드)</td>
+<td>늦은 벡터 이벤트가 보관 결과에 반영되지 않는다(결과 파일에는 있다).
+화면의 누락·예산 초과 안내가 비어 보인다</td>
 </tr>
 <tr>
 <td>search-service</td>

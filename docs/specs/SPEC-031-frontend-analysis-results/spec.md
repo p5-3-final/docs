@@ -160,6 +160,7 @@ v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6절, [ADR-0015](..
 | `service-contracts/openapi/stream-service.yaml` | v5.1: 세션 조회 API(SPEC-036) | 예(추가) |
 | `service-contracts/notifications/v1/notification-message.schema.json` | v5.1: 메시지 종류 `alert.raised`·`state.updated`(생산자 확인 필요) | 예(열거값 추가) |
 | `service-contracts/events/source.completed.schema.json` | v5.1: `partial`·`missingCounts`·`revision`을 analysis-api 요약 응답이 그대로 노출(생산자 확인 필요) | 예(선택 필드 추가) |
+| `service-contracts/openapi/analysis-service.yaml` | 4.2.0(0.5.0): `SourceSummary`의 `partial`·`missingCounts`·`revision`·`unverifiedCounts`, `EventSummary.unverifiedReason`(생산자 확인 필요, R-22·R-23) | 예(선택 필드 추가) |
 
 계약 묶음 3.10.0 → 3.11.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
