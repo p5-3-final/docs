@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/event.candidate.vector.schema.json",
   "title": "EventCandidateVector",
-  "description": "구간 벡터가 유형별 텍스트 프로토타입과 임계값 이상으로 비슷하다(ADR-0010 ③). 후보가 있는 실행마다 한 번, segment.embedded 뒤에 발행한다(같은 실행이면 같은 eventId). 후보가 없으면 발행하지 않는다. pipeline-service 완료 판정에 넣지 않는다. 발행: frame-encoder. 소비: event-analyzer (판정 방식 vector+vlm) (SPEC-019 R-11~R-14)",
+  "description": "구간 벡터가 유형별 텍스트 프로토타입과 임계값 이상으로 비슷하다(ADR-0010 ③). 후보가 있는 실행마다 한 번, segment.embedded 뒤에 발행한다(같은 실행이면 같은 eventId). 후보가 없으면 발행하지 않는다. pipeline-service 완료 판정에 넣지 않는다. 발행: frame-encoder. 소비: event-analyzer (판정 방식 vector+vlm, SPEC-020) (SPEC-019 R-11~R-14)",
   "type": "object",
   "allOf": [
     {
