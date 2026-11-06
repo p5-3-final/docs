@@ -2,6 +2,7 @@
 
 | 문서 | 언제 읽나 | 누가 고치나 |
 | --- | --- | --- |
+| [handoff.md](handoff.md) | 새 컴퓨터·새 세션에서 작업을 이어받을 때 가장 먼저 | 상태가 바뀔 때마다 |
 | [principles.md](principles.md) | 모든 plan 작성 전 | 팀 합의 + ADR |
 | [product/prd.md](product/prd.md) | 기능을 기획할 때 | PM 역할 |
 | [product/glossary.md](product/glossary.md) | 도메인 용어가 헷갈릴 때 | 누구나 |
