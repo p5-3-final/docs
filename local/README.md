@@ -1,6 +1,6 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), ai-gateway(SPEC-009)가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), frame-encoder(SPEC-019), ai-gateway(SPEC-009)가 들어 있고, 서비스 구현이 시작되면 추가한다.
 
 | 컨테이너 | 호스트 포트 | 메모리 상한 |
 | --- | --- | --- |
@@ -9,15 +9,16 @@
 | auth-service | 8081 | 768M |
 | media-service | 8082 | 768M |
 | normalize | — (health 8000, 내부) | 768M |
+| frame-encoder | — (health 8000, 내부) | 1G |
 | ai-gateway (내부 전용 API) | 8000 | 768M |
 | postgres (auth_db, media_db, ai_db) | 5432 | 512M |
 | redis | 6379 | 128M |
 | kafka (KRaft 단일 노드) | 9092 | 512M |
 | seaweedfs (S3 API, 버킷 `vlm-media`) | 8333 | 384M |
 
-`seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
+`seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·frame-encoder·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
 
-`kafka-init`은 normalize·ai-gateway가 쓰는 토픽(재시도·DLQ, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
+`kafka-init`은 normalize·frame-encoder·ai-gateway가 쓰는 토픽(재시도·DLQ, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
 
 ## 준비
 
@@ -109,6 +110,21 @@ local/scripts/upload-registry.sh   # 이미지의 Registry·프로필로 묶음�
 - 출력한 `AI_GATEWAY_REGISTRY_BUNDLE`·`AI_GATEWAY_REGISTRY_BUNDLE_SHA256`·`AI_GATEWAY_PROFILE_PATH`(묶음 안 상대 경로)를 `local/.env`에 넣고 ai-gateway를 다시 띄운다. 지우면 이미지의 것으로 돌아간다.
 - 프롬프트나 프로필을 바꾸면 이미지를 다시 빌드하고 스크립트를 다시 실행한다. 내용이 바뀌면 해시와 경로가 함께 바뀐다.
 - 새 taskType은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`(프롬프트, 입력·출력 스키마와 예시, `fallback.json`)와 프로필의 `[tasks.<taskType>]`만 더한다(R-24).
+
+### frame-encoder 구간·크롭 벡터 (SPEC-019)
+
+frame-encoder는 `segment.ready`를 받아 실행 폴더의 블러 이미지를 벡터로 바꾸고 `vectors.json`을 저장한 뒤 `segment.embedded`를 발행한다. 프로필에 프로토타입이 있으면 임계값을 넘은 구간을 `event.candidate.vector`로 발행한다. `segment.ready`를 발행하는 chunk-processor는 아직 compose에 없어, 지금은 메시지를 직접 넣어 확인한다.
+
+- 기본 프로필은 mock(`/app/profiles/local-mock.toml`)이다. 벡터에 의미가 없고 모든 구간이 후보가 된다(흐름 확인용).
+- 실제 인코더는 위 ai-gateway와 같은 가중치를 쓴다. `local/scripts/upload-models.sh`를 한 번 실행한 뒤 프로필을 바꾼다. ai-gateway도 `local.toml`로 맞춰야 질의 벡터와 같은 공간이 된다.
+
+```bash
+FRAME_ENCODER_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d frame-encoder
+```
+
+- 받은 가중치는 `frame-encoder-models` 볼륨에 남는다. manifest·가중치 해시가 프로필과 다르면 뜨지 않는다.
+- `local.toml`의 프로토타입 문장·임계값은 흐름 확인용 예시다. 후보 품질을 로컬 결과로 판단하지 않는다.
+- 실행 폴더 `blurred/` 밖 경로를 가리키거나 이미지가 없는 메시지는 `frame-encoder.dlq`로 간다.
 
 ### ai-gateway 벡터 생성 (SPEC-011)
 
