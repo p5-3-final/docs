@@ -20,7 +20,8 @@
     },
     "horizons": {
       "type": "array",
-      "minItems": 1,
+      "description": "예측 구간별 노출 확률. 예측 모델이 설정되지 않아 대체 결과를 낼 때는 빈 배열이다(SPEC-028 R-15)",
+      "minItems": 0,
       "maxItems": 6,
       "items": {
         "type": "object",

@@ -159,7 +159,7 @@ pipeline-service와 analysis-api 담당자로서 Job마다 트랙 연결이 끝�
 | `service-contracts/stages/v1/stages.schema.json` | `track-stitcher.queue_wait`·`track-stitcher.handle`·`stitcher.boundary`·`stitcher.reid`·`stitcher.finalize` | 예(추가) |
 | `service-contracts/events/chunk.boundary.schema.json`, `track.detected.schema.json` | v5.1: 선택 필드 `jobType`(없으면 `FULL`). `track.detected`는 origin `chunk`에 `trackIdEpoch` 선택 필드 | 예(선택 필드 추가) |
 
-계약 묶음 3.1.0 → 3.2.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
+계약 묶음 3.1.0 → 3.2.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가) 4.0.0 → 4.1.0(2026-11-07): `chunk-tracks`의 `boundaryBoxes`를 이웃 청크와 함께 처리하는 경계 창 전체로 넓히고(R-4·R-6의 공통 관측 전제), `track.detected.stitched`를 경계 한 쌍의 두 구성원으로 좁혔다(NFR-2). 생산자 chunk-processor 확인 필요.
 
 ## 7. 성공 지표
 

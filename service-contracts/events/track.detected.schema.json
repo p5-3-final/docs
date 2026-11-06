@@ -86,7 +86,7 @@
     "stitched": {
       "type": "array",
       "maxItems": 1024,
-      "description": "origin stitcher: 이 경계에서 이어진 트랙 묶음. 앞 청크에서 이미 이어진 구성원도 포함한다",
+      "description": "origin stitcher: 이 경계에서 이어진 트랙 쌍. members는 이 경계의 앞 청크 트랙과 뒤 청크 트랙 두 개뿐이다. 여러 경계를 거쳐 이어진 묶음과 최종 trackId는 track.manifest 번역표가 정한다. 도착 순서와 상관없이 같은 경계면 같은 내용이다(SPEC-022 NFR-2)",
       "items": {
         "type": "object",
         "additionalProperties": false,

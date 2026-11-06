@@ -188,8 +188,8 @@ plan을 쓰며 나온 결정 사항과 spec·계약 불일치다.
 | D-14 | SPEC-025 | R-9에 없는 502·504·그 밖의 5xx | 재시도 토픽 | |
 | D-15 | SPEC-027 | analysis-api 자리 표시 서버 | 미정. A 계약 기반 mock 도구(새 도구), B `libs/testing`에 작은 FastAPI 앱(기존 의존성), C 자리 표시 서버 없이 MockTransport 테스트만. 단위·e2e는 MockTransport라 구현을 막지 않음 | |
 | D-16 | SPEC-027 | 직전 영상 `final-state`가 404 `ANALYSIS_SOURCE_NOT_FOUND` | 빈 초기 상태 | |
-| D-17 | SPEC-028 | `not_restored` 판정 이미지(직전 영상 프레임을 ai-gateway가 받지 않음) | 미정. A aggregator가 프레임을 현재 job 폴더로 복사, B 계약 변경, C 이미지 1장 판정(spec 수정). 결정 전 T018 보류 | |
-| D-18 | SPEC-028 | `risk_forecast` 모델 미설정 결과 | `_risk-forecast`의 `horizons` 최소 개수를 0으로(계약 minor). 결정 전 T022 보류 | |
+| D-17 | SPEC-028 | `not_restored` 판정 이미지(직전 영상 프레임을 ai-gateway가 받지 않음) | 미정. A aggregator가 프레임을 현재 job 폴더로 복사, B 계약 변경, C 이미지 1장 판정(spec 수정). 결정 전 T018 보류 | A(2026-11-07, 추천안으로 진행) |
+| D-18 | SPEC-028 | `risk_forecast` 모델 미설정 결과 | `_risk-forecast`의 `horizons` 최소 개수를 0으로(계약 minor). 결정 전 T022 보류 | 기본안(4.1.0 반영) |
 | D-19 | SPEC-028 | 규칙 점수 공식 | λ = 분당 진입 수/60 × min(1, 활성 초/saturation_s), p = 1 − exp(−λh). 실제 값·공식 교체는 AI 담당자 몫 | |
 | D-20 | SPEC-028 | 호출 상한을 넘은 통로·위험구역 장비 방치 | `unverified`로 기록하고 상태 계산에서 뺌 | |
 | D-21 | SPEC-030 | 상태 변화 종류 대응 | 라벨 `added`↔결과 `appeared`, `removed`↔`removed`, `moved`↔`moved`. `restored`·`not_restored`는 짝 없음 | |
@@ -209,10 +209,10 @@ plan을 쓰며 나온 결정 사항과 spec·계약 불일치다.
 
 | # | spec·계약 | 문제 | 수정안 |
 | --- | --- | --- | --- |
-| C-1 | SPEC-022, `tracks/v1/chunk-tracks` | `boundaryBoxes`가 겹침 구간 박스만 담는다. 그래서 앞 청크 박스는 경계 뒤 5초에만, 뒤 청크 박스는 경계 앞 5초에만 있어 공통 관측이 거의 없다. IoU 연결(R-4·R-6)이 동작하지 않는다 | 박스를 경계 양쪽 창 전체로 넓힌다. 생산자가 chunk-processor라 생산자 확인 필요 표시를 유지한다. plan은 고친 계약을 전제로 쓰였다 |
-| C-2 | SPEC-022, `track.detected` `stitched` | "앞 청크에서 이미 이어진 구성원도 포함"이라는 설명 때문에 도착 순서에 따라 내용·trackId가 달라진다. US-1 AC3·NFR-2와 충돌한다 | 쌍의 두 구성원만 담는다. 여러 경계를 잇는 묶음은 manifest 번역표가 정한다 |
-| C-3 | SPEC-028 R-7 | 직전 영상 프레임(`sources/<previousSourceId>/`)을 ai-gateway가 받지 않는다(D-17) | D-17을 정한 뒤 spec이나 계약을 고친다 |
-| C-4 | `_risk-forecast` | `horizons` 최소 1개라 모델 미설정 `fallback.json`을 만들 수 없다(D-18) | `minItems: 0` |
+| C-1(4.1.0 반영) | SPEC-022, `tracks/v1/chunk-tracks` | `boundaryBoxes`가 겹침 구간 박스만 담는다. 그래서 앞 청크 박스는 경계 뒤 5초에만, 뒤 청크 박스는 경계 앞 5초에만 있어 공통 관측이 거의 없다. IoU 연결(R-4·R-6)이 동작하지 않는다 | 박스를 경계 양쪽 창 전체로 넓힌다. 생산자가 chunk-processor라 생산자 확인 필요 표시를 유지한다. plan은 고친 계약을 전제로 쓰였다 |
+| C-2(4.1.0 반영) | SPEC-022, `track.detected` `stitched` | "앞 청크에서 이미 이어진 구성원도 포함"이라는 설명 때문에 도착 순서에 따라 내용·trackId가 달라진다. US-1 AC3·NFR-2와 충돌한다 | 쌍의 두 구성원만 담는다. 여러 경계를 잇는 묶음은 manifest 번역표가 정한다 |
+| C-3(4.1.0 반영) | SPEC-028 R-7 | 직전 영상 프레임(`sources/<previousSourceId>/`)을 ai-gateway가 받지 않는다(D-17) | D-17을 정한 뒤 spec이나 계약을 고친다 |
+| C-4(4.1.0 반영) | `_risk-forecast` | `horizons` 최소 1개라 모델 미설정 `fallback.json`을 만들 수 없다(D-18) | `minItems: 0` |
 
 정리할 것(구현은 기본안으로 진행)
 
@@ -226,7 +226,7 @@ plan을 쓰며 나온 결정 사항과 spec·계약 불일치다.
 | C-10 | SPEC-026 R-10 | 영상 길이 비교에 허용 오차가 없다 | 프레임 간격 하나만큼 넘는 것은 허용한다 |
 | C-11 | `groundings/v1` `sampleFps` | 이름은 fps인데 설명은 "간격"이다 | 설명을 "초당 샘플 수"로 고친다(patch) |
 | C-12 | 모델 manifest(`models/`) | `kind: detector`가 `classes` 1개 이상을 요구한다. 개방 어휘 탐지기 manifest를 어떻게 쓸지 정해지지 않았다 | AI 담당자와 정한다 |
-| C-13 | `event.manifest`·AsyncAPI·`detectorCandidate` 설명 | 요구사항 번호가 틀렸다(R-12→R-10, R-10→R-9) | 설명을 고친다(patch) |
+| C-13(AsyncAPI 4.1.0 반영) | `event.manifest`·AsyncAPI·`detectorCandidate` 설명 | 요구사항 번호가 틀렸다(R-12→R-10, R-10→R-9) | 설명을 고친다(patch) |
 | C-14 | `track.manifest` 설명 | "SPEC-022 R-10~R-14"가 spec과 맞지 않는다 | R-12·R-13으로 고친다 |
 | C-15 | `event.manifest` 크기 | 후보 20,000개면 `analyzedEventIds`가 약 0.8MB라 Kafka 기본 상한 1MB에 가깝다 | 운영 토픽 `max.message.bytes`를 확인하거나 상한을 줄인다 |
 | C-16 | SPEC-021 R-1·R-3 | 마감을 반영할 "외부 모델" 범위가 모호하다 | plan은 공급자 Adapter 경로에만 반영하고, 인코더 경로는 받을 때 검사만 한다. 마감 초과 504는 호출 로그에 남기지 않는다. 의도와 다르면 spec을 고친다 |
