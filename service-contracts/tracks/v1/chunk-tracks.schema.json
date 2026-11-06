@@ -91,11 +91,11 @@
           },
           "touchesHead": {
             "type": "boolean",
-            "description": "처리 범위 앞쪽 겹침 구간(processingRange.startMs ~ ownedRange.startMs)에 관측이 있다. 첫 청크는 늘 false"
+            "description": "앞쪽 경계 창(boundaryBoxes 설명)에 관측이 있다. 첫 청크는 늘 false"
           },
           "touchesTail": {
             "type": "boolean",
-            "description": "처리 범위 뒤쪽 겹침 구간(ownedRange.endMs ~ processingRange.endMs)에 관측이 있다. 마지막 청크는 늘 false"
+            "description": "뒤쪽 경계 창(boundaryBoxes 설명)에 관측이 있다. 마지막 청크는 늘 false"
           },
           "observationCount": {
             "type": "integer",
@@ -136,7 +136,7 @@
                 }
               }
             },
-            "description": "앞·뒤 겹침 구간 안의 박스만(검출 fps 그대로). touchesHead·touchesTail이 모두 false면 빈 배열"
+            "description": "앞·뒤 경계 창 안의 박스(검출 fps 그대로). 경계 창은 이웃 청크와 함께 처리하는 구간 전체다. 앞쪽은 processingRange.startMs ~ ownedRange.startMs + (ownedRange.startMs − processingRange.startMs), 뒤쪽은 ownedRange.endMs − (processingRange.endMs − ownedRange.endMs) ~ processingRange.endMs다. 이웃 청크의 같은 경계 창과 시각이 겹쳐야 track-stitcher가 공통 관측으로 IoU를 계산할 수 있다(SPEC-022 R-4·R-6). touchesHead·touchesTail이 모두 false면 빈 배열"
           },
           "representativeCrops": {
             "type": "array",

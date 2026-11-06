@@ -102,7 +102,7 @@ v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6.2절, [ADR-0015](
 | R-4 | THE aggregator SHALL 짝이 없는 앞 청크 객체를 `removed` 후보(직전 시각은 그 객체의 마지막 관측)로, 짝이 없는 뒤 청크 객체를 `appeared` 후보(이후 시각은 처음 관측)로 만든다. | US-1 |
 | R-5 | THE aggregator SHALL 같은 클래스의 `removed`와 `appeared` 후보가 프로필 이동 창(기본 120초) 안이면 시간이 가까운 쌍부터 `moved` 후보 하나로 합친다. | US-1 |
 | R-6 | WHERE 세션 직전 영상의 끝 재고(`final-state`의 `staticObjects`)가 있으면, THE aggregator SHALL 그것을 첫 청크 앞의 재고로 놓고 R-3~R-5를 적용하며, 프로필 방호 클래스의 `removed` 후보 중 영상 끝까지 `appeared`와 짝지어지지 않은 것을 `not_restored`로 바꾼다. | US-2 |
-| R-7 | THE aggregator SHALL `removed`·`moved`·`not_restored` 후보마다 직전 객체의 대표 프레임과 이후 시각에 가장 가까운 기준 프레임(`moved`는 이후 객체의 대표 프레임) 두 장, 기대 객체 클래스·구역 이름으로 ai-gateway `state_compare`를 부른다. `appeared` 후보는 부르지 않고 기록만 한다. | US-1, US-2 |
+| R-7 | THE aggregator SHALL `removed`·`moved`·`not_restored` 후보마다 직전 객체의 대표 프레임(직전 영상의 프레임이면 이 job 폴더 `aggregate/frames/`로 복사한 사본, 2026-11-07 결정 D-17 A)과 이후 시각에 가장 가까운 기준 프레임(`moved`는 이후 객체의 대표 프레임) 두 장, 기대 객체 클래스·구역 이름으로 ai-gateway `state_compare`를 부른다. `appeared` 후보는 부르지 않고 기록만 한다. | US-1, US-2 |
 | R-8 | IF job의 판정 호출 수가 프로필 상한(기본 20)에 이르면, THEN THE aggregator SHALL 남은 후보를 판정하지 않고 `eventId`·`verificationStatus` null로 기록한다. 후보는 직전 시각 순으로 판정한다. | US-1 |
 | R-9 | THE aggregator SHALL 판정한 후보마다 `moved`는 `object_moved`, `removed`는 `object_removed`, `not_restored`는 `barrier_not_restored` 유형의 재고 이벤트를 `state_compare`의 VLMAnalysis로 만들고, `verificationStatus`가 `confirmed`이면 SPEC-027 상태 계산·노출 지표·타임라인에 넣는다. | US-1, US-2 |
 | R-10 | IF `state_compare` 호출이 SPEC-021 R-9 재시도 뒤에도 오류로 끝나면, THEN THE aggregator SHALL 그 재고 이벤트를 `verificationStatus: unknown`인 분석으로 기록하고 상태 계산에 넣지 않는다. | US-1 |
@@ -151,7 +151,7 @@ v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6.2절, [ADR-0015](
 | `service-contracts/stages/v1/stages.schema.json` | `aggregate.inventory_store`·`aggregate.inventory_compare`·`aggregate.judge`·`aggregate.forecast` | 예(추가) |
 | `service-contracts/events/chunk.manifest.schema.json` | v5.1: 선택 필드 `jobType`·`trackIdEpoch`·`last`·`gapMs`(생산자 stream-ingestor 추가, SPEC-037) | 예(선택 필드 추가) |
 
-계약 묶음 3.7.0 → 3.8.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
+계약 묶음 3.7.0 → 3.8.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가) 4.0.0 → 4.1.0(2026-11-07): `_risk-forecast.horizons` 최소 0개(모델 미설정 대체 결과, R-15). R-7의 직전 영상 프레임은 이 job 폴더로 복사해 보낸다(결정 D-17 A, 계약 변경 없음).
 
 ## 7. 성공 지표
 
