@@ -4,7 +4,7 @@ updated: 2026-11-06
 
 # 업로드 후 처리 순서 (단순판)
 
-> [아키텍처 v5](architecture.md) 5절 "업로드 경로"의 단계표를 한 장으로 줄인 문서다. 영상이 업로드된 뒤 결과가 화면에 나오기까지 어떤 서비스가 무엇을 하고, 어떤 토픽으로 넘기고, 어디서 AI를 부르고, AI 담당자가 바꿀 수 있는 자리가 어디인지만 적는다. 규칙의 근거와 세부 조건은 아키텍처 v5와 각 spec에 있다. 두 문서가 다르면 아키텍처 v5와 계약이 맞다.
+> [아키텍처 v5.1](architecture.md) 5절 "업로드 경로"의 단계표를 한 장으로 줄인 문서다. 실시간 경로는 창 이후가 이 표의 5~11단계와 같고 다른 점은 아키텍처 6절에 있다. 영상이 업로드된 뒤 결과가 화면에 나오기까지 어떤 서비스가 무엇을 하고, 어떤 토픽으로 넘기고, 어디서 AI를 부르고, AI 담당자가 바꿀 수 있는 자리가 어디인지만 적는다. 규칙의 근거와 세부 조건은 아키텍처 v5.1과 각 spec에 있다. 두 문서가 다르면 아키텍처 v5.1과 계약이 맞다.
 
 ## 1. 한눈에 보기
 
@@ -75,14 +75,14 @@ flowchart TB
 | 4 | chunk-processor | `chunk.requested` | 청크를 한 번만 디코딩해 두 갈래로 나눈다. 검색: 10초 창·5초 간격 구간마다 프레임 4장을 뽑아 블러 사본 저장. 이벤트: 확장 범위로 탐지·추적하고 이벤트 정의 목록의 규칙에 맞는 순간을 후보로 묶음(실행당 1건, 후보마다 `judgment: rule` 또는 `vlm`, 근거 프레임 최대 12장). 정적 객체 재고도 기록 | `segment.ready` · `event.candidate` · `track.detected` · `chunk.boundary` · `chunk.manifest` · `chunk.execution.finished` | YOLO26n(COCO) · YOLO-pose(쓰러짐 가상 클래스) · YOLOE(텍스트 클래스: 보호구·화염·연기·방호벽) · ByteTrack, 모두 CPU, 워커 안에서 실행 | 없음 |
 | 5 | frame-encoder | `segment.ready` | 구간마다 프레임 4장을 인코딩해 정규화 평균한 벡터 1개, 트랙 대표 크롭 벡터. 벡터 파일을 S3에 저장. 이어서 구간 벡터를 유형별 텍스트 프로토타입과 비교해 임계값 이상이면 벡터 후보 발행 | `segment.embedded` · `event.candidate.vector` | MobileCLIP2-S0(open_clip, CPU), 코사인 유사도 | 없음 (인코더는 워커 안) |
 | 6 | search-service | `segment.embedded` | 벡터 파일을 읽어 COPY 적재. `embedding_model`이 활성 설정과 다르면 거절 | `segment.indexed` | pgvector halfvec, HNSW | 없음 |
-| 7 | event-analyzer | `event.candidate` · `event.candidate.vector` | 같은 트랙·같은 유형이 10초 안에 이어지면 하나로 병합(메시지 안). `rule` 후보는 템플릿으로 `confirmed`. `vlm` 후보와 벡터 후보는 `event_judge`로 판정하고, 결과가 severity `high`이거나 판단 불가면 `event_judge_escalate`로 재판정. 두 판정이 엇갈리면 `reviewRequired`. 출력은 `VLMAnalysis` 스키마로 검증. 실패해도 후보를 버리지 않고 `unverified`·`unknown`으로 발행 | `event.analyzed`(후보마다) · `event.manifest`(실행마다, 탐지기 후보만) | asyncio, 동시 4건 | `event_judge`(terra) · `event_judge_escalate`(sol) |
+| 7 | event-analyzer | `event.candidate` · `event.candidate.vector` | 같은 트랙·같은 유형이 10초 안에 이어지면 하나로 병합(메시지 안). `rule` 후보는 템플릿으로 `confirmed`. `vlm` 후보와 벡터 후보는 `event_judge`로 판정하고, 결과가 severity `high`이거나 판단 불가면 `event_judge_escalate`로 재판정. 두 판정이 엇갈리면 `reviewRequired`. 상태형 유형은 메시지 안 구간 규칙(120초)으로 첫 후보만 판정하고 나머지는 결과를 복사(`rule+carry`), 실행당 호출 상한(`max(3, 분당 3회 × 길이)`)을 넘으면 `unverified`(`unverifiedReason: call_cap_reached`). 출력은 `VLMAnalysis` 스키마로 검증. 실패해도 후보를 버리지 않고 `unverified`·`unknown`으로 발행 | `event.analyzed`(후보마다) · `event.manifest`(실행마다, 탐지기 후보만) | asyncio, 동시 4건 | `event_judge`(terra) · `event_judge_escalate`(sol) |
 | 8 | track-stitcher | `chunk.boundary` · `segment.embedded` | 인접 청크의 겹치는 5초에서 같은 클래스 트랙을 IoU로 연결. 영상의 모든 청크와 크롭 벡터가 모이면 사라졌다 나타난 트랙을 크롭 벡터 코사인 유사도·시간 간격으로 연결(Re-ID). 로컬→최종 trackId 번역표 저장 | `track.detected`(쌍마다) · `track.manifest`(Job마다) | Redis 대기 상태, 표준 라이브러리 계산 | 없음 |
 | 9 | analysis-api · analysis-loader | `event.analyzed` · `track.detected` · `track.manifest` | 이벤트·트랙 저장, 검출 박스 대량 적재, 번역표로 최종 trackId 확정. 이벤트 관련 트랙에 속성 분석 요청 | `attribute.requested` | Spring, 파티션 테이블 | 없음 |
 | 10 | track-analyzer | `attribute.requested` | 트랙 대표 크롭 1~3장으로 보호구 착용·역할·장비 추정. 같은 트랙은 결과를 저장해 다시 부르지 않음 | `track.analyzed` | asyncio | `track_attribute`(luna) |
 | 11 | embedding-worker | `event.analyzed` · `track.analyzed` · `segment.annotated` | 이벤트 설명문(description·riskReason·solution)과 트랙 설명을 문장 하나씩 텍스트 벡터로 만들어 S3 파일로 저장 | `embedding.ready` → search-service 텍스트 인덱스 | asyncio | `embed_text`(text-embedding-3-small) |
 | 12 | pipeline-service | `segment.indexed` · `event.manifest` · `track.manifest` · `chunk.manifest` | 적재 완료 신호의 합이 계획과 맞으면 Job을 `ANALYZED`로. 벡터 후보 판정과 트랙 속성은 완료 조건이 아니다 | `analysis.completed`(counts 포함) | Spring, job 행 잠금 | 없음 |
-| 13 | aggregator | `analysis.completed` · `chunk.manifest`(재고) · analysis-api 내부 읽기 API | 읽은 이벤트·트랙 수가 counts와 다르면 재시도. (a) 청크 경계에 걸린 같은 사건 병합, (b) 체류 60초·배회 3회/300초 템플릿 이벤트, (c) `confirmed` 이벤트만 시간순으로 훑어 상태 스냅샷과 위험 활성·해소, (d) 노출 지표, (e) 청크별 정적 객체 재고를 시간순 비교해 제거·이동·미복구 후보를 `state_compare`로 판정(Job당 최대 20회), 장비 방치는 템플릿(통로·위험구역이면 `event_judge`), (f) 요약, (g) 영상 끝 활성 위험마다 노출 예측. 세션이 있으면 직전 영상의 마지막 상태에서 시작 | `source.completed`(결과 파일 경로) | 순수 함수(같은 입력이면 같은 결과) | `state_compare`(terra) · `event_judge`(terra) · `source_summary`(luna, 텍스트만) · `risk_forecast`(predictor, 규칙 점수) |
-| 14 | analysis-api → notification-service | `source.completed` | 자기 저장 수가 manifest 수와 맞을 때 같은 트랜잭션에서 규칙 이벤트·스냅샷·위험 상태 저장과 활성 버전 전환. 브라우저에 SSE 알림 | `version.activated` → search-service | Spring, Redis pub/sub | 없음 |
+| 13 | aggregator | `analysis.completed` · `chunk.manifest`(재고) · `event.analyzed`(벡터 후보 대기 집합) · analysis-api 내부 읽기 API | 읽은 이벤트 중 `rule*` 수와 트랙 수가 counts와 다르면 재시도(상한 뒤 `partial`). 대기 집합의 벡터 이벤트를 합친다. (a) 청크 경계에 걸린 같은 사건 병합, (b) 체류 60초·배회 3회/300초 템플릿 이벤트, (c) `confirmed` 이벤트만 시간순으로 훑어 상태 스냅샷과 위험 활성·해소, (d) 노출 지표, (e) 청크별 정적 객체 재고를 시간순 비교해 제거·이동·미복구 후보를 `state_compare`로 판정(Job당 최대 20회), 장비 방치는 템플릿(통로·위험구역이면 `event_judge`), (f) 요약, (g) 영상 끝 활성 위험마다 노출 예측. 세션이 있으면 직전 영상의 마지막 상태에서 시작. 완료 뒤 늦게 온 벡터 이벤트는 그 시각 이후를 다시 계산해 `revision`을 올려 다시 발행 | `source.completed`(결과 파일 경로, revision) | 순수 함수(같은 입력이면 같은 결과) | `state_compare`(terra) · `event_judge`(terra) · `source_summary`(luna, 텍스트만) · `risk_forecast`(predictor, 규칙 점수) |
+| 14 | analysis-api → notification-service | `source.completed` | 자기 저장 수가 manifest 수와 맞을 때 같은 트랜잭션에서 규칙 이벤트·스냅샷·위험 상태 저장과 활성 버전 전환. revision이 올라간 재전달은 upsert(생산자 확인 필요). 브라우저에 SSE 알림 | `version.activated` → search-service | Spring, Redis pub/sub | 없음 |
 
 읽을 때 기억할 것
 
@@ -139,6 +139,7 @@ AI 담당자 몫이 아닌 것: 토픽·계약 형식, 완료 판정, 상태 전
 
 ## 6. 완료 판정과 활성 버전
 
-- pipeline-service가 세는 것: `segment.indexed`(구간 적재), `event.manifest`(탐지기 후보 판정 완료), `track.manifest`(트랙 연결 완료). 발행 수가 아니라 적재 쪽 신호를 센다는 것이 원칙이지만, `event.manifest`·`track.manifest`는 생산 워커(event-analyzer·track-stitcher)가 낸다. 그래서 aggregator가 읽은 수를 `analysis.completed`의 counts와 다시 맞춰 보고, 다르면 재시도한다.
-- 완료 조건에 들어가지 않는 것: `event.candidate.vector` 판정, 트랙 속성, 텍스트 임베딩, bbox 주석.
+- pipeline-service가 세는 것: `segment.indexed`(구간 적재), `event.manifest`(탐지기 후보 판정 완료), `track.manifest`(트랙 연결 완료). 발행 수가 아니라 적재 쪽 신호를 센다는 것이 원칙이지만, `event.manifest`·`track.manifest`는 생산 워커(event-analyzer·track-stitcher)가 낸다. 그래서 aggregator가 읽은 수(`rule*`만)를 `analysis.completed`의 counts와 다시 맞춰 보고, 다르면 재시도하며 상한 뒤에는 `partial: true`로 발행한다.
+- 완료 조건에 들어가지 않는 것: `event.candidate.vector` 판정, 트랙 속성, 텍스트 임베딩, bbox 주석. 완료 뒤 도착한 벡터 판정은 aggregator가 `source.completed`를 `revision`을 올려 다시 낸다(ADR-0016).
+- 예산·상한 초과로 판정하지 않은 후보는 `event.analyzed.unverifiedReason`으로 식별한다. 완료는 정상 진행되고 quality-service가 재판정 큐를 만든다.
 - 활성 버전 전환은 analysis-api가 `source.completed`를 받고 자기 저장 수가 manifest 수와 맞을 때만 한다. 검색은 `version.activated`를 받은 뒤 그 버전의 벡터만 본다.
