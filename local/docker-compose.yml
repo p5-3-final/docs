@@ -185,6 +185,9 @@ services:
       # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
       AWS_ACCESS_KEY_ID: local-media-key
       AWS_SECRET_ACCESS_KEY: local-media-secret
+      # 보존 키 비밀 키(SPEC-018). Base64로 쓴 로컬 전용 샘플값("local-only-retention-key-not-a-secret")이다.
+      # 운영은 Kubernetes Secret으로 넣는다.
+      MEDIA_RETENTION_HMAC_KEY: bG9jYWwtb25seS1yZXRlbnRpb24ta2V5LW5vdC1hLXNlY3JldA==
     ports:
       - "8082:8080"
     depends_on:
@@ -207,7 +210,7 @@ services:
       - sh
       - -c
       - >-
-        for topic in video.uploaded video.deleted video.normalizing video.normalized
+        for topic in video.uploaded video.deleted video.retention.revoked video.normalizing video.normalized
         video.uploaded.normalize.retry normalize.dlq
         video.deleted.ai-gateway.retry ai-gateway.dlq; do
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
