@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info:
+  title: notification-service API
+  version: 0.1.0
+  description: '실시간 알림 구독(SSE). 다른 담당자 서비스이고, 이 파일은 화면 spec(SPEC-031)이 아키텍처 문서대로 먼저 정한 경로만 담는다(생산자 담당자 확인 필요).
+
+    - 연결은 auth-service `POST /api/v1/auth/sse-tickets`로 받은 30초 1회용 티켓으로 한다(SPEC-001). EventSource는 헤더를 못 붙여 쿼리로 넘긴다.
+
+    - 사용자별 최근 이벤트를 남겨 다시 연결하면 `Last-Event-ID` 이후를 보낸다.
+
+    - 메시지 `data`는 `../notifications/v1/notification-message.schema.json` JSON 한 줄이고 SSE `event` 이름은 `type`과 같다. 15초마다 `ping`을 보낸다.
+
+    '
+servers:
+- url: /
+  description: api-gateway 경유
+tags:
+- name: notifications
+  description: 실시간 알림
+paths:
+  /api/v1/notify/stream:
+    get:
+      operationId: subscribeNotifications
+      summary: 알림 구독(SSE)
+      description: 요청자 영상의 진행·완료·트랙 속성·주석 클립 알림. 연결은 서버가 끊을 때까지 유지된다 (SPEC-031 R-12~R-14)
+      tags:
+      - notifications
+      security: []
+      parameters:
+      - name: ticket
+        in: query
+        required: true
+        description: SSE 티켓
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      - name: Last-Event-ID
+        in: header
+        required: false
+        description: 마지막으로 받은 이벤트 id
+        schema:
+          type: string
+          maxLength: 100
+      responses:
+        '200':
+          description: SSE 스트림. 각 이벤트의 data 형식은 `notifications/v1/notification-message.schema.json`이다
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'id: 1730887200000-0
+
+                event: job.status
+
+                data: {"type":"job.status","sourceId":"0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f","occurredAt":"2026-11-06T10:00:00Z","data":{"jobId":"0192f0d5-0000-7000-8000-000000000001","status":"RUNNING","progressPercent":40,"successPercent":100,"terminal":false}}
+
+
+                '
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
