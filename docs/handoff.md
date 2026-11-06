@@ -236,6 +236,8 @@ plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 | D-28 | SPEC-029 R-24 | 추이 조회에 `versionKey`만 있을 때 | 400 | |
 | D-29 | SPEC-030 | media 보존 등급 `DATASET`의 삭제 동작 | 이번에는 등급만 저장한다. 운영자가 삭제할 때 `video.deleted`를 낼지 막을지는 미정 | |
 | D-30 | SPEC-030 | 같은 매니페스트 다시 가져오기 | importId를 manifestKey로 결정적으로 만들어 같은 videoId를 보장한다. 대신 같은 경로의 가져오기 이력은 한 행에 덮어쓴다 | |
+| D-31 | 공통(ADR-0009) | 청크 단위 토픽의 Kafka 키 | 미정. docs #40(2026-11-03, pipeline 담당자)이 envelope 규칙(sourceId를 키로 씀)과 맞추려고 chunkId 키를 sourceId로 바꾸고, 병렬성은 "offset 연속 커밋·워커 동시 처리"로 풀기로 했다(ADR-0009). ai `libs/messaging` 워커는 메시지를 하나씩 처리해서 영상 하나의 청크(1시간이면 30개)가 Pod 하나에서 차례로 돈다. A 청크 단위 토픽 키를 chunkId로(계약 변경, 다른 담당자와 협의), B 공통 라이브러리에 동시 처리와 연속 offset 커밋 구현 | |
+| D-32 | 공통 | ai-gateway 역할 | 미정. 지금은 외부 모델 관문(라우팅·프롬프트·출력 검증·캐시·예산·분당 한도·호출 로그)과 프로세스 안 연산(MobileCLIP 질의 인코더, 질의 사전)을 함께 한다. 분당 한도·하루 예산이 호출자 구분 없이 공유돼 배치 판정이 검색 동기 호출을 밀어낸다. 역할을 나누는 안은 사용자와 정한다 | |
 
 ### 8.2 spec·계약 수정이 필요한 항목
 
@@ -253,7 +255,7 @@ plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 | # | 대상 | 문제 | 수정안 |
 | --- | --- | --- | --- |
 | C-5 | SPEC-025 제외 항목 | "같은 항목·다른 모델이면 다른 파일"이라고 적었지만 경로·`vectorKey`에 모델이 없어 덮어쓴다 | spec을 "eventId만 다르고 파일은 마지막 모델 결과로 덮어씀. 모델 교체 중 공존은 REEMBED spec에서"로 고치거나 경로에 모델 단계를 넣는다(계약 변경) |
-| C-6 | SPEC-025 R-9 | `AI_MODEL_NOT_CONFIGURED`·`AI_BUDGET_EXCEEDED`는 503이라 ai-client가 2회 헛재시도한 뒤 DLQ로 간다 | 그대로 두거나 SPEC-021 R-10에서 이 두 코드를 재시도하지 않게 한다 |
+| C-6 | SPEC-025 R-9 | `AI_MODEL_NOT_CONFIGURED`는 503이라 ai-client가 2회 헛재시도한 뒤 DLQ로 간다. `AI_BUDGET_EXCEEDED`는 2026-11-06에 429로 바꿔 해결했다(계약 3.15.0) | 그대로 두거나 SPEC-021 R-10에서 `AI_MODEL_NOT_CONFIGURED`를 재시도하지 않게 한다 |
 | C-7 | 서비스 카탈로그 embedding-worker 행 | 저장소 "—", "묶음" 임베딩으로 적혀 spec(S3 저장, 묶음 제외)과 다르다 | 카탈로그를 고친다 |
 | C-8 | SPEC-026 R-17 | `grounding.completed`에 기준 신뢰도를 기록하라고 하지만 계약에 필드가 없다 | R-17을 결과 파일만으로 줄인다 |
 | C-9 | SPEC-026 R-9 | eventId가 groundingId·탐지기 버전뿐이라, FAILED 뒤 READY나 다른 requestId의 결과가 같은 eventId가 된다 | eventId에 requestId·outcome을 넣는다 |
@@ -283,3 +285,7 @@ plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 | C-33 | media `registerDatasetVideo` | `X-Request-Deadline`·504가 없다 | 계약에 더한다 |
 | C-34 | quality 계약 설명의 요구사항 번호, `ReviewItem` 예시 | 번호가 틀렸다(R-8→R-9, R-12~R-15→R-13~R-15). 예시 `judgments_disagree`가 이벤트 enum `judgment_disagreement`와 다르다 | 설명과 예시를 고친다(patch) |
 | C-35 | backend Docker 이미지 빌드 | 빌드 컨텍스트에 계약 파일이 없어 생성 코드를 빌드하지 못한다 | `CONTRACTS_DIR` 빌드 인자(SPEC-029 T037) |
+| C-36 | ai-gateway 호출 로그 | 호출 로그 저장이 모든 응답에 필수라 ai DB가 멈추면 규칙 사전 parse와 로컬 인코더 embed도 500이다. 설계 원본은 VLM이 멈춰도 기본 검색이 유지된다고 적었다 | 호출 로그 저장 실패는 경고만 남기고 응답한다(spec 수정) |
+| C-37 | SPEC-020 R-11·R-12 | ai-gateway 연결 실패는 클라이언트 재시도 2회(약 3초) 뒤 `unknown`으로 확정된다. 롤링 배포 중에도 후보가 `unknown`으로 남는다 | 재시도를 소진한 연결 실패는 메시지 재시도 토픽으로 넘긴다(요청이 도착하지 않아 비용이 없다) |
+| C-38 | SPEC-021 | 설계 원본의 "서킷 브레이커는 클라이언트 쪽"이 어느 spec에도 없다 | ai-client에 둘지 정한다. search-service 쪽은 다른 담당자 몫 |
+| C-39 | ai `scripts/` | 설계 원본의 "운영자 재처리"(DLQ → 원래 토픽) 도구가 없다 | 재처리 스크립트를 더한다 |

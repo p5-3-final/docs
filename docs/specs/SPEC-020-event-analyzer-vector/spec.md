@@ -107,8 +107,8 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 | R-11 | IF ai-gateway에 연결하지 못해 요청이 전달되지 않았으면, THEN THE event-analyzer SHALL 그 호출을 설정한 횟수까지 다시 시도하고, 502·503·시간 초과는 다시 시도하지 않는다(overview "통신 규칙" 내부 동기 호출 규약: VLM 호출은 비용이 두 번 들 수 있어 요청이 도착하지 않은 경우만 재시도). | US-3 |
 | R-12 | IF 1차 판정 호출이 실패하면(R-11의 재시도 소진 포함), THEN THE event-analyzer SHALL 그 후보의 최종 분석을 `verificationStatus` `unknown`(나머지 판정 필드 null, 유형은 후보 유형)으로 만들고 실패 코드를 기록해 발행한다. | US-3 |
 | R-13 | IF 재판정 호출이 실패하면(R-11의 재시도 소진 포함), THEN THE event-analyzer SHALL 1차 판정 결과를 최종 분석으로 쓰고 재판정의 실패 코드를 기록한다. | US-3 |
-| R-14 | IF ai-gateway가 판정 호출에 `AI_IMAGE_NOT_FOUND`를 돌려주면, THEN THE event-analyzer SHALL 다시 시도하지 않고 R-12·R-13과 같이 그 호출을 실패로 기록한다. | US-3 |
-| R-15 | IF ai-gateway가 `AI_IMAGE_NOT_FOUND` 외의 4xx를 돌려주면, THEN THE event-analyzer SHALL 그 메시지의 `event.analyzed`를 하나도 발행하지 않고 메시지를 재시도 없이 DLQ로 보낸다. | US-4 |
+| R-14 | IF ai-gateway가 판정 호출에 `AI_IMAGE_NOT_FOUND`나 429 `AI_RATE_LIMITED`를 돌려주면, THEN THE event-analyzer SHALL 다시 시도하지 않고 R-12·R-13과 같이 그 호출을 실패로 기록한다. | US-3 |
+| R-15 | IF ai-gateway가 `AI_IMAGE_NOT_FOUND`·429 `AI_RATE_LIMITED` 외의 4xx를 돌려주면, THEN THE event-analyzer SHALL 그 메시지의 `event.analyzed`를 하나도 발행하지 않고 메시지를 재시도 없이 DLQ로 보낸다. | US-4 |
 | R-16 | IF `event.candidate.vector`가 계약 스키마에 맞지 않으면, THEN THE event-analyzer SHALL `event.analyzed`를 발행하지 않고 메시지를 재시도 없이 DLQ로 보낸다. | US-4 |
 | R-17 | IF Kafka에 일시적으로 발행할 수 없으면, THEN THE event-analyzer SHALL 메시지를 재시도 토픽으로 보내 다시 처리한다. | US-3 |
 | R-18 | THE event-analyzer SHALL 한 메시지의 후보 판정을 설정한 수(기본 4)까지만 동시에 진행한다. | US-1 |
