@@ -2,11 +2,80 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/event.analyzed.schema.json",
   "title": "EventAnalyzed",
-  "description": "이벤트 후보 하나를 판정했다. 후보마다 한 번 발행한다(같은 후보면 같은 eventId). 모델 미설정·예산 초과(unverified)와 판정 실패(unknown)도 버리지 않고 발행한다. 소비자는 eventId로 중복을 흡수한다. 발행: event-analyzer. 소비: analysis-api, embedding-worker, quality-service (SPEC-020 R-8~R-10)",
+  "description": "이벤트 후보 하나를 판정했다. 후보마다 한 번 발행한다(같은 후보면 같은 eventId). 모델 미설정·예산 초과(unverified)와 판정 실패(unknown)도 버리지 않고 발행한다. 소비자는 eventId로 중복을 흡수한다. 벡터 후보(SPEC-020)와 탐지기·규칙 후보(SPEC-023)를 같은 형식으로 낸다. 발행: event-analyzer. 소비: analysis-api, embedding-worker, quality-service (SPEC-020 R-8~R-10)",
   "type": "object",
   "allOf": [
     {
       "$ref": "_envelope.schema.json"
+    },
+    {
+      "if": {
+        "properties": {
+          "judgmentMethod": {
+            "enum": [
+              "vector+vlm",
+              "vector+vlm+escalate"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "vectorCandidate"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "judgmentMethod": {
+            "enum": [
+              "rule",
+              "rule+vlm",
+              "rule+vlm+escalate"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "detectorCandidate"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "judgmentMethod": {
+            "not": {
+              "const": "rule"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "judgments": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "judgmentMethod": {
+            "const": "rule"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "judgments": {
+            "maxItems": 0
+          }
+        }
+      }
     }
   ],
   "required": [
@@ -83,10 +152,13 @@
     "judgmentMethod": {
       "type": "string",
       "enum": [
+        "rule",
+        "rule+vlm",
+        "rule+vlm+escalate",
         "vector+vlm",
         "vector+vlm+escalate"
       ],
-      "description": "vector+vlm은 event_judge 한 번, vector+vlm+escalate는 event_judge_escalate 재판정까지 부른 것. 탐지기·규칙 후보의 판정 방식은 그 spec에서 더한다."
+      "description": "rule: 규칙으로 확정(VLM 없음, 템플릿 결과), rule+vlm·vector+vlm: event_judge 한 번, …+escalate: event_judge_escalate 재판정까지 부른 것. rule로 시작하면 탐지기·규칙 후보(event.candidate, SPEC-023), vector로 시작하면 벡터 후보(event.candidate.vector, SPEC-020)다."
     },
     "vectorCandidate": {
       "type": "object",
@@ -131,9 +203,9 @@
     },
     "judgments": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 2,
-      "description": "판정 호출 기록. 1차(judge)가 먼저, 재판정(escalate)이 있으면 그 뒤다.",
+      "description": "판정 호출 기록. 1차(judge)가 먼저, 재판정(escalate)이 있으면 그 뒤다. 판정 방식 rule이면 호출이 없어 빈 배열이다.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -222,22 +294,81 @@
     },
     "taxonomyVersion": {
       "const": "v2"
-    }
-  },
-  "if": {
-    "properties": {
-      "judgmentMethod": {
-        "enum": [
-          "vector+vlm",
-          "vector+vlm+escalate"
-        ]
+    },
+    "detectorCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunkId",
+        "executionId",
+        "triggerClass",
+        "score",
+        "observationCount",
+        "trackLocalId",
+        "zoneId",
+        "zoneName",
+        "detectorProfile",
+        "mergedCandidateIds"
+      ],
+      "description": "탐지기·규칙 후보(event.candidate)의 근거. judgmentMethod가 rule로 시작하면 있다(SPEC-023 R-10).",
+      "properties": {
+        "chunkId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "executionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "triggerClass": {
+          "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "observationCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "trackLocalId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9_-]{1,64}$",
+          "description": "관련 로컬 트랙. 최종 trackId는 track.manifest 번역표로 analysis-api가 정한다"
+        },
+        "zoneId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "zoneName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "detectorProfile": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$"
+        },
+        "mergedCandidateIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "쿨다운 병합으로 이 후보에 합쳐진 다른 후보 ID(SPEC-023 R-3). 없으면 빈 배열"
+        }
       }
     }
-  },
-  "then": {
-    "required": [
-      "vectorCandidate"
-    ]
   },
   "examples": [
     {
@@ -307,6 +438,57 @@
       "reviewRequired": false,
       "reviewReasons": [],
       "taxonomyVersion": "v2"
+    },
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000f3",
+      "occurredAt": "2026-11-06T09:00:05Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "eventType": "event.analyzed",
+      "schemaVersion": 1,
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "candidateId": "0192f100-0000-5000-8000-0000000000d3",
+      "candidateEventType": "hazard_zone_access",
+      "startMs": 52000,
+      "endMs": 53000,
+      "evidenceFrameKeys": [
+        "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d3-0.jpg"
+      ],
+      "judgmentMethod": "rule",
+      "analysis": {
+        "eventType": "hazard_zone_access",
+        "eventDetected": true,
+        "verificationStatus": "confirmed",
+        "description": "A동 크레인 하부 구역에 사람이 들어왔다.",
+        "beforeState": null,
+        "afterState": null,
+        "riskDetected": null,
+        "riskType": null,
+        "riskReason": null,
+        "solution": null,
+        "severity": "medium",
+        "evidenceStart": 52.0,
+        "evidenceEnd": 53.0
+      },
+      "judgments": [],
+      "reviewRequired": false,
+      "reviewReasons": [],
+      "taxonomyVersion": "v2",
+      "detectorCandidate": {
+        "chunkId": "0192f100-0000-7000-8000-000000000002",
+        "executionId": "0192f100-0000-7000-8000-000000000003",
+        "triggerClass": "hazard_zone_person",
+        "score": 0.9,
+        "observationCount": 3,
+        "trackLocalId": "t5",
+        "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+        "zoneName": "A동 크레인 하부",
+        "detectorProfile": "industrial-default@1",
+        "mergedCandidateIds": []
+      }
     }
   ]
 }

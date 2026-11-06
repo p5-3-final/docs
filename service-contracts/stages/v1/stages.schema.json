@@ -77,11 +77,11 @@
         },
         {
           "const": "event-analyzer.handle",
-          "description": "event-analyzer 소비 그룹: event.candidate.vector 핸들러 전체"
+          "description": "event-analyzer 소비 그룹: event.candidate.vector·event.candidate 핸들러 전체"
         },
         {
           "const": "analyzer.judge",
-          "description": "후보 1차 판정(event_judge 호출과 재시도). 후보 수를 count로 남긴다 (SPEC-020)"
+          "description": "후보 1차 판정(event_judge 호출과 재시도). 판정한 후보 수를 count로 남긴다 (SPEC-020, SPEC-023)"
         },
         {
           "const": "analyzer.escalate",
@@ -106,6 +106,10 @@
         {
           "const": "stitcher.finalize",
           "description": "번역표 저장과 track.manifest 발행. 최종 트랙 수를 count로 남긴다 (SPEC-022)"
+        },
+        {
+          "const": "analyzer.merge",
+          "description": "탐지기·규칙 후보 쿨다운 병합과 규칙 후보 확정. 받은 후보 수를 count로 남긴다 (SPEC-023)"
         }
       ]
     }

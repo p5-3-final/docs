@@ -289,7 +289,7 @@ sequenceDiagram
 | 체류·배회 등 시간 기준 | aggregator가 경계를 이은 트랙으로 영상 전체 기준 판단, 템플릿 설명(VLM 없음) |
 | 쓰러짐·화재·보호구·물건 제거·방호 미복구·활성 위험 중 접근 | `event_judge` 1회로 `VLMAnalysis` 생성 |
 | 점수가 애매하거나 severity high | `event_judge_escalate`로 재판정, 두 판정이 다르면 `reviewRequired` |
-| 같은 트랙의 같은 유형 반복 | 쿨다운(기본 10초) 안에서는 confidence 높은 후보 하나로 병합 |
+| 같은 트랙의 같은 유형 반복 | 쿨다운(기본 10초) 안에서는 confidence 높은 후보 하나로 병합(event-analyzer, 청크 실행 메시지 안. 합쳐진 후보 ID는 `detectorCandidate.mergedCandidateIds`, [SPEC-023](../specs/SPEC-023-event-analyzer-detector/spec.md)) |
 | 구간 벡터 프로토타입 후보(`event.candidate.vector`) | `event_judge`로 판정, 판정 방식 `vector+vlm`. severity high이거나 판단 불가면 `event_judge_escalate`로 재판정하고 `vector+vlm+escalate`. 트랙이 없어 쿨다운 병합은 하지 않는다([SPEC-020](../specs/SPEC-020-event-analyzer-vector/spec.md)) |
 | 장비 방치 | aggregator 시간 규칙, 템플릿 설명. 통로·위험구역이면 `event_judge` |
 | 정적 객체 재고 변화(제거·등장·이동·미복구) | aggregator가 전후 구간 대표 프레임으로 `event_judge`·`state_compare` 호출 |
@@ -407,9 +407,9 @@ sequenceDiagram
 | `track.detected` · `track.manifest` | sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service (`track.detected`는 origin `chunk`: 실행마다 트랙 요약·검출 박스 파일, origin `stitcher`: 인접 청크 쌍마다 경계 연결 묶음. `track.manifest`는 Job마다 1건: 로컬→최종 번역표 `tracks/v1/track-mapping` 경로와 개수, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
 | `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙, 클릭, 자유 질문) |
 | `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service |
-| `event.candidate` | sourceId | chunk-processor → event-analyzer (청크당 1건, 0건 포함, `unsupported_events`, 상한 초과 시 S3 경로) |
+| `event.candidate` | sourceId | chunk-processor → event-analyzer (실행마다 1건, 0건 포함, 탐지기 능력·`unsupportedEvents`, 후보 256개 초과 시 `candidates/v1` 파일 경로, [SPEC-023](../specs/SPEC-023-event-analyzer-detector/spec.md)) |
 | `event.candidate.vector` (v4) | sourceId | frame-encoder → event-analyzer (구간 벡터 프로토타입 후보, 후보가 있는 실행만 1건, 완료 판정 제외) |
-| `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`event.analyzed`는 후보마다 1건: `VLMAnalysis`, 판정 방식, 판정 호출 기록, `reviewRequired`. `event.manifest`는 탐지기 후보 spec에서 정한다) |
+| `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`event.analyzed`는 후보마다 1건: `VLMAnalysis`, 판정 방식, 판정 호출 기록, `reviewRequired`. `event.manifest`는 `event.candidate` 실행마다 1건: 받은·병합·발행 수, 발행한 eventId, `unsupportedEvents`, [SPEC-023](../specs/SPEC-023-event-analyzer-detector/spec.md)) |
 | `grounding.requested` | sourceId | search-service → grounding-worker (segmentId 최대 3개, 대상어, 표준 질의) |
 | `grounding.completed` | sourceId | grounding-worker → search-service · notification-service (클립 경로, 프레임별 객체 수) |
 | `segment.annotated` | sourceId | search-service → embedding-worker (정밀 검색에서 확인된 구간 주석) |
