@@ -11,7 +11,7 @@ related: [ADR-0001, ADR-0002, ADR-0005, ADR-0006]
 
 ## 맥락
 
-[ADR-0005](0005-search-and-event-paths.md)는 일반 CCTV를 대상으로 검색 경로와 이벤트 경로를 나누고 17개 배포 단위를 정했다. 이후 팀은 대상 도메인을 산업안전 CCTV로 좁히고, 연구용 프로토타입 `vlm_project`의 인코더·탐지기 선택, 판정 규칙, 정직성 원칙을 MSA 구조에 옮긴 설계(v3)를 만들었다. 설계 원본은 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`다(파일 이름은 v2지만 내용은 v3).
+[ADR-0005](0005-search-and-event-paths.md)는 일반 CCTV를 대상으로 검색 경로와 이벤트 경로를 나누고 17개 배포 단위를 정했다. 이후 팀은 대상 도메인을 산업안전 CCTV로 좁히고, 연구용 프로토타입 `vlm_project`의 인코더·탐지기 선택, 판정 규칙, 정직성 원칙을 MSA 구조에 옮긴 설계(v3)를 만들었다. 설계 원본은 [design-origin-v2.md](../architecture/legacy/design-origin-v2.md)다(파일 이름은 v2지만 내용은 v3. 2026-11-06에 루트 `references/`에서 옮김).
 
 v3가 ADR-0005와 다른 점은 다음과 같다.
 
@@ -125,7 +125,7 @@ v3가 ADR-0005와 다른 점은 다음과 같다.
 - [ADR-0005 분석을 검색 경로와 이벤트 경로로 나누고 17개 배포 단위를 다시 구성한다](0005-search-and-event-paths.md) (이 ADR로 대체)
 - [ADR-0001 ai 레포를 uv workspace로 구성한다](0001-ai-uv-workspace.md)
 - [ADR-0006 로컬 개발과 테스트의 S3 대체 저장소로 SeaweedFS를 쓴다](0006-local-s3-seaweedfs.md)
-- 설계 원본: 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`
+- 설계 원본: [design-origin-v2.md](../architecture/legacy/design-origin-v2.md)
 - OpenAI 모델 목록: <https://developers.openai.com/api/docs/models/all>
 - Ultralytics 라이선스: <https://www.ultralytics.com/license>
 - MobileCLIP2-S0 OpenCLIP 모델 카드(apple-amlr): <https://huggingface.co/timm/MobileCLIP2-S0-OpenCLIP>

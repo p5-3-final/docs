@@ -38,7 +38,7 @@ cd repos/ai && uv sync --all-packages
 
 | 경로 | 내용 |
 | --- | --- |
-| `references/` | 설계 원본(`검색·이벤트 VLM 아키텍처_v2.md`·`.html`). 아키텍처 v5.1(`architecture/architecture.md`)·ADR-0008이 이 문서에서 왔다 |
+| `references/` | 개인 작업 메모(검토 기록·작업 계획). 커밋하지 않는다. 설계 원본은 `architecture/legacy/design-origin-v2.md`·`.html`로 옮겼다 |
 | `17서비스 VLM 아키텍처.md` | 이전 설계 원본 |
 | `docs/architecture/rationale.md` | 사용자 작성 중 문서(추적하지 않음) |
 | `docs/architecture/benchmarks/` | 측정 보고서(커밋하지 않음, 4.6절) |

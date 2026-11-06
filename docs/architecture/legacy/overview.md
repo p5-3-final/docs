@@ -8,7 +8,7 @@ updated: 2026-11-06
 
 > 영상 처리 책임·계획/배정·정수 밀리초 규칙은 [ADR-0009](../../adr/0009-pipeline-dispatch-boundary.md)가 우선한다. 아래 v3는 목표 설계이며 구현 현황은 backend SPEC-008 plan의 비교표로 확인한다. 새 추론 endpoint·실행 저장소는 아직 구현되지 않았다.
 >
-> 서비스 목록과 책임은 [service-catalog.md](../service-catalog.md)에 있다. 서비스를 바꾸면 둘을 함께 갱신한다. 이 구조의 근거는 [ADR-0008](../../adr/0008-industrial-safety-v3.md)(v3)이고, 평가·상태 변화·예측을 받칠 확장 자리(v4)는 [ADR-0010](../../adr/0010-v4-evaluation-readiness.md), 파생 데이터 보존 등급은 [ADR-0011](../../adr/0011-derived-data-retention.md)이다. 설계 원본은 루트 `references/검색·이벤트 VLM 아키텍처_v2.md`(내용은 v4)다. v4 반영 작업의 진행 상황은 [v4 전환 작업 목록](v4-transition.md)에 있다.
+> 서비스 목록과 책임은 [service-catalog.md](../service-catalog.md)에 있다. 서비스를 바꾸면 둘을 함께 갱신한다. 이 구조의 근거는 [ADR-0008](../../adr/0008-industrial-safety-v3.md)(v3)이고, 평가·상태 변화·예측을 받칠 확장 자리(v4)는 [ADR-0010](../../adr/0010-v4-evaluation-readiness.md), 파생 데이터 보존 등급은 [ADR-0011](../../adr/0011-derived-data-retention.md)이다. 설계 원본은 [design-origin-v2.md](design-origin-v2.md)(내용은 v4)다. v4 반영 작업의 진행 상황은 [v4 전환 작업 목록](v4-transition.md)에 있다.
 
 산업현장 CCTV 영상을 대상으로, VLM을 꼭 필요한 순간에만 부르는 두 경로로 분석한다. 두 경로는 청크를 한 번 디코딩하는 지점에서 갈라지고, 비싼 결과는 모두 DB에 남겨 재사용한다.
 

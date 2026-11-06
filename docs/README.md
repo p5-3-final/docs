@@ -10,7 +10,7 @@
 | [architecture/processing-flow.md](architecture/processing-flow.md) | 업로드 후 처리 순서·토픽·AI 호출·AI 담당자 교체 지점을 한 장으로 확인 | 처리 흐름이나 AI 호출 자리가 바뀔 때 |
 | [architecture/service-catalog.md](architecture/service-catalog.md) | 서비스 담당자, 포트, DB 확인 | 서비스 추가·변경 시 |
 | [architecture/delivery-and-data.md](architecture/delivery-and-data.md) | 무엇을 어디에 올리고 어떻게 배포·보관·삭제하는지 확인 | 배포 흐름이나 저장 위치가 바뀔 때 |
-| [architecture/legacy/](architecture/legacy/overview.md) | 대체된 옛 개요(v3·v4)와 v4 전환 목록. 참고용 | 읽지 않아도 된다 |
+| [architecture/legacy/](architecture/legacy/overview.md) | 대체된 옛 개요(v3·v4), v4 전환 목록, 설계 원본(`design-origin-v2.md`·`.html`). 참고용 | 읽지 않아도 된다 |
 | [specs/](specs/README.md) | 기능 구현 전 | 기능 담당자 |
 | [contracts/](../service-contracts/README.md) | API·이벤트 연동 시 | 생산자 서비스 담당자 |
 | [adr/](adr/README.md) | "왜 이렇게 했지?"가 궁금할 때 | 결정한 사람 |
