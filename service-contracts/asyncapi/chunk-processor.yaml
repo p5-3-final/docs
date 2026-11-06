@@ -1,8 +1,10 @@
 asyncapi: 3.0.0
 info:
   title: Chunk processor execution events
-  version: 1.0.0
-  description: SPEC-014. 실제 종료만 발행하며 불명 timeout은 종료로 취급하지 않는다.
+  version: 1.1.0
+  description: |
+    SPEC-014. 실제 종료만 발행하며 불명 timeout은 종료로 취급하지 않는다.
+    SPEC-019. 검색 경로 입력이 준비되면 실행마다 segment.ready를 한 번 발행한다(구간·크롭이 없어도 발행).
 defaultContentType: application/json
 servers:
   local:
@@ -37,6 +39,21 @@ channels:
               type: string
               format: uuid
               description: sourceId
+  segmentReady:
+    address: segment.ready
+    description: 청크의 구간 프레임 4장·트랙 대표 크롭(블러 사본) 준비 완료. 메시지 키는 sourceId다.
+    messages:
+      segmentReady:
+        payload:
+          $ref: '../events/segment.ready.schema.json'
+        headers:
+          $ref: '#/components/schemas/Headers'
+        bindings:
+          kafka:
+            key:
+              type: string
+              format: uuid
+              description: sourceId
 operations:
   consumeRequested:
     action: receive
@@ -46,6 +63,11 @@ operations:
     action: send
     channel:
       $ref: '#/channels/finished'
+  publishSegmentReady:
+    action: send
+    summary: 구간 프레임·크롭을 blurred/ 아래에 저장한 뒤 발행 (SPEC-019)
+    channel:
+      $ref: '#/channels/segmentReady'
 components:
   schemas:
     Headers:

@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/event.candidate.vector.schema.json",
+  "title": "EventCandidateVector",
+  "description": "구간 벡터가 유형별 텍스트 프로토타입과 임계값 이상으로 비슷하다(ADR-0010 ③). 후보가 있는 실행마다 한 번, segment.embedded 뒤에 발행한다(같은 실행이면 같은 eventId). 후보가 없으면 발행하지 않는다. pipeline-service 완료 판정에 넣지 않는다. 발행: frame-encoder. 소비: event-analyzer (판정 방식 vector+vlm) (SPEC-019 R-11~R-14)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "jobId",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "embeddingModel",
+    "prototypeVersion",
+    "taxonomyVersion",
+    "candidates"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "event.candidate.vector"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "embeddingModel": {
+      "type": "string",
+      "pattern": "^[^:\\s]+:[^:\\s]+:[^:\\s]+:[^:\\s]+$",
+      "description": "인코더 모델 ID `<라이브러리>:<아키텍처>:<가중치>:<집계>`. ai-gateway 질의 벡터와 같아야 비교할 수 있다."
+    },
+    "prototypeVersion": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$",
+      "description": "프로필의 프로토타입 버전"
+    },
+    "taxonomyVersion": {
+      "const": "v2"
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 512,
+      "items": {
+        "type": "object",
+        "required": [
+          "candidateId",
+          "segmentId",
+          "startMs",
+          "endMs",
+          "eventType",
+          "score",
+          "threshold",
+          "frameKeys"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "executionId·segmentId·eventType으로 결정적으로 만든 ID"
+          },
+          "segmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "eventType": {
+            "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/detectableEventType"
+          },
+          "score": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1,
+            "description": "구간 벡터와 유형 프로토타입 벡터의 코사인 유사도"
+          },
+          "threshold": {
+            "type": "number",
+            "exclusiveMinimum": -1,
+            "maximum": 1,
+            "description": "이 유형의 임계값(프로필 값)"
+          },
+          "frameKeys": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/blurred/[^/?#]+\\.(jpg|jpeg|png|webp)$"
+            },
+            "description": "구간 프레임(블러 사본) 경로. 판정의 근거 이미지로 쓴다."
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000e3",
+      "occurredAt": "2026-11-06T09:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "eventType": "event.candidate.vector",
+      "schemaVersion": 1,
+      "embeddingModel": "open_clip:MobileCLIP2-S0:dfndr2b:mean-4",
+      "prototypeVersion": "local-1",
+      "taxonomyVersion": "v2",
+      "candidates": [
+        {
+          "candidateId": "0192f100-0000-5000-8000-0000000000d1",
+          "segmentId": "0192f100-0000-7000-8000-0000000000a1",
+          "startMs": 0,
+          "endMs": 10000,
+          "eventType": "fall",
+          "score": 0.31,
+          "threshold": 0.25,
+          "frameKeys": [
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/0192f100-0000-7000-8000-0000000000a1-0.jpg",
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/0192f100-0000-7000-8000-0000000000a1-1.jpg",
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/0192f100-0000-7000-8000-0000000000a1-2.jpg",
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/0192f100-0000-7000-8000-0000000000a1-3.jpg"
+          ]
+        }
+      ]
+    }
+  ]
+}

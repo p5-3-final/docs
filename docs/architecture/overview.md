@@ -111,7 +111,7 @@ flowchart LR
    - 검색 경로: 소유 범위 안에서 시작하는 10초 창·5초 간격 구간마다 균등 간격 프레임 4장을 뽑고, 얼굴·번호판을 블러 처리한 사본을 저장한다(`segment.ready`). 정적 구간은 플래그만 남기고 벡터는 모두 만든다.
    - 이벤트 경로: 확장 범위로 탐지 프로필의 탐지기(기본 YOLO26n·YOLO-pose·YOLOE 텍스트 클래스)와 추적(ByteTrack)을 돌리고, 이벤트 정의 목록의 규칙과 탐지기 능력 선언에 맞고 시작 시각이 소유 범위 안인 후보만 청크당 한 건(0건, 미지원 유형 목록 포함)으로 묶는다(`event.candidate`). 체류·배회처럼 시간이 기준인 규칙은 판단하지 않고 트랙별 구역 진입·이탈 시각만 남긴다.
    - 청크 안에서 끝난 트랙은 `track.detected`, 경계에 걸친 트랙은 `chunk.boundary`로 보내고, 검출 박스·크롭은 S3에 둔다. 마지막에 구간·후보·트랙 수와 탐지기 능력을 담은 `chunk.manifest`를 발행한다.
-6. frame-encoder가 구간마다 프레임 4장을 각각 정규화한 벡터의 평균을 다시 정규화해 구간 벡터 하나를 만들고, 트랙 대표 크롭 벡터도 같은 인코더로 만든다. 벡터 파일을 S3에 저장하고 `segment.embedded`를 발행한다. search-service가 COPY로 적재한 뒤 `segment.indexed`를 발행한다. 벡터의 `embedding_model`이 활성 설정과 다르면 적재를 거부한다. 이어서 구간 벡터를 프로필의 유형별 텍스트 프로토타입과 비교해 임계값을 넘는 구간을 `event.candidate.vector`로 발행한다. 이 토픽은 pipeline-service 완료 판정에 넣지 않는다(v4 ③).
+6. frame-encoder가 구간마다 프레임 4장을 각각 정규화한 벡터의 평균을 다시 정규화해 구간 벡터 하나를 만들고, 트랙 대표 크롭 벡터도 같은 인코더로 만든다. 벡터 파일(JSON, `service-contracts/vectors/v1/`)을 S3에 저장하고 `segment.embedded`를 발행한다([SPEC-019](../specs/SPEC-019-frame-encoder/spec.md)). search-service가 COPY로 적재한 뒤 `segment.indexed`를 발행한다. 벡터의 `embedding_model`이 활성 설정과 다르면 적재를 거부한다. 이어서 구간 벡터를 프로필의 유형별 텍스트 프로토타입과 비교해 임계값을 넘는 구간을 `event.candidate.vector`로 발행한다. 이 토픽은 pipeline-service 완료 판정에 넣지 않는다(v4 ③).
 7. track-stitcher가 두 단계로 트랙을 잇는다.
    - 경계 연결: 인접 청크의 경계 트랙을 겹치는 5초의 IoU와 클래스로 잇는다. 크롭 벡터를 기다리지 않는다.
    - 재등장 연결(Re-ID): 영상의 모든 청크에 대해 `chunk.boundary`와 `segment.embedded`(크롭 벡터)가 모이면, 화면을 떠났다 다시 나타난 트랙을 외형 유사도와 시간 간격으로 잇는다. 그다음 `track.manifest`를 발행한다.
@@ -398,8 +398,8 @@ sequenceDiagram
 | `video.uploaded` · `video.normalized` · `video.deleted` | sourceId | media-service · normalize → pipeline-service · media-service · search-service · 전 서비스 (v4: `video.uploaded`에 `sessionId`·역할, `video.deleted`에 보존 키·보존 만료 시각 `retention`) |
 | `video.retention.revoked` (v4) | sourceId | media-service → DB를 가진 서비스 (보존 키. 받은 서비스는 그 키의 보존 데이터를 지움) |
 | `chunk.requested` | sourceId | pipeline-service → chunk-processor |
-| `segment.ready` | sourceId | chunk-processor → frame-encoder (구간 목록·대표 프레임·크롭 경로·개수) |
-| `segment.embedded` | sourceId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embedding_model`·차원) |
+| `segment.ready` | sourceId | chunk-processor → frame-encoder (구간 목록·프레임 4장·크롭의 블러 사본 경로, 실행마다 1건, 0개여도 발행) |
+| `segment.embedded` | sourceId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embeddingModel`·차원) |
 | `segment.indexed` | sourceId | search-service → pipeline-service (COPY 적재 완료·개수) |
 | `chunk.manifest` | sourceId | chunk-processor → pipeline-service · aggregator (구간·후보·트랙 수, 탐지기 능력, `unsupported_events`, v4 정적 객체 재고: 클래스·위치·구역·처음·마지막 관측) |
 | `chunk.boundary` | sourceId | chunk-processor → track-stitcher |
@@ -407,7 +407,7 @@ sequenceDiagram
 | `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙, 클릭, 자유 질문) |
 | `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service |
 | `event.candidate` | sourceId | chunk-processor → event-analyzer (청크당 1건, 0건 포함, `unsupported_events`, 상한 초과 시 S3 경로) |
-| `event.candidate.vector` (v4) | sourceId | frame-encoder → event-analyzer (구간 벡터 프로토타입 후보, 완료 판정 제외) |
+| `event.candidate.vector` (v4) | sourceId | frame-encoder → event-analyzer (구간 벡터 프로토타입 후보, 후보가 있는 실행만 1건, 완료 판정 제외) |
 | `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`VLMAnalysis`, `reviewRequired`) |
 | `grounding.requested` | sourceId | search-service → grounding-worker (segmentId 최대 3개, 대상어, 표준 질의) |
 | `grounding.completed` | sourceId | grounding-worker → search-service · notification-service (클립 경로, 프레임별 객체 수) |

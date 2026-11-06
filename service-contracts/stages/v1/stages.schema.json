@@ -46,6 +46,30 @@
         {
           "const": "chunk-processor.handle",
           "description": "SPEC-014 실행 점유·처리·종료 기록"
+        },
+        {
+          "const": "frame-encoder.queue_wait",
+          "description": "frame-encoder 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "frame-encoder.handle",
+          "description": "frame-encoder 소비 그룹: segment.ready 핸들러 전체"
+        },
+        {
+          "const": "encoder.segments",
+          "description": "구간 벡터 만들기(프레임 읽기·인코딩·평균). 구간 수를 count로 (SPEC-019)"
+        },
+        {
+          "const": "encoder.crops",
+          "description": "크롭 벡터 만들기. 크롭 수를 count로 (SPEC-019)"
+        },
+        {
+          "const": "encoder.store",
+          "description": "벡터 파일 저장 (SPEC-019)"
+        },
+        {
+          "const": "encoder.prototype",
+          "description": "구간 벡터와 유형별 텍스트 프로토타입 비교 (SPEC-019, ADR-0010 ③)"
         }
       ]
     }
