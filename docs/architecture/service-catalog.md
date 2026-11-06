@@ -20,7 +20,7 @@ updated: 2026-11-04
 | analysis-loader | `services/analysis-loader` | 검출 박스·트랙 위치 파일 대량 적재(analysis-api와 DB 공유, 분리 배포) | `track.detected` → — | 8085 | analysis_db | — | 다른 작업자 |
 | search-service | `services/search-service` | 문장·이미지로 장면 찾기(질의 해석·시각/텍스트 검색·정밀 검색 선택), 구간·크롭 벡터 적재, bbox 주석 요청, Video RAG, 결과 재사용, 구간 주석 | `segment.embedded`, `embedding.ready`, `grounding.completed`, `version.activated`, `video.deleted` → `segment.indexed`, `segment.annotated`, `grounding.requested` | 8086 | search_db (pgvector) | `openapi/search-service.yaml` | 다른 작업자 |
 | notification-service | `services/notification-service` | 진행률·분석 완료·트랙 속성·주석 클립 도착 실시간 알림(SSE) | `job.status`, `source.completed`, `track.analyzed`, `grounding.completed` → — | 8087 | — (Redis) | `openapi/notification-service.yaml` | 다른 작업자 |
-| quality-service | `services/quality-service` | 검토 큐(`reviewRequired`·표본), Golden Set 버전 관리, 평가 리포트, CI Gate·회귀 평가 결과, v4 라벨 3종(bbox·구간·상태 변화)·외부 데이터셋 가져오기·특징 내보내기·처리 단계 성능 리포트 | `event.analyzed`, `stage.timing` → — | 8088 | quality_db | `openapi/quality-service.yaml` (예정) | |
+| quality-service | `services/quality-service` | 검토 큐(`reviewRequired`·표본), Golden Set 버전 관리, 평가 리포트, CI Gate·회귀 평가 결과, v4 라벨 3종(bbox·구간·상태 변화)·외부 데이터셋 가져오기·특징 내보내기·처리 단계 성능 리포트 | `event.analyzed`, `stage.timing` → — | 8088 | quality_db | `openapi/quality-service.yaml` ([SPEC-029](../specs/SPEC-029-quality-service/spec.md)) | |
 
 ## Data Plane (Python 경로와 담당 분리)
 

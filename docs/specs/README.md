@@ -33,5 +33,6 @@
 | [SPEC-026](SPEC-026-grounding-worker/spec.md) | grounding-worker 검색 상위 구간 bbox 주석 클립 | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-027](SPEC-027-aggregator/spec.md) | aggregator 영상 단위 병합·시간 규칙·위험 상태·노출 지표·요약 | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-028](SPEC-028-aggregator-inventory/spec.md) | aggregator 정적 객체 재고 비교·장비 방치·위험 노출 예측 | Approved | ai, docs | | 2026-11-06 |
+| [SPEC-029](SPEC-029-quality-service/spec.md) | quality-service 검토 큐·Golden Set·평가 실행·처리 단계 리포트 | Approved | backend, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)

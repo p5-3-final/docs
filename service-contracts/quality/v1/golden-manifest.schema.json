@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/quality/v1/golden-manifest.schema.json",
+  "title": "GoldenManifest",
+  "description": "Golden Set 확정 버전 하나. 경로: Golden Set 저장소의 golden/<setId>/v<version>/manifest.json. 쓴 뒤 바꾸지 않는다. 작성: quality-service. 읽기: 평가 잡 (SPEC-029)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "setId",
+    "name",
+    "split",
+    "version",
+    "frozenAt",
+    "entries"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "setId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string"
+    },
+    "split": {
+      "type": "string",
+      "enum": [
+        "dev",
+        "eval"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "frozenAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entryId",
+          "sourceId",
+          "eventId",
+          "candidateEventType",
+          "judgmentMethod",
+          "startMs",
+          "endMs",
+          "label",
+          "analysis",
+          "frameKeys",
+          "taxonomyVersion"
+        ],
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateEventType": {
+            "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"
+          },
+          "judgmentMethod": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "label": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "verdict",
+              "eventPresent",
+              "eventType",
+              "startMs",
+              "endMs",
+              "severity",
+              "note"
+            ],
+            "properties": {
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "correct",
+                  "incorrect",
+                  "uncertain"
+                ]
+              },
+              "eventPresent": {
+                "type": "boolean",
+                "description": "그 구간에 이벤트가 실제로 있었는지"
+              },
+              "eventType": {
+                "anyOf": [
+                  {
+                    "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "startMs": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "endMs": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "severity": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  null
+                ]
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500
+              }
+            }
+          },
+          "analysis": {
+            "$ref": "../../events/_vlm-analysis.schema.json"
+          },
+          "frameKeys": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^golden/[0-9a-f-]{36}/v[0-9]+/frames/[0-9a-f-]{36}/[0-9]+[.](jpg|jpeg|png|webp)$"
+            },
+            "description": "Golden Set 저장소로 복사한 블러 사본. 원본 영상이 지워져도 남는다(ADR-0011 Golden Set 확정 버전)"
+          },
+          "taxonomyVersion": {
+            "type": "string",
+            "pattern": "^v[0-9]+$"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "setId": "0192fb00-0000-7000-8000-000000000001",
+      "name": "ppe-eval",
+      "split": "eval",
+      "version": 3,
+      "frozenAt": "2026-11-06T11:00:00Z",
+      "entries": [
+        {
+          "entryId": "0192fb10-0000-7000-8000-000000000001",
+          "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+          "eventId": "0192f300-0000-5000-8000-000000000101",
+          "candidateEventType": "ppe_missing",
+          "judgmentMethod": "rule+vlm+escalate",
+          "startMs": 95000,
+          "endMs": 105000,
+          "label": {
+            "verdict": "incorrect",
+            "eventPresent": true,
+            "eventType": "ppe_missing",
+            "startMs": 96000,
+            "endMs": 104000,
+            "severity": "medium",
+            "note": "안전모는 썼고 조끼만 없음"
+          },
+          "analysis": {
+            "eventType": "ppe_missing",
+            "eventDetected": true,
+            "verificationStatus": "confirmed",
+            "description": "크레인 하부에서 작업자가 안전모 없이 자재를 옮깁니다.",
+            "beforeState": null,
+            "afterState": "안전모 미착용 작업자 작업 중",
+            "riskDetected": true,
+            "riskType": "ppe_missing",
+            "riskReason": "안전모 미착용",
+            "solution": "안전관리자 확인 필요",
+            "severity": "high",
+            "evidenceStart": 95.0,
+            "evidenceEnd": 100.0
+          },
+          "frameKeys": [
+            "golden/0192fb00-0000-7000-8000-000000000001/v3/frames/0192fb10-0000-7000-8000-000000000001/0.jpg"
+          ],
+          "taxonomyVersion": "v2"
+        }
+      ]
+    }
+  ]
+}

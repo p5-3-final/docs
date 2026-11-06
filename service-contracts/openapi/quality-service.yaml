@@ -1,0 +1,1577 @@
+openapi: 3.1.0
+info:
+  title: quality-service API
+  version: 1.0.0
+  description: '검토 큐, Golden Set 버전, 평가 실행과 CI Gate, 처리 단계 리포트 (SPEC-029).
+
+    - `/api/v1/quality/**`는 api-gateway를 거치고 OPERATOR 역할만 쓴다. 역할 검사는 서비스가 `X-User-Roles`로 한다.
+
+    - `/internal/v1/quality/**`는 평가 잡 전용이다. api-gateway가 라우팅하지 않고 NetworkPolicy와 호출자 헤더 허용 목록으로 막는다.
+
+    '
+servers:
+- url: /
+  description: api-gateway 경유(내부 경로는 클러스터 내부 주소 http://quality-service:8088)
+tags:
+- name: review
+  description: 검토 큐
+- name: golden-sets
+  description: Golden Set
+- name: evaluation
+  description: 평가 실행과 CI Gate
+- name: stage-reports
+  description: 처리 단계 리포트
+- name: internal
+  description: 클러스터 내부 전용
+paths:
+  /api/v1/quality/review-items:
+    get:
+      operationId: listReviewItems
+      summary: 검토 큐 목록
+      description: 상태·사유·유형으로 거른 검토 항목. 정렬은 createdAt 오름차순, itemId 순 (SPEC-029 R-5)
+      tags:
+      - review
+      parameters:
+      - &id001
+        $ref: ./_common.yaml#/components/parameters/XUserId
+      - &id002
+        $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/ReviewStatus'
+      - $ref: '#/components/parameters/ReviewReason'
+      - $ref: '#/components/parameters/EventType'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 검토 항목 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewItem'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - &id003
+                  itemId: 0192fa00-0000-5000-8000-000000000001
+                  eventId: 0192f300-0000-5000-8000-000000000101
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  jobId: 0192f0d5-0000-7000-8000-000000000001
+                  eventType: ppe_missing
+                  startMs: 95000
+                  endMs: 105000
+                  judgmentMethod: rule+vlm+escalate
+                  reason: review_required
+                  reviewReasons: &id006
+                  - judgments_disagree
+                  evidenceFrameKeys: &id007
+                  - sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f0d5-0000-7000-8000-000000000001/chunks/0192f0d6-0000-7000-8000-000000000001/executions/0192f0d7-0000-7000-8000-000000000001/blurred/ev-1.jpg
+                  analysis: &id008
+                    eventType: ppe_missing
+                    eventDetected: true
+                    verificationStatus: confirmed
+                    description: 크레인 하부에서 작업자가 안전모 없이 자재를 옮깁니다.
+                    beforeState: null
+                    afterState: 안전모 미착용 작업자 작업 중
+                    riskDetected: true
+                    riskType: ppe_missing
+                    riskReason: 안전모 미착용
+                    solution: 안전관리자 확인 필요
+                    severity: high
+                    evidenceStart: 95.0
+                    evidenceEnd: 100.0
+                  status: LABELED
+                  assigneeId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                  assignedAt: '2026-11-06T10:00:00Z'
+                  label: &id009
+                    verdict: incorrect
+                    eventPresent: true
+                    eventType: ppe_missing
+                    startMs: 96000
+                    endMs: 104000
+                    severity: medium
+                    note: 안전모는 썼고 조끼만 없음
+                  labeledAt: '2026-11-06T10:05:00Z'
+                  createdAt: '2026-11-06T09:00:00Z'
+                page: &id010
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401': &id004
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '403': &id005
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/quality/review-items/{itemId}:
+    get:
+      operationId: getReviewItem
+      summary: 검토 항목 상세
+      description: 근거 프레임 경로·판정 결과·라벨을 담는다 (SPEC-029 R-5)
+      tags:
+      - review
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: 검토 항목
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewItem'
+              example: *id003
+        '404':
+          $ref: '#/components/responses/ReviewNotFound'
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/review-items/{itemId}/assignment:
+    post:
+      operationId: assignReviewItem
+      summary: 검토 항목 맡기
+      description: '`UNASSIGNED`인 항목을 요청자에게 맡긴다. 동시에 여러 명이 요청하면 한 명만 성공하고 나머지는 409 `QUALITY_REVIEW_ALREADY_ASSIGNED`다 (SPEC-029 R-6)'
+      tags:
+      - review
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: 맡은 항목
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewItem'
+              example:
+                itemId: 0192fa00-0000-5000-8000-000000000001
+                eventId: 0192f300-0000-5000-8000-000000000101
+                sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                jobId: 0192f0d5-0000-7000-8000-000000000001
+                eventType: ppe_missing
+                startMs: 95000
+                endMs: 105000
+                judgmentMethod: rule+vlm+escalate
+                reason: review_required
+                reviewReasons: *id006
+                evidenceFrameKeys: *id007
+                analysis: *id008
+                status: ASSIGNED
+                assigneeId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                assignedAt: '2026-11-06T10:00:00Z'
+                label: null
+                labeledAt: null
+                createdAt: '2026-11-06T09:00:00Z'
+        '404':
+          $ref: '#/components/responses/ReviewNotFound'
+        '409':
+          description: 이미 다른 사람이 맡았거나 라벨이 끝남 (`QUALITY_REVIEW_ALREADY_ASSIGNED`, `QUALITY_REVIEW_ALREADY_LABELED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_REVIEW_ALREADY_ASSIGNED
+        '401': *id004
+        '403': *id005
+    delete:
+      operationId: releaseReviewItem
+      summary: 검토 항목 내려놓기
+      description: 맡은 사람만 `ASSIGNED → UNASSIGNED`로 되돌린다 (SPEC-029 R-7)
+      tags:
+      - review
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/ItemId'
+      responses:
+        '204':
+          description: 내려놓음
+        '404':
+          $ref: '#/components/responses/ReviewNotFound'
+        '409':
+          description: 맡은 상태가 아님 (`QUALITY_REVIEW_NOT_ASSIGNED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_REVIEW_NOT_ASSIGNED
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/review-items/{itemId}/label:
+    put:
+      operationId: labelReviewItem
+      summary: 검토 라벨 저장
+      description: 맡은 사람만 라벨을 저장한다. 저장하면 `LABELED`가 되고, 같은 사람이 다시 저장하면 덮어쓴다 (SPEC-029 R-8~R-10)
+      tags:
+      - review
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewLabel'
+            example: *id009
+      responses:
+        '200':
+          description: 라벨을 저장한 항목
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewItem'
+              example: *id003
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ReviewNotFound'
+        '409':
+          description: 맡은 상태가 아님 (`QUALITY_REVIEW_NOT_ASSIGNED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_REVIEW_NOT_ASSIGNED
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/golden-sets:
+    post:
+      operationId: createGoldenSet
+      summary: Golden Set 만들기
+      description: 이름은 전체에서 유일하다. 개발(dev)·평가(eval) 분할은 바꿀 수 없다 (SPEC-029 R-11)
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoldenSetRequest'
+            example:
+              name: ppe-eval
+              split: eval
+              description: 보호구 평가 세트
+      responses:
+        '201':
+          description: 만든 Golden Set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoldenSet'
+              example:
+                setId: 0192fb00-0000-7000-8000-000000000001
+                name: ppe-eval
+                split: eval
+                description: 보호구 평가 세트
+                draftEntryCount: 0
+                latestVersion: null
+                baselineRunId: null
+                createdAt: '2026-11-06T09:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: 같은 이름이 있음 (`QUALITY_GOLDEN_SET_DUPLICATED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_GOLDEN_SET_DUPLICATED
+        '401': *id004
+        '403': *id005
+    get:
+      operationId: listGoldenSets
+      summary: Golden Set 목록
+      description: 이름 순
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Golden Set 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GoldenSet'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - &id011
+                  setId: 0192fb00-0000-7000-8000-000000000001
+                  name: ppe-eval
+                  split: eval
+                  description: 보호구 평가 세트
+                  draftEntryCount: 12
+                  latestVersion: 2
+                  baselineRunId: 0192fc00-0000-7000-8000-000000000001
+                  createdAt: '2026-11-06T09:00:00Z'
+                page: *id010
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/golden-sets/{setId}:
+    get:
+      operationId: getGoldenSet
+      summary: Golden Set 상세
+      description: 초안 항목 수, 최신 확정 버전, 기준 평가 실행 (SPEC-029 R-11)
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      responses:
+        '200':
+          description: Golden Set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoldenSet'
+              example: *id011
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/golden-sets/{setId}/entries:
+    post:
+      operationId: addGoldenSetEntry
+      summary: 검토 라벨을 초안에 넣기
+      description: '`LABELED`이고 verdict가 uncertain이 아닌 검토 항목만 넣는다. 같은 항목은 한 번만 들어간다 (SPEC-029 R-12, R-13)'
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddGoldenSetEntryRequest'
+            example:
+              reviewItemId: 0192fa00-0000-5000-8000-000000000001
+      responses:
+        '201':
+          description: 넣은 초안 항목
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoldenSetEntry'
+              example: &id012
+                entryId: 0192fb10-0000-7000-8000-000000000001
+                setId: 0192fb00-0000-7000-8000-000000000001
+                reviewItemId: 0192fa00-0000-5000-8000-000000000001
+                sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                eventId: 0192f300-0000-5000-8000-000000000101
+                label: *id009
+                addedAt: '2026-11-06T10:10:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '409':
+          description: 라벨이 없거나 uncertain이거나 이미 들어 있음 (`QUALITY_REVIEW_NOT_LABELED`, `QUALITY_GOLDEN_ENTRY_DUPLICATED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_REVIEW_NOT_LABELED
+        '401': *id004
+        '403': *id005
+    get:
+      operationId: listGoldenSetEntries
+      summary: 초안 항목 목록
+      description: 확정하지 않은 초안 항목. 추가 순
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 초안 항목 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GoldenSetEntry'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - *id012
+                page: *id010
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/golden-sets/{setId}/entries/{entryId}:
+    delete:
+      operationId: deleteGoldenSetEntry
+      summary: 초안 항목 빼기
+      description: 초안에서만 뺀다. 확정 버전은 바뀌지 않는다 (SPEC-029 R-12)
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      - $ref: '#/components/parameters/EntryId'
+      responses:
+        '204':
+          description: 뺌
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/golden-sets/{setId}/versions:
+    post:
+      operationId: createGoldenSetVersion
+      summary: 초안을 새 버전으로 확정
+      description: 초안 전체를 다음 버전 번호로 고정한다. 근거 프레임을 Golden Set 저장소로 복사하고 매니페스트(`quality/v1/golden-manifest`)를 쓴 뒤 버전 행을 만든다. 확정 버전은 바꾸거나 지울 수 없다 (SPEC-029 R-14~R-16)
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      responses:
+        '201':
+          description: 확정한 버전
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoldenSetVersion'
+              example: &id013
+                setId: 0192fb00-0000-7000-8000-000000000001
+                version: 3
+                entryCount: 13
+                manifestKey: golden/0192fb00-0000-7000-8000-000000000001/v3/manifest.json
+                frozenAt: '2026-11-06T11:00:00Z'
+                frozenBy: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '409':
+          description: 초안이 비었거나 다른 확정이 진행 중 (`QUALITY_GOLDEN_EMPTY`, `QUALITY_GOLDEN_FREEZE_IN_PROGRESS`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_GOLDEN_EMPTY
+        '401': *id004
+        '403': *id005
+    get:
+      operationId: listGoldenSetVersions
+      summary: 확정 버전 목록
+      description: 버전 번호 내림차순
+      tags:
+      - golden-sets
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 버전 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GoldenSetVersion'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - *id013
+                page: *id010
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/golden-sets/{setId}/baseline:
+    put:
+      operationId: setGoldenSetBaseline
+      summary: 기준 평가 실행 정하기
+      description: 이 Golden Set의 CI Gate 비교 기준 실행을 정한다. 그 실행은 이 Golden Set으로 잰 것이어야 한다 (SPEC-029 R-19)
+      tags:
+      - evaluation
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetBaselineRequest'
+            example:
+              runId: 0192fc00-0000-7000-8000-000000000001
+      responses:
+        '200':
+          description: 바뀐 Golden Set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoldenSet'
+              example: *id011
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '409':
+          description: 다른 Golden Set으로 잰 실행 (`QUALITY_RUN_SET_MISMATCH`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_RUN_SET_MISMATCH
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/evaluation-runs:
+    get:
+      operationId: listEvaluationRuns
+      summary: 평가 실행 목록
+      description: 받은 시각 내림차순 (SPEC-029 R-20)
+      tags:
+      - evaluation
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/GoldenSetIdQuery'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 평가 실행 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EvaluationRun'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - &id014
+                  runId: 0192fc00-0000-7000-8000-000000000002
+                  goldenSetId: 0192fb00-0000-7000-8000-000000000001
+                  goldenSetVersion: 3
+                  kind: event
+                  versions: &id015
+                    taxonomy: v2
+                    detectorProfile: detect-v1
+                    modelId: gpt-6.1-terra
+                    promptVersion: event_judge@0123456789ab
+                    embeddingModel: null
+                  metrics: &id016
+                  - name: candidate_recall
+                    eventType: ppe_missing
+                    value: 0.81
+                    higherIsBetter: true
+                  - name: judge_precision
+                    eventType: ppe_missing
+                    value: 0.74
+                    higherIsBetter: true
+                  startedAt: '2026-11-06T11:10:00Z'
+                  finishedAt: '2026-11-06T11:20:00Z'
+                  trigger: ci
+                  commitSha: a6e8967
+                  gate:
+                    baselineRunId: 0192fc00-0000-7000-8000-000000000001
+                    passed: false
+                    tolerance: 0.02
+                    failures:
+                    - name: judge_precision
+                      eventType: ppe_missing
+                      baseline: 0.78
+                      value: 0.74
+                  receivedAt: '2026-11-06T11:20:01Z'
+                page: *id010
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/evaluation-runs/{runId}:
+    get:
+      operationId: getEvaluationRun
+      summary: 평가 실행 상세
+      description: 지표와 CI Gate 결과 (SPEC-029 R-20)
+      tags:
+      - evaluation
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: 평가 실행
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRun'
+              example: *id014
+        '404':
+          $ref: '#/components/responses/RunNotFound'
+        '401': *id004
+        '403': *id005
+  /internal/v1/quality/evaluation-runs:
+    post:
+      operationId: submitEvaluationRun
+      summary: 평가 잡 결과 제출 (내부 전용)
+      description: 평가 잡(CI·운영자 실행)이 결과를 낸다. runId가 같으면 처음 것을 그대로 돌려준다. 받은 즉시 기준 실행과 비교해 Gate 결과를 붙인다. api-gateway는 `/internal/**`을 라우팅하지 않는다 (SPEC-029 R-17~R-19)
+      tags:
+      - internal
+      parameters:
+      - $ref: '#/components/parameters/XCaller'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitEvaluationRunRequest'
+            example:
+              runId: 0192fc00-0000-7000-8000-000000000002
+              goldenSetId: 0192fb00-0000-7000-8000-000000000001
+              goldenSetVersion: 3
+              kind: event
+              versions: *id015
+              metrics: *id016
+              startedAt: '2026-11-06T11:10:00Z'
+              finishedAt: '2026-11-06T11:20:00Z'
+              trigger: ci
+              commitSha: a6e8967
+      responses:
+        '201':
+          description: 받은 평가 실행
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRun'
+              example: *id014
+        '200':
+          description: 이미 받은 실행
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRun'
+              example: *id014
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '403':
+          description: 허용 호출자가 아님 (`QUALITY_CALLER_NOT_ALLOWED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Forbidden
+                status: 403
+                code: QUALITY_CALLER_NOT_ALLOWED
+  /api/v1/quality/stage-reports/sources/{sourceId}:
+    get:
+      operationId: getSourceStageReport
+      summary: 영상별 처리 단계 분해
+      description: 그 영상의 측정 기록을 단계 경로별로 묶는다. 원본 보존 기간(90일) 안의 기록만 (SPEC-029 R-22)
+      tags:
+      - stage-reports
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/SourceId'
+      responses:
+        '200':
+          description: 단계 분해
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceStageReport'
+              example:
+                sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                recordCount: 42
+                stages:
+                - path: event-analyzer.handle/analyzer.judge
+                  stageId: analyzer.judge
+                  count: 3
+                  totalMs: 9120.5
+                  p50Ms: 2950.0
+                  p95Ms: 3400.0
+                  errorCount: 0
+        '404':
+          $ref: '#/components/responses/SourceNotFound'
+        '401': *id004
+        '403': *id005
+  /api/v1/quality/stage-reports/trends:
+    get:
+      operationId: getStageTrend
+      summary: 단계별 일 단위 추이
+      description: 일 단위 집계에서 읽는다. 버전 키·값을 주면 그 버전 기록만 (SPEC-029 R-23, R-24)
+      tags:
+      - stage-reports
+      parameters:
+      - *id001
+      - *id002
+      - $ref: '#/components/parameters/StageIdQuery'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+      - $ref: '#/components/parameters/VersionKey'
+      - $ref: '#/components/parameters/VersionValue'
+      responses:
+        '200':
+          description: 추이
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StageTrend'
+              example:
+                stageId: analyzer.judge
+                from: '2026-11-01'
+                to: '2026-11-06'
+                versionKey: modelId
+                versionValue: gpt-6.1-terra
+                days:
+                - date: '2026-11-06'
+                  count: 120
+                  p50Ms: 2900.0
+                  p95Ms: 3500.0
+                  errorCount: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401': *id004
+        '403': *id005
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      description: 검토 항목 ID(eventId로 결정적)
+      schema: &id017
+        type: string
+        format: uuid
+    SetId:
+      name: setId
+      in: path
+      required: true
+      description: Golden Set ID
+      schema: *id017
+    EntryId:
+      name: entryId
+      in: path
+      required: true
+      description: 초안 항목 ID
+      schema: *id017
+    RunId:
+      name: runId
+      in: path
+      required: true
+      description: 평가 실행 ID
+      schema: *id017
+    SourceId:
+      name: sourceId
+      in: path
+      required: true
+      description: 영상 ID
+      schema: *id017
+    ReviewStatus:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+        - UNASSIGNED
+        - ASSIGNED
+        - LABELED
+    ReviewReason:
+      name: reason
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+        - review_required
+        - sample
+    EventType:
+      name: eventType
+      in: query
+      required: false
+      schema:
+        $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+    GoldenSetIdQuery:
+      name: goldenSetId
+      in: query
+      required: false
+      schema: *id017
+    StageIdQuery:
+      name: stageId
+      in: query
+      required: true
+      schema:
+        $ref: ../stages/v1/stages.schema.json#/$defs/stageId
+    From:
+      name: from
+      in: query
+      required: true
+      description: 포함, UTC 날짜
+      schema:
+        type: string
+        format: date
+    To:
+      name: to
+      in: query
+      required: true
+      description: 포함, UTC 날짜. from부터 최대 90일
+      schema:
+        type: string
+        format: date
+    VersionKey:
+      name: versionKey
+      in: query
+      required: false
+      description: StageTiming.versions의 키
+      schema:
+        type: string
+        enum:
+        - taxonomy
+        - detectorProfile
+        - embeddingModel
+        - modelId
+        - promptVersion
+        - analysisVersion
+    VersionValue:
+      name: versionValue
+      in: query
+      required: false
+      description: versionKey와 함께만
+      schema:
+        type: string
+        maxLength: 200
+    Page:
+      name: page
+      in: query
+      required: false
+      description: 0부터 시작하는 페이지 번호
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      description: 페이지 크기
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    XCaller:
+      name: X-Caller
+      in: header
+      required: true
+      description: 호출하는 잡 이름. 허용 목록(설정)에 있어야 한다
+      schema:
+        type: string
+        pattern: ^[a-z][a-z0-9-]{1,62}$
+      example: quality-eval
+  responses:
+    BadRequest:
+      description: 요청 형식이 잘못됨 (`QUALITY_INVALID_REQUEST`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: QUALITY_INVALID_REQUEST
+    Forbidden:
+      description: OPERATOR 역할이 아님 (`QUALITY_FORBIDDEN`). 검토 항목을 맡은 사람이 아니면 `QUALITY_REVIEW_NOT_ASSIGNEE`
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            code: QUALITY_FORBIDDEN
+    ReviewNotFound:
+      description: 검토 항목이 없음 (`QUALITY_REVIEW_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: QUALITY_REVIEW_NOT_FOUND
+    GoldenNotFound:
+      description: Golden Set이나 항목이 없음 (`QUALITY_GOLDEN_SET_NOT_FOUND`, `QUALITY_GOLDEN_ENTRY_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: QUALITY_GOLDEN_SET_NOT_FOUND
+    RunNotFound:
+      description: 평가 실행이 없음 (`QUALITY_RUN_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: QUALITY_RUN_NOT_FOUND
+    SourceNotFound:
+      description: 그 영상의 측정 기록이 없음 (`QUALITY_SOURCE_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: QUALITY_SOURCE_NOT_FOUND
+  schemas:
+    ReviewLabel:
+      type: object
+      additionalProperties: false
+      required:
+      - verdict
+      - eventPresent
+      - eventType
+      - startMs
+      - endMs
+      - severity
+      - note
+      description: 검토 라벨. verdict는 판정 결과가 맞았는지, 나머지는 검토자가 본 정답이다
+      properties:
+        verdict:
+          type: string
+          enum:
+          - correct
+          - incorrect
+          - uncertain
+        eventPresent:
+          type: boolean
+          description: 그 구간에 이벤트가 실제로 있었는지
+        eventType:
+          anyOf:
+          - $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+          - type: 'null'
+          description: eventPresent=true면 필수
+        startMs:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        endMs:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        severity:
+          type:
+          - string
+          - 'null'
+          enum:
+          - low
+          - medium
+          - high
+          - null
+        note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    ReviewItem:
+      type: object
+      additionalProperties: false
+      required:
+      - itemId
+      - eventId
+      - sourceId
+      - jobId
+      - eventType
+      - startMs
+      - endMs
+      - judgmentMethod
+      - reason
+      - reviewReasons
+      - evidenceFrameKeys
+      - analysis
+      - status
+      - assigneeId
+      - assignedAt
+      - label
+      - labeledAt
+      - createdAt
+      properties:
+        itemId: *id017
+        eventId: *id017
+        sourceId: *id017
+        jobId: *id017
+        eventType:
+          $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+        startMs: &id018
+          type: integer
+          minimum: 0
+        endMs: *id018
+        judgmentMethod:
+          type: string
+          maxLength: 50
+        reason:
+          type: string
+          enum:
+          - review_required
+          - sample
+          description: 'review_required: event.analyzed의 reviewRequired, sample: 표본 추출'
+        reviewReasons:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        evidenceFrameKeys:
+          type: array
+          items:
+            type: string
+            maxLength: 1024
+          description: 블러 사본 경로. 화면은 서명 주소로 바꿔 보여 준다
+        analysis:
+          type: object
+          description: 판정 결과 VLMAnalysis. 형식은 `events/_vlm-analysis.schema.json`이다
+        status:
+          type: string
+          enum:
+          - UNASSIGNED
+          - ASSIGNED
+          - LABELED
+        assigneeId: &id019
+          type: &id020
+          - string
+          - 'null'
+          format: uuid
+        assignedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        label:
+          anyOf:
+          - $ref: '#/components/schemas/ReviewLabel'
+          - type: 'null'
+        labeledAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    CreateGoldenSetRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - split
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9-]{0,62}$
+        split:
+          type: string
+          enum:
+          - dev
+          - eval
+        description:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    GoldenSet:
+      type: object
+      additionalProperties: false
+      required:
+      - setId
+      - name
+      - split
+      - description
+      - draftEntryCount
+      - latestVersion
+      - baselineRunId
+      - createdAt
+      properties:
+        setId: *id017
+        name:
+          type: string
+        split:
+          type: string
+          enum:
+          - dev
+          - eval
+        description:
+          type:
+          - string
+          - 'null'
+        draftEntryCount:
+          type: integer
+          minimum: 0
+        latestVersion:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        baselineRunId: *id019
+        createdAt:
+          type: string
+          format: date-time
+    AddGoldenSetEntryRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - reviewItemId
+      properties:
+        reviewItemId: *id017
+    GoldenSetEntry:
+      type: object
+      additionalProperties: false
+      required:
+      - entryId
+      - setId
+      - reviewItemId
+      - sourceId
+      - eventId
+      - label
+      - addedAt
+      properties:
+        entryId: *id017
+        setId: *id017
+        reviewItemId: *id017
+        sourceId: *id017
+        eventId: *id017
+        label:
+          $ref: '#/components/schemas/ReviewLabel'
+        addedAt:
+          type: string
+          format: date-time
+    GoldenSetVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - setId
+      - version
+      - entryCount
+      - manifestKey
+      - frozenAt
+      - frozenBy
+      properties:
+        setId: *id017
+        version:
+          type: integer
+          minimum: 1
+        entryCount:
+          type: integer
+          minimum: 1
+        manifestKey:
+          type: string
+          pattern: ^golden/[0-9a-f-]{36}/v[0-9]+/manifest[.]json$
+          description: Golden Set 저장소의 매니페스트(`quality/v1/golden-manifest.schema.json`)
+        frozenAt:
+          type: string
+          format: date-time
+        frozenBy: *id017
+    SetBaselineRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - runId
+      properties:
+        runId: *id017
+    Metric:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - eventType
+      - value
+      - higherIsBetter
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]{0,63}$
+          description: '예: candidate_recall, judge_precision, temporal_iou_mean, recall_at_50'
+        eventType:
+          anyOf:
+          - $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+          - type: 'null'
+          description: 유형별 지표면 유형, 전체면 null
+        value:
+          type: number
+        higherIsBetter:
+          type: boolean
+    RunVersions:
+      type: object
+      additionalProperties: false
+      required:
+      - taxonomy
+      - detectorProfile
+      - modelId
+      - promptVersion
+      - embeddingModel
+      description: 평가 실행을 다시 재현하는 데 필요한 버전. 쓰지 않은 것은 null
+      properties:
+        taxonomy:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        detectorProfile:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        modelId:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        promptVersion:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        embeddingModel:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+    SubmitEvaluationRunRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - runId
+      - goldenSetId
+      - goldenSetVersion
+      - kind
+      - versions
+      - metrics
+      - startedAt
+      - finishedAt
+      - trigger
+      - commitSha
+      properties:
+        runId: &id021
+          type: string
+          format: uuid
+          description: 평가 잡이 만든 ID. 다시 보내도 한 번만 저장된다
+        goldenSetId: *id017
+        goldenSetVersion: &id022
+          type: integer
+          minimum: 1
+        kind: &id023
+          type: string
+          enum:
+          - event
+          - search
+          - track_attribute
+        versions: &id024
+          $ref: '#/components/schemas/RunVersions'
+        metrics: &id025
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/Metric'
+        startedAt: &id026
+          type: string
+          format: date-time
+        finishedAt: &id027
+          type: string
+          format: date-time
+        trigger: &id028
+          type: string
+          enum:
+          - ci
+          - scheduled
+          - manual
+        commitSha: &id029
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9a-f]{7,40}$
+    GateResult:
+      type: object
+      additionalProperties: false
+      required:
+      - baselineRunId
+      - passed
+      - tolerance
+      - failures
+      properties:
+        baselineRunId:
+          type: *id020
+          format: uuid
+          description: 받을 때의 기준 실행. 없으면 null
+        passed:
+          type:
+          - boolean
+          - 'null'
+          description: 기준이 없으면 null
+        tolerance:
+          type: number
+          minimum: 0
+          description: 허용 하락폭(절댓값, 설정)
+        failures:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - name
+            - eventType
+            - baseline
+            - value
+            properties:
+              name:
+                type: string
+              eventType:
+                type:
+                - string
+                - 'null'
+              baseline:
+                type: number
+              value:
+                type: number
+    StageStat:
+      type: object
+      additionalProperties: false
+      required:
+      - path
+      - stageId
+      - count
+      - totalMs
+      - p50Ms
+      - p95Ms
+      - errorCount
+      properties:
+        path:
+          type: string
+        stageId:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+        totalMs:
+          type: number
+        p50Ms:
+          type: number
+        p95Ms:
+          type: number
+        errorCount:
+          type: integer
+          minimum: 0
+    SourceStageReport:
+      type: object
+      additionalProperties: false
+      required:
+      - sourceId
+      - recordCount
+      - stages
+      properties:
+        sourceId: *id017
+        recordCount:
+          type: integer
+          minimum: 0
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/StageStat'
+    StageTrend:
+      type: object
+      additionalProperties: false
+      required:
+      - stageId
+      - from
+      - to
+      - versionKey
+      - versionValue
+      - days
+      properties:
+        stageId:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        versionKey:
+          type:
+          - string
+          - 'null'
+        versionValue:
+          type:
+          - string
+          - 'null'
+        days:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - date
+            - count
+            - p50Ms
+            - p95Ms
+            - errorCount
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+                minimum: 0
+              p50Ms:
+                type: number
+              p95Ms:
+                type: number
+              errorCount:
+                type: integer
+                minimum: 0
+    EvaluationRun:
+      type: object
+      additionalProperties: false
+      required:
+      - runId
+      - goldenSetId
+      - goldenSetVersion
+      - kind
+      - versions
+      - metrics
+      - startedAt
+      - finishedAt
+      - trigger
+      - commitSha
+      - gate
+      - receivedAt
+      properties:
+        runId: *id021
+        goldenSetId: *id017
+        goldenSetVersion: *id022
+        kind: *id023
+        versions: *id024
+        metrics: *id025
+        startedAt: *id026
+        finishedAt: *id027
+        trigger: *id028
+        commitSha: *id029
+        gate:
+          $ref: '#/components/schemas/GateResult'
+        receivedAt:
+          type: string
+          format: date-time
+security:
+- bearerAuth: []
