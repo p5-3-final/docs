@@ -137,6 +137,35 @@
               }
             },
             "description": "앞·뒤 겹침 구간 안의 박스만(검출 fps 그대로). touchesHead·touchesTail이 모두 false면 빈 배열"
+          },
+          "representativeCrops": {
+            "type": "array",
+            "maxItems": 3,
+            "description": "트랙 대표 크롭(블러 사본) 1~3장. segment.ready의 crops와 같은 항목이다. 속성 분석(SPEC-024)·크롭 검색에 쓴다. 크롭이 없는 트랙은 빈 배열이거나 없다",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cropId",
+                "ptsMs",
+                "key"
+              ],
+              "properties": {
+                "cropId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "ptsMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9223372036854775807
+                },
+                "key": {
+                  "type": "string",
+                  "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/blurred/[^/?#]+\\.(jpg|jpeg|png|webp)$"
+                }
+              }
+            }
           }
         }
       }
@@ -188,6 +217,13 @@
                 0.71
               ],
               "confidence": 0.86
+            }
+          ],
+          "representativeCrops": [
+            {
+              "cropId": "0192f100-0000-7000-8000-0000000000c7",
+              "ptsMs": 110000,
+              "key": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/crop-t7-0.jpg"
             }
           ]
         }

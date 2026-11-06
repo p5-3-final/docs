@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/track.analyzed.schema.json",
+  "title": "TrackAnalyzed",
+  "description": "attribute.requested 하나의 처리 결과. 요청마다 한 번 발행한다(같은 requestId면 같은 eventId). 실패도 버리지 않고 outcome FAILED로 발행한다. 발행: track-analyzer. 소비: analysis-api, embedding-worker, notification-service (SPEC-024)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "READY"
+          },
+          "reason": {
+            "enum": [
+              "event",
+              "click"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "attributes"
+        ],
+        "properties": {
+          "attributes": {
+            "type": "object"
+          },
+          "answer": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "READY"
+          },
+          "reason": {
+            "const": "question"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "answer": {
+            "type": "object"
+          },
+          "attributes": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "FAILED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "errorCode": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "null"
+          },
+          "answer": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "required": [
+    "requestId",
+    "jobId",
+    "trackId",
+    "reason",
+    "outcome",
+    "attributes",
+    "answer",
+    "callId",
+    "modelId",
+    "promptVersion",
+    "taxonomyVersion",
+    "errorCode"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "track.analyzed"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "trackId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "event",
+        "click",
+        "question"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "FAILED"
+      ],
+      "description": "READY: 결과가 있음(unverified·unknown 포함), FAILED: ai-gateway 호출이 결과 없이 끝남. analysis-api 트랙 속성 상태와 같은 이름이다"
+    },
+    "attributes": {
+      "anyOf": [
+        {
+          "$ref": "_track-attribute.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "event·click의 READY만"
+    },
+    "answer": {
+      "anyOf": [
+        {
+          "$ref": "_object-answer.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "question의 READY만"
+    },
+    "callId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "modelId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "promptVersion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "taxonomyVersion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "v2",
+        null
+      ]
+    },
+    "errorCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+      "description": "FAILED만: ai-gateway 오류 코드 또는 AI_TIMEOUT·AI_CONNECTION_FAILED"
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000b5",
+      "eventType": "track.analyzed",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:10:03Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "requestId": "0192f100-0000-5000-8000-0000000000a2",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "trackId": "0192f100-0000-5000-8000-0000000000e1",
+      "reason": "click",
+      "outcome": "READY",
+      "attributes": {
+        "verificationStatus": "confirmed",
+        "helmet": "not_worn",
+        "vest": "worn",
+        "role": "worker",
+        "equipment": [],
+        "description": "주황색 안전조끼를 입고 안전모를 쓰지 않은 작업자"
+      },
+      "answer": null,
+      "callId": "0192f0e1-0000-7000-8000-000000000011",
+      "modelId": "gpt-6-luna",
+      "promptVersion": "track_attribute@0123456789ab",
+      "taxonomyVersion": "v2",
+      "errorCode": null
+    },
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000b6",
+      "eventType": "track.analyzed",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:10:05Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "requestId": "0192f100-0000-5000-8000-0000000000a4",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "trackId": "0192f100-0000-5000-8000-0000000000e1",
+      "reason": "question",
+      "outcome": "FAILED",
+      "attributes": null,
+      "answer": null,
+      "callId": null,
+      "modelId": null,
+      "promptVersion": null,
+      "taxonomyVersion": null,
+      "errorCode": "AI_PROVIDER_UNAVAILABLE"
+    }
+  ]
+}

@@ -28,5 +28,6 @@
 | [SPEC-021](SPEC-021-internal-call-rules/spec.md) | 내부 동기 호출 규약 적용 (ai-gateway 마감 시간, 생성 클라이언트, 재시도 규칙) | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-022](SPEC-022-track-stitcher/spec.md) | track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID) | Approved | ai, docs | | 2026-11-06 |
 | [SPEC-023](SPEC-023-event-analyzer-detector/spec.md) | event-analyzer 탐지기·규칙 후보 판정과 event.manifest | Approved | ai, docs | | 2026-11-06 |
+| [SPEC-024](SPEC-024-track-analyzer/spec.md) | track-analyzer 트랙 속성 분석과 객체 자유 질문 | Approved | ai, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
