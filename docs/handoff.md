@@ -173,9 +173,14 @@ cd repos/ai && uv sync --all-packages
 | SPEC-023 | event-analyzer 탐지기·규칙 후보(`event.candidate`·`event.manifest`, `event.analyzed` 판정 방식 `rule*`) | Approved |
 | SPEC-024 | track-analyzer(`attribute.requested`·`track.analyzed`, ai-gateway `track_attribute`·`object_question`, 트랙 요약 파일 대표 크롭) | Approved |
 | SPEC-025 | embedding-worker(`segment.annotated`·`embedding.ready`, 텍스트 벡터 파일) | Approved |
-| SPEC-026 | grounding-worker | 작성 예정 |
+| SPEC-026 | grounding-worker(`grounding.requested`·`grounding.completed`, 결과 파일 `groundings/v1`) | Approved |
 | SPEC-027 | aggregator | 작성 예정 |
 | SPEC-028 | quality-service | 작성 예정 |
 | SPEC-029~ | frontend 나머지 화면 | 작성 예정 |
+
+plan 단계에서 사용자에게 먼저 확인할 것(새 라이브러리 도입 규칙):
+
+- grounding-worker(SPEC-026)의 개방 어휘 탐지기 실행 라이브러리. YOLOE의 공식 구현인 `ultralytics`는 AGPL-3.0이라 배포 형태에 따라 소스 공개 의무가 생긴다. 대안(ONNX로 내보낸 가중치를 `onnxruntime`으로 실행)과 함께 물어본다.
+- 영상 디코딩·인코딩. normalize는 FFmpeg·ffprobe 프로세스를 부르므로 같은 방식(새 라이브러리 없음)을 기본안으로 제안한다.
 
 번호는 작성하면서 바뀔 수 있다. 실제 번호와 상태는 [spec 목록](specs/README.md)이 원본이다.

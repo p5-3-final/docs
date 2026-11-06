@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/grounding.requested.schema.json",
+  "title": "GroundingRequested",
+  "description": "검색 결과 상위 구간(최대 3개)에 대상어 bbox 주석 클립을 만들어 달라는 요청. 검색 요청 하나에 한 건이다. 발행: search-service(다른 담당자, 생산자 확인 필요). 소비: grounding-worker (SPEC-026)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "requestId",
+    "jobId",
+    "normalizationId",
+    "normalizedKey",
+    "canonicalQuery",
+    "targets",
+    "segments"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "grounding.requested"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "검색 요청 ID. grounding.completed와 SSE에서 결과를 검색 화면에 맞춰 붙이는 데 쓴다"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "구간을 만든 분석 job(활성 분석 버전)"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizedKey": {
+      "type": "string",
+      "pattern": "^sources/[0-9a-f-]{36}/normalizations/[0-9a-f-]{36}/normalized[.]mp4$",
+      "description": "정규화 영상 경로(video.normalized의 normalizedKey). sourceId·normalizationId 폴더와 같아야 한다"
+    },
+    "canonicalQuery": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "ai-gateway /v1/parse의 canonicalQuery. 기록용"
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9 '-]{0,79}$",
+        "description": "영어 소문자 명사구(ai-gateway /v1/parse의 시각 대상어). 예: person without a hard hat"
+      },
+      "description": "대상어 1~3개. 탐지기 텍스트 클래스로 쓴다"
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "description": "주석을 만들 구간. 검색 순위 순",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "groundingId",
+          "segmentId",
+          "startMs",
+          "endMs"
+        ],
+        "properties": {
+          "groundingId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "주석 ID. search-service가 정렬한 대상어와 segmentId로 결정적으로 만든다(uuid5). 탐지기 버전은 결과 경로에 들어간다"
+          },
+          "segmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "구간 시작(포함), 정규화 영상 기준"
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "구간 끝(제외). startMs보다 커야 한다"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f311-0000-7000-8000-000000000001",
+      "eventType": "grounding.requested",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:00:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "requestId": "0192f310-0000-7000-8000-000000000001",
+      "jobId": "0192f0d5-0000-7000-8000-000000000001",
+      "normalizationId": "0192f0d4-0000-7000-8000-000000000001",
+      "normalizedKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/normalizations/0192f0d4-0000-7000-8000-000000000001/normalized.mp4",
+      "canonicalQuery": "person without a hard hat near forklift",
+      "targets": [
+        "person without a hard hat",
+        "forklift"
+      ],
+      "segments": [
+        {
+          "groundingId": "0192f300-0000-5000-8000-0000000000a1",
+          "segmentId": "0192f0e0-0000-5000-8000-000000000011",
+          "startMs": 40000,
+          "endMs": 50000
+        }
+      ]
+    }
+  ]
+}

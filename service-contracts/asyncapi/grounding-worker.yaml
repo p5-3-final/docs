@@ -1,0 +1,77 @@
+asyncapi: 3.0.0
+info:
+  title: grounding-worker events
+  version: 1.0.0
+  description: |
+    grounding-worker가 소비·발행하는 이벤트 (SPEC-026)
+    - 소비: grounding.requested (소비 그룹 grounding-worker)
+    - 발행: grounding.completed
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  groundingRequested:
+    address: grounding.requested
+    description: 검색 요청마다 한 건(구간 최대 3개). 메시지 키는 sourceId다.
+    messages:
+      groundingRequested:
+        $ref: '#/components/messages/GroundingRequested'
+  groundingCompleted:
+    address: grounding.completed
+    description: 주석 구간마다 한 건(실패 포함). 메시지 키는 sourceId다.
+    messages:
+      groundingCompleted:
+        $ref: '#/components/messages/GroundingCompleted'
+operations:
+  consumeGroundingRequested:
+    action: receive
+    summary: 구간마다 클립을 만들고 grounding.completed 발행 (SPEC-026)
+    channel:
+      $ref: '#/channels/groundingRequested'
+    messages:
+      - $ref: '#/channels/groundingRequested/messages/groundingRequested'
+  publishGroundingCompleted:
+    action: send
+    summary: 클립·결과 파일 저장 뒤 발행 (SPEC-026)
+    channel:
+      $ref: '#/channels/groundingCompleted'
+    messages:
+      - $ref: '#/channels/groundingCompleted/messages/groundingCompleted'
+components:
+  messages:
+    GroundingRequested:
+      name: grounding.requested
+      title: bbox 주석 요청
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/grounding.requested.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    GroundingCompleted:
+      name: grounding.completed
+      title: bbox 주석 결과
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/grounding.completed.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. 입력 메시지를 처리한 trace를 이어 간다(원칙 VI).
