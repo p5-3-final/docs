@@ -299,6 +299,9 @@ services:
       AI_GATEWAY_REGISTRY_BUNDLE_SHA256: ${AI_GATEWAY_REGISTRY_BUNDLE_SHA256:-}
       # video.deleted 소비의 처리 시간 측정 묶음을 stage.timing에 발행한다(SPEC-013).
       AI_GATEWAY_STAGE_TIMING_PUBLISH: ${AI_GATEWAY_STAGE_TIMING_PUBLISH:-false}
+      # 결과 캐시 앞단·동시 호출 잠금·분당 한도(SPEC-016). Redis가 없어도 ai-gateway는 DB 캐시와
+      # Pod별 한도로 동작하므로 depends_on에 넣지 않는다(R-17).
+      AI_GATEWAY_REDIS_URL: redis://redis:6379/0
     # 받은 가중치를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
     volumes:
       - ai-gateway-models:/var/cache/vlm-models
