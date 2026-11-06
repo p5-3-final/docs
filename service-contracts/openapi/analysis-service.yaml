@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: analysis-api internal API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     analysis-api의 내부 읽기 전용 API. aggregator가 job 하나의 적재 결과를 한 번 읽는 데 쓴다(SPEC-027).
     다른 담당자 서비스이고, 이 파일은 소비 쪽 spec이 아키텍처 문서대로 먼저 정한 내부 경로만 담는다(생산자 담당자 확인 필요). 공개 API(`/api/v1/analysis/**`)는 이 파일에 아직 없다.
@@ -247,6 +247,7 @@ paths:
                   - zoneId: 0192f100-0000-7000-8000-0000000000f1
                     state: 방호벽 설치됨
                 activeRisks: []
+                staticObjects: []
         '404':
           description: 영상이 없거나(`ANALYSIS_SOURCE_NOT_FOUND`) 활성 분석 버전이 없음(`ANALYSIS_NO_ACTIVE_VERSION`)
           content:
@@ -492,3 +493,8 @@ components:
           type: array
           items:
             $ref: '../aggregates/v1/source-result.schema.json#/properties/initialState/properties/activeRisks/items'
+        staticObjects:
+          type: array
+          description: 활성 분석 버전 끝의 정적 객체 재고(source.completed 결과 파일의 inventory). 저장된 재고가 없으면 빈 배열이다 (SPEC-028)
+          items:
+            $ref: '../aggregates/v1/source-result.schema.json#/properties/inventory/items'

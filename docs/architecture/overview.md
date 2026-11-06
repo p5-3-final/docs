@@ -402,7 +402,7 @@ sequenceDiagram
 | `segment.ready` | sourceId | chunk-processor → frame-encoder (구간 목록·프레임 4장·크롭의 블러 사본 경로, 실행마다 1건, 0개여도 발행) |
 | `segment.embedded` | sourceId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embeddingModel`·차원) |
 | `segment.indexed` | sourceId | search-service → pipeline-service (COPY 적재 완료·개수) |
-| `chunk.manifest` | sourceId | chunk-processor → pipeline-service · aggregator (구간·후보·트랙 수, 탐지기 능력, `unsupported_events`, v4 정적 객체 재고: 클래스·위치·구역·처음·마지막 관측) |
+| `chunk.manifest` | sourceId | chunk-processor → pipeline-service · aggregator (실행마다 1건: 구간·후보·트랙 수, 탐지기 능력, `unsupported_events`, v4 정적 객체 재고(클래스·위치·구역·처음·마지막 관측·대표 프레임)와 기준 프레임, [SPEC-028](../specs/SPEC-028-aggregator-inventory/spec.md)) |
 | `chunk.boundary` | sourceId | chunk-processor → track-stitcher (실행마다 1건, 트랙 0개여도 발행: 소유·처리 범위, 정규화 사본 길이, 트랙 요약 파일 `tracks/v1/chunk-tracks` 경로, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
 | `track.detected` · `track.manifest` | sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service (`track.detected`는 origin `chunk`: 실행마다 트랙 요약·검출 박스 파일, origin `stitcher`: 인접 청크 쌍마다 경계 연결 묶음. `track.manifest`는 Job마다 1건: 로컬→최종 번역표 `tracks/v1/track-mapping` 경로와 개수, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
 | `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙·클릭·자유 질문마다 1건: requestId, 최종 trackId, 대표 크롭 1~3장, 질문이면 장면 프레임·질문, [SPEC-024](../specs/SPEC-024-track-analyzer/spec.md)) |
@@ -416,7 +416,7 @@ sequenceDiagram
 | `embedding.ready` | sourceId | embedding-worker → search-service (텍스트 인덱스 항목마다 1건: itemKind `event`·`track`·`segment_annotation`, 텍스트 벡터 파일 `vectors/v1/text-vector-file` 경로, [SPEC-025](../specs/SPEC-025-embedding-worker/spec.md)) |
 | `version.activated` | sourceId | analysis-api → search-service (전환 순번 포함) |
 | `analysis.completed` · `job.status` | sourceId | pipeline-service → aggregator · notification-service (`analysis.completed`는 job마다 1건: job 유형, 세션과 직전 영상, manifest 합계, [SPEC-027](../specs/SPEC-027-aggregator/spec.md). `job.status`는 상태 전체 + 순번) |
-| `source.completed` | sourceId | aggregator → analysis-api · notification-service (job마다 1건, 본문은 결과 파일 `aggregates/v1/source-result` 경로: 병합 묶음, 시간 규칙 이벤트, 스냅샷, 위험 상태와 노출 지표, 타임라인, 요약. v4 재고 변화 이벤트는 SPEC-028, [SPEC-027](../specs/SPEC-027-aggregator/spec.md)) |
+| `source.completed` | sourceId | aggregator → analysis-api · notification-service (job마다 1건, 본문은 결과 파일 `aggregates/v1/source-result` 경로: 병합 묶음, 시간 규칙 이벤트, 스냅샷, 위험 상태와 노출 지표, 타임라인, 요약. v4 재고 변화·장비 방치 이벤트와 노출 예측은 [SPEC-028](../specs/SPEC-028-aggregator-inventory/spec.md), [SPEC-027](../specs/SPEC-027-aggregator/spec.md)) |
 | `stage.timing` (v4) | sourceId | 모든 소비자(공통 메시징 라이브러리) → quality-service (핸들러당 1건, `StageTiming` 묶음. 보존 7일) |
 | `{토픽}.{그룹}.retry` · `{그룹}.dlq` | sourceId | 지터 재시도, 운영자 재처리 |
 

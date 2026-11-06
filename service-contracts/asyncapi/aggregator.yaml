@@ -1,10 +1,10 @@
 asyncapi: 3.0.0
 info:
   title: aggregator events
-  version: 1.0.0
+  version: 1.1.0
   description: |
     aggregator가 소비·발행하는 이벤트 (SPEC-027)
-    - 소비: analysis.completed (소비 그룹 aggregator)
+    - 소비: analysis.completed, chunk.manifest (소비 그룹 aggregator)
     - 발행: source.completed
 defaultContentType: application/json
 servers:
@@ -25,7 +25,20 @@ channels:
     messages:
       sourceCompleted:
         $ref: '#/components/messages/SourceCompleted'
+  chunkManifest:
+    address: chunk.manifest
+    description: 청크 실행마다 한 건. 정적 객체 재고를 청크 재고 파일로 옮긴다(SPEC-028). 메시지 키는 sourceId다.
+    messages:
+      chunkManifest:
+        $ref: '#/components/messages/ChunkManifest'
 operations:
+  consumeChunkManifest:
+    action: receive
+    summary: 청크마다 처음 받은 재고를 저장 (SPEC-028)
+    channel:
+      $ref: '#/channels/chunkManifest'
+    messages:
+      - $ref: '#/channels/chunkManifest/messages/chunkManifest'
   consumeAnalysisCompleted:
     action: receive
     summary: 영상 단위 집계 후 source.completed 발행 (SPEC-027)
@@ -42,6 +55,19 @@ operations:
       - $ref: '#/channels/sourceCompleted/messages/sourceCompleted'
 components:
   messages:
+    ChunkManifest:
+      name: chunk.manifest
+      title: 청크 실행 산출물 목록
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/chunk.manifest.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
     AnalysisCompleted:
       name: analysis.completed
       title: 분석 적재 완료
