@@ -220,7 +220,7 @@ plan을 쓰며 나온 결정 사항과 spec·계약 불일치다.
 | --- | --- | --- | --- |
 | C-5 | SPEC-025 제외 항목 | "같은 항목·다른 모델이면 다른 파일"이라고 적었지만 경로·`vectorKey`에 모델이 없어 덮어쓴다 | spec을 "eventId만 다르고 파일은 마지막 모델 결과로 덮어씀. 모델 교체 중 공존은 REEMBED spec에서"로 고치거나 경로에 모델 단계를 넣는다(계약 변경) |
 | C-6 | SPEC-025 R-9 | `AI_MODEL_NOT_CONFIGURED`는 503이라 ai-client가 2회 헛재시도한 뒤 DLQ로 간다 | 그대로 두거나 SPEC-021 R-10에서 이 코드를 재시도하지 않게 한다 |
-| C-7 | 서비스 카탈로그 embedding-worker 행 | 저장소 "—", "묶음" 임베딩으로 적혀 spec(S3 저장, 묶음 제외)과 다르다 | 카탈로그를 고친다 |
+| C-7(반영) | 서비스 카탈로그 embedding-worker 행 | 저장소 "—", "묶음" 임베딩으로 적혀 spec(S3 저장, 묶음 제외)과 다르다 | 카탈로그를 고친다 |
 | C-8 | SPEC-026 R-17 | `grounding.completed`에 기준 신뢰도를 기록하라고 하지만 계약에 필드가 없다 | R-17을 결과 파일만으로 줄인다 |
 | C-9 | SPEC-026 R-9 | eventId가 groundingId·탐지기 버전뿐이라, FAILED 뒤 READY나 다른 requestId의 결과가 같은 eventId가 된다 | eventId에 requestId·outcome을 넣는다 |
 | C-10 | SPEC-026 R-10 | 영상 길이 비교에 허용 오차가 없다 | 프레임 간격 하나만큼 넘는 것은 허용한다 |

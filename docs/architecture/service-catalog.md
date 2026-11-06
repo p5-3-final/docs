@@ -40,7 +40,7 @@ Kafka 워커는 기존 health 전용 포트 규칙을 유지하며 업무 API용
 | grounding-worker | `services/grounding-worker` | 상위 구간에 대상어 bbox를 그린 주석 클립 생성 | `grounding.requested` → `grounding.completed` | — | S3 | 개방 어휘 탐지기(자체 실행) | |
 | event-analyzer | `services/event-analyzer` | 청크 후보 묶음을 대기 없이 병합·판정, `VLMAnalysis` 검증, 상향 판정·`reviewRequired`, v4 벡터 후보 판정(`vector+vlm`), v5.1 구간 규칙·재판정 간격(`rule+carry`)·실행당 상한·긴급 후보 즉시 판정 | `event.candidate`, `event.candidate.vector`, `alert.candidate`(v5.1) → `event.analyzed`, `event.manifest`, `alert.raised`(v5.1) | — | Redis(실시간 재판정 간격) | `event_judge` → 애매하거나 high면 `event_judge_escalate` | |
 | track-analyzer | `services/track-analyzer` | 이벤트 관련 트랙·클릭한 트랙의 속성 분석, 객체 자유 질문 | `attribute.requested` → `track.analyzed` | — | — | `track_attribute`, `object_question` | |
-| embedding-worker | `services/embedding-worker` | 이벤트 설명문, 트랙 속성, 구간 주석 묶음 텍스트 임베딩 | `event.analyzed`, `track.analyzed`, `segment.annotated` → `embedding.ready` | — | — | `embed_text` | |
+| embedding-worker | `services/embedding-worker` | 이벤트 설명문, 트랙 속성 설명, 구간 주석 문장을 항목마다 텍스트 임베딩해 벡터 파일로 저장(묶음 임베딩 아님, SPEC-025) | `event.analyzed`, `track.analyzed`, `segment.annotated` → `embedding.ready` | — | S3(벡터 파일) | `embed_text` | |
 | aggregator | `services/aggregator` | fold 한 곳: 청크 경계 이벤트 병합, 시간 기준 규칙(체류·배회·장비 방치), 상태 스냅샷·위험 상태 전이, 타임라인, 텍스트 요약, v4 작업 세션 초기 상태·정적 객체 재고 비교·노출 지표, v5.1 늦은 벡터 이벤트 revision 재발행·실시간 창 증분 fold·활성 위험 중 접근 판정 | `analysis.completed`, `chunk.manifest`, `event.analyzed`(v5.1), `track.detected`(v5.1, STREAM만) → `source.completed`, `state.updated`(v5.1) | — | Redis(대기 집합·STREAM 상태), S3(스냅샷) | `source_summary`, `event_judge`, `state_compare`, `risk_forecast` | |
 
 ## Client
