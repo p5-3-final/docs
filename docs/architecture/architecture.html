@@ -353,11 +353,11 @@ ai-gateway</td>
 <p>업로드 파일과 카메라 스트림이 같은 파이프라인으로 들어가 같은
 결과(이벤트·위험 상태·검색 인덱스)가 된다.</p>
 <pre class="mermaid">flowchart LR
-  classDef in fill:#eeeeee,stroke:#999999
-  classDef chunk fill:#dbe9ff,stroke:#3b6fd6
-  classDef judge fill:#ffe6cc,stroke:#d6762b
-  classDef fin fill:#dff2df,stroke:#3a9a3a
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef in fill:#eeeeee,stroke:#999999,color:#18222d
+  classDef chunk fill:#dbe9ff,stroke:#3b6fd6,color:#18222d
+  classDef judge fill:#ffe6cc,stroke:#d6762b,color:#18222d
+  classDef fin fill:#dff2df,stroke:#3a9a3a,color:#18222d
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
 
   U[/업로드 파일/]:::in --&gt; NZ[normalize&lt;br/&gt;검증 · 고정 fps 사본 · HLS]:::in --&gt; PL[pipeline-service&lt;br/&gt;Job FULL · 청크 2분 · 배정]:::in
   C[/카메라 RTSP/]:::in --&gt; ST[stream-service&lt;br/&gt;Job STREAM · 카메라 임대]:::in
@@ -484,8 +484,8 @@ Python 11개는 영상 디코딩·탐지·추적·벡터·외부 AI 호출을 �
 중 ai-gateway만 HTTP 서버이고 나머지는 Kafka 워커다. Quality의 Python
 평가 잡은 상주 서비스가 아니라 배포 단위로 세지 않는다.</p>
 <pre class="mermaid">flowchart TB
-  classDef in fill:#eeeeee,stroke:#999999
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef in fill:#eeeeee,stroke:#999999,color:#18222d
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
   B[/브라우저 · React SPA/]:::in --&gt;|HTTPS /api/v1/*| GW[api-gateway]
   CAM[/카메라 RTSP/]:::in --&gt; IG(stream-ingestor)
   subgraph D[Spring 10]
@@ -1894,9 +1894,9 @@ PoC에서 p50·p95를 잰다. 목표를 넘으면 두 번 나눠 응답, 후보 
 VLM은 후보에만 부른다.</p>
 <h3 id="81-후보가-만들어지는-두-경로">8.1 후보가 만들어지는 두 경로</h3>
 <pre class="mermaid">flowchart LR
-  classDef chunk fill:#dbe9ff,stroke:#3b6fd6
-  classDef judge fill:#ffe6cc,stroke:#d6762b
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef chunk fill:#dbe9ff,stroke:#3b6fd6,color:#18222d
+  classDef judge fill:#ffe6cc,stroke:#d6762b,color:#18222d
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
   CP(chunk-processor · stream-ingestor&lt;br/&gt;탐지기 클래스 + 규칙):::chunk --&gt;|event.candidate&lt;br/&gt;실행당 1건 · judgment rule 또는 vlm| EA
   CP --&gt;|alert.candidate&lt;br/&gt;severity high · 활성 위험 구역 · 즉시| EA
   FE(frame-encoder&lt;br/&gt;구간 벡터 × 유형 프로토타입):::chunk --&gt;|event.candidate.vector&lt;br/&gt;연속 구간 병합 뒤| EA
@@ -2275,7 +2275,7 @@ null</td>
 없다. 상태 전이는 aggregator가 <code>fold</code> 한 함수로만 계산한다.
 업로드·실시간·늦은 이벤트가 모두 같은 함수를 지난다.</p>
 <pre class="mermaid">flowchart LR
-  classDef fin fill:#dff2df,stroke:#3a9a3a
+  classDef fin fill:#dff2df,stroke:#3a9a3a,color:#18222d
   A[analysis.completed scope job&lt;br/&gt;업로드 · 읽기 API로 이벤트 전체] --&gt; F
   B[analysis.completed scope chunk&lt;br/&gt;실시간 · Redis에 모은 이 창 이벤트] --&gt; F
   C[늦은 벡터 이벤트&lt;br/&gt;event.analyzed vector* · 완료 뒤 도착] --&gt; F
@@ -2438,7 +2438,7 @@ href="../adr/0016-aggregator-fold-and-deterministic-caps.md">ADR-0016</a>).</p>
 블러 사본을 읽어 모델에 전달한다. 원본 경로는 거부하고 보낸 경로를 호출
 로그에 남긴다.</p>
 <pre class="mermaid">flowchart LR
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
   IN[/호출자&lt;br/&gt;event-analyzer · track-analyzer · embedding-worker&lt;br/&gt;aggregator · search-service · quality-eval/] -.-&gt;|/v1/analyze · /v1/embed · /v1/parse&lt;br/&gt;X-Request-Deadline| R
   subgraph G[ai-gateway]
     R{{1 Prompt Registry&lt;br/&gt;taskType → 프롬프트 · 스키마 · 모델}}:::gw --&gt; C{{2 결과 캐시&lt;br/&gt;입력 해시 + taskType + 버전&lt;br/&gt;Redis → DB · single-flight}}:::gw

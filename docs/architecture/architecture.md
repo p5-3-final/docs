@@ -49,11 +49,11 @@ updated: 2026-11-06
 
 ```mermaid
 flowchart LR
-  classDef in fill:#eeeeee,stroke:#999999
-  classDef chunk fill:#dbe9ff,stroke:#3b6fd6
-  classDef judge fill:#ffe6cc,stroke:#d6762b
-  classDef fin fill:#dff2df,stroke:#3a9a3a
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef in fill:#eeeeee,stroke:#999999,color:#18222d
+  classDef chunk fill:#dbe9ff,stroke:#3b6fd6,color:#18222d
+  classDef judge fill:#ffe6cc,stroke:#d6762b,color:#18222d
+  classDef fin fill:#dff2df,stroke:#3a9a3a,color:#18222d
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
 
   U[/업로드 파일/]:::in --> NZ[normalize<br/>검증 · 고정 fps 사본 · HLS]:::in --> PL[pipeline-service<br/>Job FULL · 청크 2분 · 배정]:::in
   C[/카메라 RTSP/]:::in --> ST[stream-service<br/>Job STREAM · 카메라 임대]:::in
@@ -107,8 +107,8 @@ Spring 10개는 사용자 요청·업무 상태·저장·조회·품질 검토�
 
 ```mermaid
 flowchart TB
-  classDef in fill:#eeeeee,stroke:#999999
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef in fill:#eeeeee,stroke:#999999,color:#18222d
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
   B[/브라우저 · React SPA/]:::in -->|HTTPS /api/v1/*| GW[api-gateway]
   CAM[/카메라 RTSP/]:::in --> IG(stream-ingestor)
   subgraph D[Spring 10]
@@ -510,9 +510,9 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  classDef chunk fill:#dbe9ff,stroke:#3b6fd6
-  classDef judge fill:#ffe6cc,stroke:#d6762b
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef chunk fill:#dbe9ff,stroke:#3b6fd6,color:#18222d
+  classDef judge fill:#ffe6cc,stroke:#d6762b,color:#18222d
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
   CP(chunk-processor · stream-ingestor<br/>탐지기 클래스 + 규칙):::chunk -->|event.candidate<br/>실행당 1건 · judgment rule 또는 vlm| EA
   CP -->|alert.candidate<br/>severity high · 활성 위험 구역 · 즉시| EA
   FE(frame-encoder<br/>구간 벡터 × 유형 프로토타입):::chunk -->|event.candidate.vector<br/>연속 구간 병합 뒤| EA
@@ -603,7 +603,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  classDef fin fill:#dff2df,stroke:#3a9a3a
+  classDef fin fill:#dff2df,stroke:#3a9a3a,color:#18222d
   A[analysis.completed scope job<br/>업로드 · 읽기 API로 이벤트 전체] --> F
   B[analysis.completed scope chunk<br/>실시간 · Redis에 모은 이 창 이벤트] --> F
   C[늦은 벡터 이벤트<br/>event.analyzed vector* · 완료 뒤 도착] --> F
@@ -652,7 +652,7 @@ aggregator는 모든 Job의 `event.analyzed`를 소비한다. 업로드 Job이 �
 
 ```mermaid
 flowchart LR
-  classDef gw fill:#f3e6ff,stroke:#8a4fd6
+  classDef gw fill:#f3e6ff,stroke:#8a4fd6,color:#18222d
   IN[/호출자<br/>event-analyzer · track-analyzer · embedding-worker<br/>aggregator · search-service · quality-eval/] -.->|/v1/analyze · /v1/embed · /v1/parse<br/>X-Request-Deadline| R
   subgraph G[ai-gateway]
     R{{1 Prompt Registry<br/>taskType → 프롬프트 · 스키마 · 모델}}:::gw --> C{{2 결과 캐시<br/>입력 해시 + taskType + 버전<br/>Redis → DB · single-flight}}:::gw
