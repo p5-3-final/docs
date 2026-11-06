@@ -71,9 +71,9 @@ cd repos/ai && uv sync --all-packages
 | normalize | ai | SPEC-007 Implementing |
 | ai-gateway | ai | SPEC-009·011·012·016 Implementing, SPEC-020 R-20(`event_judge_escalate`) 완료 |
 | frame-encoder | ai | SPEC-019 Implementing |
-| event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로(SPEC-023)는 plan·tasks까지 머지. v5.1 추가 요구(SPEC-020 R-21~22, SPEC-023 R-17~24)는 plan·tasks 갱신 전 |
-| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지. v5.1 추가 요구(SPEC-022 R-23, SPEC-027 R-25~34, SPEC-028 R-19)는 plan·tasks 갱신 전. 구현 전 결정은 6절 |
-| quality-service | backend | spec·계약·plan·tasks 머지. v5.1 추가 요구(SPEC-029 R-27~28, 계약 2.0.0)는 plan·tasks 갱신 전. 구현 전 결정은 6절 |
+| event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로(SPEC-023)는 plan·tasks까지 머지. v5.1 추가 요구(SPEC-020 R-21~22, SPEC-023 R-17~24)는 plan·tasks에 반영(ai #43) |
+| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지. v5.1 추가 요구(SPEC-022 R-23, SPEC-027 R-25~34, SPEC-028 R-19)는 plan·tasks에 반영(ai #43). 구현 전 결정은 6절 |
+| quality-service | backend | spec·계약·plan·tasks 머지. v5.1 추가 요구(SPEC-029 R-27~28, 계약 2.0.0)는 plan·tasks에 반영(backend #53). 구현 전 결정은 6절 |
 | stream-service | backend | SPEC-036 Approved(v5.1, ADR-0015). plan·구현은 Phase 2, 사용자 지시 뒤 |
 | stream-ingestor | ai | SPEC-037 Approved(v5.1, ADR-0015). plan·구현은 Phase 2, 사용자 지시 뒤 |
 | infra, gitops | infra, gitops | **사용자가 지시할 때만** 작업한다 |
@@ -146,7 +146,7 @@ cd repos/ai && uv sync --all-packages
 
 ## 5. 이어서 할 일
 
-문서는 모두 머지했다. 기준은 아키텍처 v5.1(ADR-0015~0017)과 계약 묶음 4.0.0이다. 아래 순서로 구현하되, v5.1로 요구사항이 늘어난 spec은 구현 전에 그 레포의 plan·tasks를 먼저 갱신한다. 앞의 것이 뒤의 입력을 만든다.
+문서는 모두 머지했다. 기준은 아키텍처 v5.1(ADR-0015~0017)과 계약 묶음 4.0.0이다. v5.1로 늘어난 요구사항은 각 레포 plan·tasks에 반영했다(ai #43, backend #53, frontend #35. SPEC-013·016·019·020은 구현이 끝난 spec이라 추가 태스크만 남았다). 계약 lock은 아직 ai 3.0.0, backend 2.9.1, frontend 2.0.1이고 각 plan의 첫 태스크(T001 또는 SPEC-021)가 깨지는 계약 테스트와 함께 4.0.0으로 올린다. 아래 순서로 구현한다. 앞의 것이 뒤의 입력을 만든다.
 
 1. 6절의 사용자 결정(D-*)을 받고, "먼저 고칠 것"(C-1~C-4)과 정리할 계약 수정을 docs PR 하나로 반영한다(계약 묶음 minor·patch).
 2. SPEC-021(ai): 계약 lock 4.0.0으로 올리기(기존 계약 테스트 4건을 같이 맞춤), ai-gateway 마감, 생성 클라이언트, 재시도 규칙, embed·parse
