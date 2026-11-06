@@ -1,11 +1,11 @@
 asyncapi: 3.0.0
 info:
   title: event-analyzer events
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    event-analyzer 워커가 이벤트 후보를 판정해 발행하는 이벤트 (SPEC-020).
+    event-analyzer 워커가 이벤트 후보를 판정해 발행하는 이벤트 (SPEC-020 벡터 후보, SPEC-023 탐지기·규칙 후보).
     최소 한 번 전달이다. 같은 후보(candidateId)를 다시 처리하면 같은 eventId를 쓴다.
-    메시지의 후보를 모두 판정한 뒤 후보마다 한 건씩 발행한다. 벡터 후보는 event.manifest 수에 넣지 않는다.
+    메시지의 후보를 모두 판정한 뒤 후보마다 한 건씩 발행한다. 탐지기·규칙 후보 메시지(event.candidate)는 그 뒤 실행마다 event.manifest를 한 건 발행한다. 벡터 후보는 event.manifest 수에 넣지 않는다.
     payload의 원본은 `../events/*.schema.json`이고 판정 결과 형식은 `../events/_vlm-analysis.schema.json`이다.
 defaultContentType: application/json
 servers:
@@ -20,6 +20,18 @@ channels:
     messages:
       eventCandidateVector:
         $ref: '#/components/messages/EventCandidateVector'
+  eventCandidate:
+    address: event.candidate
+    description: chunk-processor가 발행하는 탐지기·규칙 후보 묶음(소비 그룹 event-analyzer). 메시지 키는 sourceId다.
+    messages:
+      eventCandidate:
+        $ref: '#/components/messages/EventCandidate'
+  eventManifest:
+    address: event.manifest
+    description: 실행 하나의 탐지기·규칙 후보 판정 완료. 메시지 키는 sourceId다.
+    messages:
+      eventManifest:
+        $ref: '#/components/messages/EventManifest'
   eventAnalyzed:
     address: event.analyzed
     description: 후보 하나의 판정 결과. 메시지 키는 sourceId다.
@@ -34,6 +46,20 @@ operations:
       $ref: '#/channels/eventCandidateVector'
     messages:
       - $ref: '#/channels/eventCandidateVector/messages/eventCandidateVector'
+  consumeEventCandidate:
+    action: receive
+    summary: 쿨다운 병합 뒤 규칙 후보는 템플릿으로 확정하고 VLM 후보는 판정한다 (SPEC-023 R-1~R-9)
+    channel:
+      $ref: '#/channels/eventCandidate'
+    messages:
+      - $ref: '#/channels/eventCandidate/messages/eventCandidate'
+  publishEventManifest:
+    action: send
+    summary: 실행의 event.analyzed를 모두 발행한 뒤 한 번 (SPEC-023 R-12)
+    channel:
+      $ref: '#/channels/eventManifest'
+    messages:
+      - $ref: '#/channels/eventManifest/messages/eventManifest'
   publishEventAnalyzed:
     action: send
     summary: 후보마다 한 번 발행 (SPEC-020 R-8)
@@ -50,6 +76,32 @@ components:
         $ref: '#/components/schemas/KafkaHeaders'
       payload:
         $ref: '../events/event.candidate.vector.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    EventCandidate:
+      name: event.candidate
+      title: 탐지기·규칙 이벤트 후보 묶음
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.candidate.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    EventManifest:
+      name: event.manifest
+      title: 실행의 후보 판정 완료
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.manifest.schema.json'
       bindings:
         kafka:
           key:

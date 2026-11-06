@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/event.candidate.schema.json",
+  "title": "EventCandidate",
+  "description": "청크 실행 하나의 탐지기·규칙 이벤트 후보 묶음. 실행마다 한 번, 후보가 0개여도 발행한다. 후보가 256개 이하면 candidates에 싣고, 넘으면 candidatesKey 파일에 둔다(둘 중 하나). 발행: chunk-processor(다른 담당자 확인 필요). 소비: event-analyzer (SPEC-023)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "jobId",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "ownedRange",
+    "detector",
+    "unsupportedEvents",
+    "candidateCount",
+    "taxonomyVersion"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "event.candidate"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ownedRange": {
+      "$ref": "chunk.requested.schema.json#/properties/ownedRange"
+    },
+    "detector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "detectorProfile",
+        "models",
+        "supportedEvents"
+      ],
+      "description": "이 실행의 탐지기 능력 선언(탐지 프로필)",
+      "properties": {
+        "detectorProfile": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "modelId",
+              "available"
+            ],
+            "properties": {
+              "modelId": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "available": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "supportedEvents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/detectableEventType"
+          }
+        }
+      }
+    },
+    "unsupportedEvents": {
+      "type": "object",
+      "description": "판정하지 않은 유형과 이유(예: 구역 정의 없음, 선언한 탐지기 없음). 키는 이벤트 유형",
+      "propertyNames": {
+        "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/detectableEventType"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 200
+      }
+    },
+    "candidateCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "../candidates/v1/candidate-file.schema.json#/$defs/candidate"
+      }
+    },
+    "candidatesKey": {
+      "type": "string",
+      "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/candidates[.]json$",
+      "description": "후보 목록 파일(candidates/v1/candidate-file.schema.json)"
+    },
+    "taxonomyVersion": {
+      "const": "v2"
+    }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "candidates"
+      ]
+    },
+    {
+      "required": [
+        "candidatesKey"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000a5",
+      "eventType": "event.candidate",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:00:05Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "ownedRange": {
+        "startMs": 0,
+        "endMs": 120000
+      },
+      "detector": {
+        "detectorProfile": "industrial-default@1",
+        "models": [
+          {
+            "modelId": "ultralytics:yolo26n:coco",
+            "available": true
+          },
+          {
+            "modelId": "ultralytics:yoloe-11s:text",
+            "available": true
+          }
+        ],
+        "supportedEvents": [
+          "ppe_missing",
+          "fire_or_smoke",
+          "hazard_zone_access"
+        ]
+      },
+      "unsupportedEvents": {
+        "fall": "자세 추정 탐지기 없음",
+        "object_removed": "구역 정의 없음"
+      },
+      "candidateCount": 2,
+      "taxonomyVersion": "v2",
+      "candidates": [
+        {
+          "candidateId": "0192f100-0000-5000-8000-0000000000d2",
+          "eventType": "ppe_missing",
+          "startMs": 30000,
+          "endMs": 34000,
+          "judgment": "vlm",
+          "triggerClass": "no_helmet",
+          "score": 0.71,
+          "observationCount": 6,
+          "trackLocalId": "t3",
+          "zoneId": null,
+          "zoneName": null,
+          "evidenceFrameKeys": [
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d2-0.jpg",
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d2-1.jpg"
+          ]
+        },
+        {
+          "candidateId": "0192f100-0000-5000-8000-0000000000d3",
+          "eventType": "hazard_zone_access",
+          "startMs": 52000,
+          "endMs": 53000,
+          "judgment": "rule",
+          "triggerClass": "hazard_zone_person",
+          "score": 0.9,
+          "observationCount": 3,
+          "trackLocalId": "t5",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "zoneName": "A동 크레인 하부",
+          "evidenceFrameKeys": [
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d3-0.jpg"
+          ]
+        }
+      ]
+    }
+  ]
+}

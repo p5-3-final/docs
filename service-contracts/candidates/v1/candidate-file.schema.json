@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/candidates/v1/candidate-file.schema.json",
+  "title": "Candidate file v1",
+  "description": "event.candidate의 후보가 메시지 상한(256개)을 넘을 때 chunk-processor가 실행 폴더에 저장하는 후보 목록 파일(`candidates.json`, UTF-8). 후보 항목 형식의 원본이다. 생산자: chunk-processor(다른 담당자 확인 필요). 소비: event-analyzer (SPEC-023)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "chunkId",
+    "executionId",
+    "candidates"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {
+        "$ref": "#/$defs/candidate"
+      }
+    }
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateId",
+        "eventType",
+        "startMs",
+        "endMs",
+        "judgment",
+        "triggerClass",
+        "score",
+        "observationCount",
+        "trackLocalId",
+        "zoneId",
+        "zoneName",
+        "evidenceFrameKeys"
+      ],
+      "properties": {
+        "candidateId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "결정적 후보 ID(jobId·유형·트랙·시각으로 생성). event.analyzed eventId의 입력이다"
+        },
+        "eventType": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/detectableEventType"
+        },
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807,
+          "description": "후보 시작. 소유 범위 안이다"
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "judgment": {
+          "type": "string",
+          "enum": [
+            "rule",
+            "vlm"
+          ],
+          "description": "rule: 규칙으로 확정(구역 진입 등, VLM 없음), vlm: event_judge로 판정. 이벤트 정의 목록이 정한다"
+        },
+        "triggerClass": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "탐지·규칙 점수(confidence)"
+        },
+        "observationCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "trackLocalId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9_-]{1,64}$",
+          "description": "관련 로컬 트랙. 화재·연기처럼 트랙이 없으면 null"
+        },
+        "zoneId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "관련 구역. 없으면 null"
+        },
+        "zoneName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "evidenceFrameKeys": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/blurred/[^/?#]+\\.(jpg|jpeg|png|webp)$"
+          },
+          "description": "후보 전후 5초 근거 프레임(박스 표시, 블러 사본). 시간순"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "candidates": [
+        {
+          "candidateId": "0192f100-0000-5000-8000-0000000000d2",
+          "eventType": "ppe_missing",
+          "startMs": 30000,
+          "endMs": 34000,
+          "judgment": "vlm",
+          "triggerClass": "no_helmet",
+          "score": 0.71,
+          "observationCount": 6,
+          "trackLocalId": "t3",
+          "zoneId": null,
+          "zoneName": null,
+          "evidenceFrameKeys": [
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d2-0.jpg",
+            "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d2-1.jpg"
+          ]
+        }
+      ]
+    }
+  ]
+}
