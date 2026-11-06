@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: analysis-api API
-  version: 0.3.0
+  version: 0.4.0
   description: 'analysis-api의 내부 읽기 전용 API. aggregator가 job 하나의 적재 결과를 한 번 읽는 데 쓴다(SPEC-027).
 
     다른 담당자 서비스이고, 이 파일은 소비 쪽 spec이 아키텍처 문서대로 먼저 정한 내부 경로만 담는다(생산자 담당자 확인 필요). 공개 API(`/api/v1/analysis/**`)도 화면 spec(SPEC-031·SPEC-032)이 아키텍처 문서 "외부 API" 표대로 먼저 정했다(생산자 담당자 확인 필요). 공개 API는 api-gateway를
@@ -24,6 +24,10 @@ tags:
   description: 이벤트 타임라인·상세·검토 (SPEC-031)
 - name: states
   description: 위험 상태·스냅샷·요약 (SPEC-031)
+- name: inspect
+  description: 오버레이·클릭 조회·트랙 속성·객체 질문 (SPEC-032)
+- name: zones
+  description: 위험구역 정의 (SPEC-032)
 paths:
   /internal/v1/sources/{sourceId}/jobs/{jobId}/events:
     get:
@@ -305,12 +309,9 @@ paths:
       tags:
       - events
       parameters:
-      - &id001
-        $ref: ./_common.yaml#/components/parameters/XUserId
-      - &id002
-        $ref: ./_common.yaml#/components/parameters/XUserRoles
-      - &id011
-        $ref: '#/components/parameters/SourceId'
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
       - $ref: '#/components/parameters/EventTypeQ'
       - $ref: '#/components/parameters/SeverityQ'
       - $ref: '#/components/parameters/VerificationQ'
@@ -343,8 +344,7 @@ paths:
                     $ref: ./_common.yaml#/components/schemas/PageMeta
               example:
                 items:
-                - &id003
-                  eventId: 0192f300-0000-5000-8000-000000000101
+                - eventId: 0192f300-0000-5000-8000-000000000101
                   sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
                   eventType: ppe_missing
                   startMs: 95000
@@ -362,7 +362,7 @@ paths:
                   thumbnailUrl: https://storage.example/vlm/sources/...signed
                   mergedInto: null
                   origin: candidate
-                page: &id004
+                page:
                   page: 0
                   size: 20
                   totalElements: 1
@@ -371,7 +371,7 @@ paths:
           $ref: '#/components/responses/PublicBadRequest'
         '404':
           $ref: '#/components/responses/PublicSourceNotFound'
-        '401': &id005
+        '401':
           $ref: ./_common.yaml#/components/responses/Unauthenticated
   /api/v1/analysis/events:
     get:
@@ -381,8 +381,8 @@ paths:
       tags:
       - events
       parameters:
-      - *id001
-      - *id002
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
       - $ref: '#/components/parameters/EventTypeQ'
       - $ref: '#/components/parameters/SeverityQ'
       - $ref: '#/components/parameters/VerificationQ'
@@ -411,11 +411,33 @@ paths:
                     $ref: ./_common.yaml#/components/schemas/PageMeta
               example:
                 items:
-                - *id003
-                page: *id004
+                - eventId: 0192f300-0000-5000-8000-000000000101
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  eventType: ppe_missing
+                  startMs: 95000
+                  endMs: 105000
+                  seekMs: 93000
+                  severity: medium
+                  verificationStatus: confirmed
+                  judgmentMethod: rule+vlm
+                  description: 크레인 하부에서 작업자가 안전모 없이 자재를 옮깁니다.
+                  zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  zoneName: A동 크레인 하부
+                  trackId: 0192f200-0000-5000-8000-000000000001
+                  reviewRequired: false
+                  reviewState: UNREVIEWED
+                  thumbnailUrl: https://storage.example/vlm/sources/...signed
+                  mergedInto: null
+                  origin: candidate
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
         '400':
           $ref: '#/components/responses/PublicBadRequest'
-        '401': *id005
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
   /api/v1/analysis/events/{eventId}:
     get:
       operationId: getEvent
@@ -424,8 +446,8 @@ paths:
       tags:
       - events
       parameters:
-      - *id001
-      - *id002
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
       - $ref: '#/components/parameters/EventId'
       responses:
         '200':
@@ -435,8 +457,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/EventDetail'
               example:
-                event: *id003
-                analysis: &id006
+                event:
+                  eventId: 0192f300-0000-5000-8000-000000000101
+                  sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  eventType: ppe_missing
+                  startMs: 95000
+                  endMs: 105000
+                  seekMs: 93000
+                  severity: medium
+                  verificationStatus: confirmed
+                  judgmentMethod: rule+vlm
+                  description: 크레인 하부에서 작업자가 안전모 없이 자재를 옮깁니다.
+                  zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  zoneName: A동 크레인 하부
+                  trackId: 0192f200-0000-5000-8000-000000000001
+                  reviewRequired: false
+                  reviewState: UNREVIEWED
+                  thumbnailUrl: https://storage.example/vlm/sources/...signed
+                  mergedInto: null
+                  origin: candidate
+                analysis:
                   eventType: ppe_missing
                   eventDetected: true
                   verificationStatus: confirmed
@@ -450,17 +490,17 @@ paths:
                   severity: medium
                   evidenceStart: 95.0
                   evidenceEnd: 100.0
-                evidenceFrames: &id007
+                evidenceFrames:
                 - ptsMs: 95000
                   url: https://storage.example/vlm/sources/...signed
-                judgments: &id008
+                judgments:
                 - taskType: event_judge
                   modelId: gpt-6.1-terra
                   verificationStatus: confirmed
                   eventDetected: true
-                reviewReasons: &id009 []
+                reviewReasons: []
                 detectorProfile: detect-v1
-                versions: &id010
+                versions:
                   taxonomy: v2
                   analysis: 0192f0d5-0000-7000-8000-000000000001
                 reviewNote: null
@@ -468,7 +508,8 @@ paths:
                 reviewedAt: null
         '404':
           $ref: '#/components/responses/EventNotFound'
-        '401': *id005
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
   /api/v1/analysis/events/{eventId}/review:
     put:
       operationId: reviewEvent
@@ -477,8 +518,8 @@ paths:
       tags:
       - events
       parameters:
-      - *id001
-      - *id002
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
       - $ref: '#/components/parameters/EventId'
       requestBody:
         required: true
@@ -516,12 +557,33 @@ paths:
                   thumbnailUrl: https://storage.example/vlm/sources/...signed
                   mergedInto: null
                   origin: candidate
-                analysis: *id006
-                evidenceFrames: *id007
-                judgments: *id008
-                reviewReasons: *id009
+                analysis:
+                  eventType: ppe_missing
+                  eventDetected: true
+                  verificationStatus: confirmed
+                  description: 크레인 하부에서 작업자가 안전모 없이 자재를 옮깁니다.
+                  beforeState: null
+                  afterState: 안전모 미착용 작업자 작업 중
+                  riskDetected: true
+                  riskType: ppe_missing
+                  riskReason: 안전모 미착용
+                  solution: 안전관리자 확인 필요
+                  severity: medium
+                  evidenceStart: 95.0
+                  evidenceEnd: 100.0
+                evidenceFrames:
+                - ptsMs: 95000
+                  url: https://storage.example/vlm/sources/...signed
+                judgments:
+                - taskType: event_judge
+                  modelId: gpt-6.1-terra
+                  verificationStatus: confirmed
+                  eventDetected: true
+                reviewReasons: []
                 detectorProfile: detect-v1
-                versions: *id010
+                versions:
+                  taxonomy: v2
+                  analysis: 0192f0d5-0000-7000-8000-000000000001
                 reviewNote: 자재 그림자를 사람으로 봄
                 reviewedBy: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
                 reviewedAt: '2026-11-06T11:00:00Z'
@@ -531,7 +593,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/EventNotFound'
-        '401': *id005
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
   /api/v1/analysis/sources/{sourceId}/risks:
     get:
       operationId: listSourceRisks
@@ -540,9 +603,9 @@ paths:
       tags:
       - states
       parameters:
-      - *id001
-      - *id002
-      - *id011
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
       responses:
         '200':
           description: 위험 상태
@@ -572,7 +635,8 @@ paths:
                   forecast: null
         '404':
           $ref: '#/components/responses/PublicSourceNotFound'
-        '401': *id005
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
   /api/v1/analysis/sources/{sourceId}/snapshots:
     get:
       operationId: listSourceSnapshots
@@ -581,9 +645,9 @@ paths:
       tags:
       - states
       parameters:
-      - *id001
-      - *id002
-      - *id011
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
       responses:
         '200':
           description: 스냅샷
@@ -603,7 +667,8 @@ paths:
                   relatedEventId: 0192f300-0000-5000-8000-000000000101
         '404':
           $ref: '#/components/responses/PublicSourceNotFound'
-        '401': *id005
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
   /api/v1/analysis/sources/{sourceId}/summary:
     get:
       operationId: getSourceSummary
@@ -612,9 +677,9 @@ paths:
       tags:
       - states
       parameters:
-      - *id001
-      - *id002
-      - *id011
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
       responses:
         '200':
           description: 요약
@@ -650,7 +715,347 @@ paths:
                 analyzedAt: '2026-11-06T10:00:00Z'
         '404':
           $ref: '#/components/responses/PublicSourceNotFound'
-        '401': *id005
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/analysis/sources/{sourceId}/overlay:
+    get:
+      operationId: getSourceOverlay
+      summary: 구간의 트랙 박스(오버레이)
+      description: '[fromMs, toMs) 구간의 최종 트랙 박스. 구간은 최대 10초. 박스는 탐지 간격(기본 2fps)으로 나온다 (SPEC-032 R-1)'
+      tags:
+      - inspect
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
+      - name: fromMs
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+      - name: toMs
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+      responses:
+        '200':
+          description: 오버레이
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overlay'
+              example:
+                sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                fromMs: 40000
+                toMs: 50000
+                tracks:
+                - trackId: 0192f200-0000-5000-8000-000000000001
+                  className: person
+                  hasEvent: true
+                  boxes:
+                  - ptsMs: 40000
+                    box:
+                      x: 0.41
+                      y: 0.22
+                      w: 0.08
+                      h: 0.31
+        '400':
+          $ref: '#/components/responses/PublicBadRequest'
+        '404':
+          $ref: '#/components/responses/PublicSourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/analysis/sources/{sourceId}/inspect:
+    get:
+      operationId: inspectPoint
+      summary: 화면 클릭 조회
+      description: (tMs, x, y)에 가장 가까운 탐지 시각에서 그 점을 덮는 박스 중 가장 작은 트랙을 찾는다. 속성이 없으면 속성 분석을 요청하고(attribute.requested, reason click) `REQUESTED`로 돌려준다. 결과는 SSE `track.analyzed`로 알린다 (SPEC-032 R-3~R-5)
+      tags:
+      - inspect
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
+      - name: tMs
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+      - name: x
+        in: query
+        required: true
+        schema:
+          type: number
+          minimum: 0
+          maximum: 1
+      - name: y
+        in: query
+        required: true
+        schema:
+          type: number
+          minimum: 0
+          maximum: 1
+      responses:
+        '200':
+          description: 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectResult'
+              example:
+                tMs: 41000
+                x: 0.44
+                y: 0.3
+                hit: true
+                box:
+                  x: 0.41
+                  y: 0.22
+                  w: 0.08
+                  h: 0.31
+                track:
+                  trackId: 0192f200-0000-5000-8000-000000000001
+                  className: person
+                  startMs: 40000
+                  endMs: 125000
+                  attributeStatus: REQUESTED
+                  attributes: null
+                  requestId: 0192f210-0000-7000-8000-000000000001
+        '400':
+          $ref: '#/components/responses/PublicBadRequest'
+        '404':
+          $ref: '#/components/responses/PublicSourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/analysis/tracks/{trackId}:
+    get:
+      operationId: getTrack
+      summary: 트랙과 속성
+      description: SSE `track.analyzed`(click·event)를 받은 뒤 속성을 다시 읽는 데 쓴다 (SPEC-032 R-5)
+      tags:
+      - inspect
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/TrackId'
+      responses:
+        '200':
+          description: 트랙
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackAttributes'
+              example:
+                trackId: 0192f200-0000-5000-8000-000000000001
+                className: person
+                startMs: 40000
+                endMs: 125000
+                attributeStatus: READY
+                attributes:
+                  verificationStatus: confirmed
+                  helmet: not_worn
+                  vest: worn
+                  role: worker
+                  equipment: []
+                  description: 주황색 안전조끼를 입고 안전모를 쓰지 않은 작업자
+                requestId: 0192f210-0000-7000-8000-000000000001
+        '404':
+          $ref: '#/components/responses/TrackNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/analysis/tracks/{trackId}/ask:
+    post:
+      operationId: askTrack
+      summary: 객체에 자유 질문
+      description: 질문을 저장하고 attribute.requested(reason question)를 낸 뒤 202를 돌려준다. 답은 SSE `track.analyzed`(question)로 알리고 질문 조회로 읽는다. 사용자별 분당 질문 수 상한(설정)을 넘으면 429 (SPEC-032 R-7, R-8)
+      tags:
+      - inspect
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/TrackId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+            example:
+              question: 이 사람이 들고 있는 것은 무엇인가요?
+              tMs: 41000
+      responses:
+        '202':
+          description: 질문 접수
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskAccepted'
+              example:
+                requestId: 0192f210-0000-7000-8000-000000000002
+                status: REQUESTED
+        '400':
+          $ref: '#/components/responses/PublicBadRequest'
+        '404':
+          $ref: '#/components/responses/TrackNotFound'
+        '429':
+          description: 질문 수 상한 초과 (`ANALYSIS_QUESTION_RATE_LIMITED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Too Many Requests
+                status: 429
+                code: ANALYSIS_QUESTION_RATE_LIMITED
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/analysis/tracks/{trackId}/questions/{requestId}:
+    get:
+      operationId: getTrackQuestion
+      summary: 객체 질문 결과
+      description: 질문과 답(`_object-answer`) (SPEC-032 R-8)
+      tags:
+      - inspect
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/TrackId'
+      - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 질문 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResult'
+              example:
+                requestId: 0192f210-0000-7000-8000-000000000002
+                trackId: 0192f200-0000-5000-8000-000000000001
+                question: 이 사람이 들고 있는 것은 무엇인가요?
+                status: READY
+                answer:
+                  verificationStatus: confirmed
+                  answerable: true
+                  answer: 철근 묶음을 들고 있습니다.
+                askedAt: '2026-11-06T11:00:00Z'
+        '404':
+          $ref: '#/components/responses/TrackNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+  /api/v1/analysis/sources/{sourceId}/zones:
+    get:
+      operationId: getSourceZones
+      summary: 영상의 위험구역 정의
+      description: 구역 다각형과 재분석 필요 여부 (SPEC-032 R-10)
+      tags:
+      - zones
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
+      responses:
+        '200':
+          description: 구역
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+              example:
+                sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                items:
+                - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  name: A동 크레인 하부
+                  kind: hazard
+                  polygon:
+                  - x: 0.1
+                    y: 0.5
+                  - x: 0.4
+                    y: 0.5
+                  - x: 0.4
+                    y: 0.9
+                  - x: 0.1
+                    y: 0.9
+                updatedAt: '2026-11-06T09:00:00Z'
+                reanalysisNeeded: false
+        '404':
+          $ref: '#/components/responses/PublicSourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+    put:
+      operationId: putSourceZones
+      summary: 위험구역 정의 바꾸기
+      description: 구역 목록 전체를 바꾼다. 빠진 구역은 지운다. 영상 소유자나 OPERATOR만 쓴다. 다음 분석부터 반영되고 reanalysisNeeded가 true가 된다 (SPEC-032 R-11~R-13)
+      tags:
+      - zones
+      parameters:
+      - $ref: ./_common.yaml#/components/parameters/XUserId
+      - $ref: ./_common.yaml#/components/parameters/XUserRoles
+      - $ref: '#/components/parameters/SourceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutZonesRequest'
+            example:
+              items:
+              - zoneId: null
+                name: A동 크레인 하부
+                kind: hazard
+                polygon:
+                - x: 0.1
+                  y: 0.5
+                - x: 0.4
+                  y: 0.5
+                - x: 0.4
+                  y: 0.9
+                - x: 0.1
+                  y: 0.9
+      responses:
+        '200':
+          description: 바뀐 구역
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneList'
+              example:
+                sourceId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                items:
+                - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                  name: A동 크레인 하부
+                  kind: hazard
+                  polygon:
+                  - x: 0.1
+                    y: 0.5
+                  - x: 0.4
+                    y: 0.5
+                  - x: 0.4
+                    y: 0.9
+                  - x: 0.1
+                    y: 0.9
+                updatedAt: '2026-11-06T09:00:00Z'
+                reanalysisNeeded: true
+        '400':
+          description: 꼭짓점 수·좌표 범위·자기 교차·이름 중복 위반 (`ANALYSIS_ZONE_INVALID`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                code: ANALYSIS_ZONE_INVALID
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/PublicSourceNotFound'
+        '401':
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
 components:
   parameters:
     SourceId:
@@ -717,7 +1122,7 @@ components:
       name: eventId
       in: path
       required: true
-      schema: &id012
+      schema:
         type: string
         format: uuid
     Page:
@@ -743,7 +1148,7 @@ components:
       name: eventType
       in: query
       required: false
-      schema: &id013
+      schema:
         $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
     SeverityQ:
       name: severity
@@ -792,6 +1197,20 @@ components:
       schema:
         type: string
         format: date-time
+    TrackId:
+      name: trackId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   responses:
     BadRequest:
       description: 잘못된 커서·limit·헤더 (`ANALYSIS_INVALID_REQUEST`)
@@ -892,6 +1311,17 @@ components:
             title: Bad Request
             status: 400
             code: ANALYSIS_INVALID_REQUEST
+    TrackNotFound:
+      description: 트랙이 없거나 남의 영상 (`ANALYSIS_TRACK_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: ANALYSIS_TRACK_NOT_FOUND
   schemas:
     JobEvent:
       type: object
@@ -1026,6 +1456,7 @@ components:
           - aisle
           - general
           description: hazard는 위험구역(체류·배회 규칙 대상), aisle은 통로
+      description: 구역. 내부 API는 zoneId·name·kind만, 공개 API(ZoneDefinition)는 다각형까지 담는다
     FinalState:
       type: object
       additionalProperties: false
@@ -1094,13 +1525,20 @@ components:
       - mergedInto
       - origin
       properties:
-        eventId: *id012
-        sourceId: *id012
-        eventType: *id013
-        startMs: &id014
+        eventId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        eventType:
+          $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
+        startMs:
           type: integer
           minimum: 0
-        endMs: *id014
+        endMs:
+          type: integer
+          minimum: 0
         seekMs:
           type: integer
           minimum: 0
@@ -1130,8 +1568,8 @@ components:
           - string
           - 'null'
           maxLength: 1000
-        zoneId: &id015
-          type: &id016
+        zoneId:
+          type:
           - string
           - 'null'
           format: uuid
@@ -1139,7 +1577,11 @@ components:
           type:
           - string
           - 'null'
-        trackId: *id015
+        trackId:
+          type:
+          - string
+          - 'null'
+          format: uuid
         reviewRequired:
           type: boolean
         reviewState:
@@ -1154,7 +1596,9 @@ components:
           - 'null'
           format: uri
         mergedInto:
-          type: *id016
+          type:
+          - string
+          - 'null'
           format: uuid
           description: 청크 경계 병합으로 다른 이벤트에 합쳐졌으면 대표 eventId. 목록 기본값은 대표만 보여 준다
         origin:
@@ -1230,7 +1674,11 @@ components:
           - string
           - 'null'
           maxLength: 500
-        reviewedBy: *id015
+        reviewedBy:
+          type:
+          - string
+          - 'null'
+          format: uuid
         reviewedAt:
           type:
           - string
@@ -1271,7 +1719,9 @@ components:
       - exposure
       - forecast
       properties:
-        riskId: *id012
+        riskId:
+          type: string
+          format: uuid
         zoneId:
           type: string
           description: 구역 ID 또는 global
@@ -1288,8 +1738,12 @@ components:
           - resolved
         reason:
           type: string
-        firstSeenMs: *id014
-        lastSeenMs: *id014
+        firstSeenMs:
+          type: integer
+          minimum: 0
+        lastSeenMs:
+          type: integer
+          minimum: 0
         resolvedAtMs:
           type:
           - integer
@@ -1297,7 +1751,9 @@ components:
           minimum: 0
         relatedEventIds:
           type: array
-          items: *id012
+          items:
+            type: string
+            format: uuid
         carriedOver:
           type: boolean
         exposure:
@@ -1326,7 +1782,11 @@ components:
       - jobId
       - items
       properties:
-        jobId: *id015
+        jobId:
+          type:
+          - string
+          - 'null'
+          format: uuid
         items:
           type: array
           items:
@@ -1343,14 +1803,18 @@ components:
       - currentState
       - relatedEventId
       properties:
-        snapshotId: *id012
+        snapshotId:
+          type: string
+          format: uuid
         zoneId:
           type: string
         zoneName:
           type:
           - string
           - 'null'
-        timestampMs: *id014
+        timestampMs:
+          type: integer
+          minimum: 0
         previousState:
           type:
           - string
@@ -1359,7 +1823,9 @@ components:
           type:
           - string
           - 'null'
-        relatedEventId: *id012
+        relatedEventId:
+          type: string
+          format: uuid
     SnapshotList:
       type: object
       additionalProperties: false
@@ -1367,7 +1833,11 @@ components:
       - jobId
       - items
       properties:
-        jobId: *id015
+        jobId:
+          type:
+          - string
+          - 'null'
+          format: uuid
         items:
           type: array
           items:
@@ -1386,7 +1856,9 @@ components:
       - timeline
       - analyzedAt
       properties:
-        sourceId: *id012
+        sourceId:
+          type: string
+          format: uuid
         status:
           type: string
           enum:
@@ -1394,7 +1866,9 @@ components:
           - READY
           description: 활성 분석 버전이 있으면 READY. 진행 상태는 알림(job.status)으로 본다
         jobId:
-          type: *id016
+          type:
+          - string
+          - 'null'
           format: uuid
           description: 활성 분석 버전의 job
         summary:
@@ -1427,7 +1901,9 @@ components:
                 - atMs
                 - text
                 properties:
-                  atMs: *id014
+                  atMs:
+                    type: integer
+                    minimum: 0
                   text:
                     type: string
         counts:
@@ -1452,14 +1928,20 @@ components:
           - previousSourceId
           - initialStateUsed
           properties:
-            sessionId: *id012
+            sessionId:
+              type: string
+              format: uuid
             role:
               type: string
               enum:
               - BEFORE
               - DURING
               - AFTER
-            previousSourceId: *id015
+            previousSourceId:
+              type:
+              - string
+              - 'null'
+              format: uuid
             initialStateUsed:
               type: boolean
         timeline:
@@ -1475,7 +1957,9 @@ components:
             - zoneId
             - severity
             properties:
-              atMs: *id014
+              atMs:
+                type: integer
+                minimum: 0
               kind:
                 type: string
                 enum:
@@ -1484,7 +1968,9 @@ components:
                 - risk_activated
                 - risk_resolved
                 - inventory_event
-              refId: *id012
+              refId:
+                type: string
+                format: uuid
               eventType:
                 type:
                 - string
@@ -1502,6 +1988,299 @@ components:
           - string
           - 'null'
           format: date-time
+    NormBox:
+      type: object
+      additionalProperties: false
+      required:
+      - x
+      - y
+      - w
+      - h
+      description: 프레임 크기로 나눈 0~1 좌표, 왼쪽 위 기준
+      properties:
+        x:
+          type: number
+          minimum: 0
+          maximum: 1
+        y:
+          type: number
+          minimum: 0
+          maximum: 1
+        w:
+          type: number
+          minimum: 0
+          maximum: 1
+        h:
+          type: number
+          minimum: 0
+          maximum: 1
+    OverlayTrack:
+      type: object
+      additionalProperties: false
+      required:
+      - trackId
+      - className
+      - boxes
+      - hasEvent
+      properties:
+        trackId:
+          type: string
+          format: uuid
+        className:
+          type: string
+        hasEvent:
+          type: boolean
+          description: 이 트랙에 이벤트가 있으면 true(강조 표시)
+        boxes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - ptsMs
+            - box
+            properties:
+              ptsMs:
+                type: integer
+                minimum: 0
+              box:
+                $ref: '#/components/schemas/NormBox'
+    Overlay:
+      type: object
+      additionalProperties: false
+      required:
+      - sourceId
+      - fromMs
+      - toMs
+      - tracks
+      properties:
+        sourceId:
+          type: string
+          format: uuid
+        fromMs:
+          type: integer
+          minimum: 0
+        toMs:
+          type: integer
+          minimum: 0
+        tracks:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/OverlayTrack'
+    TrackAttributes:
+      type: object
+      additionalProperties: false
+      required:
+      - trackId
+      - className
+      - startMs
+      - endMs
+      - attributeStatus
+      - attributes
+      - requestId
+      properties:
+        trackId:
+          type: string
+          format: uuid
+        className:
+          type: string
+        startMs:
+          type: integer
+          minimum: 0
+        endMs:
+          type: integer
+          minimum: 0
+        attributeStatus:
+          type: string
+          enum:
+          - NONE
+          - REQUESTED
+          - READY
+          - FAILED
+          description: 트랙 속성 상태(overview 상태 표 트랙 속성 행)
+        attributes:
+          type:
+          - object
+          - 'null'
+          description: READY면 `events/_track-attribute.schema.json`
+        requestId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+    InspectResult:
+      type: object
+      additionalProperties: false
+      required:
+      - tMs
+      - x
+      - y
+      - hit
+      - box
+      - track
+      properties:
+        tMs:
+          type: integer
+          minimum: 0
+        x:
+          type: number
+        y:
+          type: number
+        hit:
+          type: boolean
+          description: 그 점을 덮는 트랙 박스가 있으면 true
+        box:
+          anyOf:
+          - $ref: '#/components/schemas/NormBox'
+          - type: 'null'
+        track:
+          anyOf:
+          - $ref: '#/components/schemas/TrackAttributes'
+          - type: 'null'
+    AskRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - question
+      - tMs
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tMs:
+          type: integer
+          minimum: 0
+          description: 질문할 때 화면 시각. 장면 프레임을 고르는 데 쓴다
+    AskAccepted:
+      type: object
+      additionalProperties: false
+      required:
+      - requestId
+      - status
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - REQUESTED
+    QuestionResult:
+      type: object
+      additionalProperties: false
+      required:
+      - requestId
+      - trackId
+      - question
+      - status
+      - answer
+      - askedAt
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        trackId:
+          type: string
+          format: uuid
+        question:
+          type: string
+        status:
+          type: string
+          enum:
+          - REQUESTED
+          - READY
+          - FAILED
+        answer:
+          type:
+          - object
+          - 'null'
+          description: READY면 `events/_object-answer.schema.json`
+        askedAt:
+          type: string
+          format: date-time
+    ZoneDefinition:
+      type: object
+      additionalProperties: false
+      required:
+      - zoneId
+      - name
+      - kind
+      - polygon
+      properties:
+        zoneId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: 새 구역은 null로 보내고 서버가 만든다
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        kind:
+          type: string
+          enum:
+          - hazard
+          - aisle
+          - general
+        polygon:
+          type: array
+          minItems: 3
+          maxItems: 32
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - x
+            - y
+            properties:
+              x:
+                type: number
+                minimum: 0
+                maximum: 1
+              y:
+                type: number
+                minimum: 0
+                maximum: 1
+          description: 프레임 크기로 나눈 꼭짓점. 자기 자신과 교차하지 않아야 한다
+    ZoneList:
+      type: object
+      additionalProperties: false
+      required:
+      - sourceId
+      - items
+      - updatedAt
+      - reanalysisNeeded
+      properties:
+        sourceId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ZoneDefinition'
+        updatedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        reanalysisNeeded:
+          type: boolean
+          description: 구역을 바꾼 뒤 아직 재분석하지 않았으면 true. 구역은 다음 분석부터 반영된다
+    PutZonesRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ZoneDefinition'
   securitySchemes:
     bearerAuth:
       type: http
