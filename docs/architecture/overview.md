@@ -405,8 +405,8 @@ sequenceDiagram
 | `chunk.manifest` | sourceId | chunk-processor → pipeline-service · aggregator (구간·후보·트랙 수, 탐지기 능력, `unsupported_events`, v4 정적 객체 재고: 클래스·위치·구역·처음·마지막 관측) |
 | `chunk.boundary` | sourceId | chunk-processor → track-stitcher (실행마다 1건, 트랙 0개여도 발행: 소유·처리 범위, 정규화 사본 길이, 트랙 요약 파일 `tracks/v1/chunk-tracks` 경로, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
 | `track.detected` · `track.manifest` | sourceId | chunk-processor, track-stitcher → analysis-api · analysis-loader · pipeline-service (`track.detected`는 origin `chunk`: 실행마다 트랙 요약·검출 박스 파일, origin `stitcher`: 인접 청크 쌍마다 경계 연결 묶음. `track.manifest`는 Job마다 1건: 로컬→최종 번역표 `tracks/v1/track-mapping` 경로와 개수, [SPEC-022](../specs/SPEC-022-track-stitcher/spec.md)) |
-| `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙, 클릭, 자유 질문) |
-| `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service |
+| `attribute.requested` | sourceId | analysis-api → track-analyzer (이벤트 관련 트랙·클릭·자유 질문마다 1건: requestId, 최종 trackId, 대표 크롭 1~3장, 질문이면 장면 프레임·질문, [SPEC-024](../specs/SPEC-024-track-analyzer/spec.md)) |
+| `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service (요청마다 1건, 실패도 `outcome: FAILED`로 발행. 속성 `_track-attribute`·답 `_object-answer`, [SPEC-024](../specs/SPEC-024-track-analyzer/spec.md)) |
 | `event.candidate` | sourceId | chunk-processor → event-analyzer (실행마다 1건, 0건 포함, 탐지기 능력·`unsupportedEvents`, 후보 256개 초과 시 `candidates/v1` 파일 경로, [SPEC-023](../specs/SPEC-023-event-analyzer-detector/spec.md)) |
 | `event.candidate.vector` (v4) | sourceId | frame-encoder → event-analyzer (구간 벡터 프로토타입 후보, 후보가 있는 실행만 1건, 완료 판정 제외) |
 | `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`event.analyzed`는 후보마다 1건: `VLMAnalysis`, 판정 방식, 판정 호출 기록, `reviewRequired`. `event.manifest`는 `event.candidate` 실행마다 1건: 받은·병합·발행 수, 발행한 eventId, `unsupportedEvents`, [SPEC-023](../specs/SPEC-023-event-analyzer-detector/spec.md)) |

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
     taskType별 입력 변수·출력 형식의 원본은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다(docs ADR-0012).
@@ -413,7 +413,9 @@ components:
         값은 늘어날 수 있는 열린 목록(`x-extensible-enum`)이다. 쓰는 쪽은 모르는 값을 받아도 실패하지 않아야 한다. 등록되지 않은 값을 요청하면 400 `AI_UNKNOWN_TASK_TYPE`이다. (ADR-0014)
         - `event_judge`: 이벤트 후보 판정 → `VLMAnalysis` (SPEC-009)
         - `event_judge_escalate`: 위험하거나 판단 불가인 후보를 더 강한 모델로 재판정. 입력·출력 형식은 `event_judge`와 같고 모델은 프로필에서 따로 정한다. 재판정할지는 호출자(event-analyzer)가 정한다. (SPEC-020 R-20)
-      x-extensible-enum: [event_judge, event_judge_escalate]
+        - `track_attribute`: 트랙 대표 크롭 1~3장 → 보호구·역할·장비·외형 설명(`events/_track-attribute.schema.json`) (SPEC-024)
+        - `object_question`: 트랙 크롭과 장면 프레임, 질문 → 답(`events/_object-answer.schema.json`) (SPEC-024)
+      x-extensible-enum: [event_judge, event_judge_escalate, track_attribute, object_question]
     EmbedTaskType:
       type: string
       description: |

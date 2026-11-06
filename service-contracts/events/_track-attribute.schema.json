@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/_track-attribute.schema.json",
+  "title": "TrackAttribute",
+  "description": "트랙 속성 분석 결과. ai-gateway track_attribute의 출력이고 track.analyzed의 attributes로 다른 레포에 전달된다(ADR-0012). 모델 미설정·예산 초과(unverified)와 검증 실패·판단 불가(unknown)도 같은 형식이다 (SPEC-024)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verificationStatus",
+    "helmet",
+    "vest",
+    "role",
+    "equipment",
+    "description"
+  ],
+  "properties": {
+    "verificationStatus": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "unverified",
+        "unknown"
+      ],
+      "description": "confirmed: 모델이 답함, unverified: 모델 미설정·예산 초과, unknown: 판단 불가·출력 검증 실패"
+    },
+    "helmet": {
+      "anyOf": [
+        {
+          "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/ppeState"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "안전모. 사람 트랙이 아니거나 ai-gateway가 만든 결과면 null"
+    },
+    "vest": {
+      "anyOf": [
+        {
+          "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/ppeState"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "안전조끼. 사람 트랙이 아니거나 ai-gateway가 만든 결과면 null"
+    },
+    "role": {
+      "anyOf": [
+        {
+          "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/workerRole"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "사람 트랙의 역할. 사람이 아니면 null"
+    },
+    "equipment": {
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+      },
+      "description": "들거나 타고 있는 장비 클래스(예: forklift, ladder). 없으면 빈 배열"
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300,
+      "description": "외형 한 문장(복장 색, 들고 있는 것). 신원은 쓰지 않는다. 텍스트 검색에 쓴다"
+    }
+  },
+  "examples": [
+    {
+      "verificationStatus": "confirmed",
+      "helmet": "not_worn",
+      "vest": "worn",
+      "role": "worker",
+      "equipment": [],
+      "description": "주황색 안전조끼를 입고 안전모를 쓰지 않은 작업자"
+    },
+    {
+      "verificationStatus": "unverified",
+      "helmet": null,
+      "vest": null,
+      "role": null,
+      "equipment": [],
+      "description": null
+    }
+  ]
+}

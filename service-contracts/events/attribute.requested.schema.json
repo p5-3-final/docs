@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/attribute.requested.schema.json",
+  "title": "AttributeRequested",
+  "description": "트랙 하나의 속성 분석이나 객체 자유 질문 요청. 이벤트 관련 트랙(event), 화면 클릭(click), 자유 질문(question)마다 한 번 발행한다. 같은 요청을 다시 보내면 같은 requestId다. 발행: analysis-api(다른 담당자 확인 필요). 소비: track-analyzer (SPEC-024)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    },
+    {
+      "if": {
+        "properties": {
+          "reason": {
+            "const": "question"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "question": {
+            "type": "string"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "question": {
+            "type": "null"
+          },
+          "evidenceFrameKeys": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ],
+  "required": [
+    "requestId",
+    "jobId",
+    "trackId",
+    "className",
+    "reason",
+    "crops",
+    "evidenceFrameKeys",
+    "question"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "attribute.requested"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "requestId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "요청 ID. track.analyzed가 같은 값을 돌려준다. notification-service가 이 값으로 화면에 알린다"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "trackId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "최종 trackId(track.manifest 번역표 기준)"
+    },
+    "className": {
+      "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "event",
+        "click",
+        "question"
+      ],
+      "description": "event: 이벤트 관련 트랙 자동 분석, click: 화면 클릭, question: 객체 자유 질문"
+    },
+    "crops": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "ptsMs"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^sources/[0-9a-f-]{36}/.+/blurred/[^/?#]+\\.(jpg|jpeg|png|webp)$"
+          },
+          "ptsMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        }
+      },
+      "description": "트랙 대표 크롭(블러 사본). 시간순"
+    },
+    "evidenceFrameKeys": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "pattern": "^sources/[0-9a-f-]{36}/.+/blurred/[^/?#]+\\.(jpg|jpeg|png|webp)$"
+      },
+      "description": "question만: 질문 시각 근처 장면 프레임(블러 사본). event·click은 빈 배열"
+    },
+    "question": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "question만: 사용자 질문. event·click은 null"
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000a1",
+      "eventType": "attribute.requested",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:10:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "requestId": "0192f100-0000-5000-8000-0000000000a2",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "trackId": "0192f100-0000-5000-8000-0000000000e1",
+      "className": "person",
+      "reason": "click",
+      "crops": [
+        {
+          "key": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/crop-t7-0.jpg",
+          "ptsMs": 110000
+        }
+      ],
+      "evidenceFrameKeys": [],
+      "question": null
+    },
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000a3",
+      "eventType": "attribute.requested",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:10:00Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "requestId": "0192f100-0000-5000-8000-0000000000a4",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "trackId": "0192f100-0000-5000-8000-0000000000e1",
+      "className": "person",
+      "reason": "question",
+      "crops": [
+        {
+          "key": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/crop-t7-0.jpg",
+          "ptsMs": 110000
+        }
+      ],
+      "evidenceFrameKeys": [
+        "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/blurred/cand-d2-0.jpg"
+      ],
+      "question": "이 사람이 손에 무엇을 들고 있나요?"
+    }
+  ]
+}

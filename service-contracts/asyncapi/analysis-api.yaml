@@ -1,0 +1,50 @@
+asyncapi: 3.0.0
+info:
+  title: analysis-api events
+  version: 0.1.0
+  description: |
+    analysis-api가 발행하는 이벤트. 다른 담당자 서비스이고, 이 파일은 소비 쪽 spec이 아키텍처 문서대로 먼저 정한 채널만 담는다(생산자 담당자 확인 필요).
+    - attribute.requested: 트랙 속성 분석·객체 자유 질문 요청 (SPEC-024)
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  attributeRequested:
+    address: attribute.requested
+    description: 이벤트 관련 트랙·화면 클릭·자유 질문마다 한 건. 트랙 속성 상태를 REQUESTED로 바꾸는 트랜잭션의 Outbox로 낸다. 메시지 키는 sourceId다.
+    messages:
+      attributeRequested:
+        $ref: '#/components/messages/AttributeRequested'
+operations:
+  publishAttributeRequested:
+    action: send
+    summary: 트랙 속성 상태 NONE·FAILED → REQUESTED 전이와 함께 발행 (SPEC-024)
+    channel:
+      $ref: '#/channels/attributeRequested'
+    messages:
+      - $ref: '#/channels/attributeRequested/messages/attributeRequested'
+components:
+  messages:
+    AttributeRequested:
+      name: attribute.requested
+      title: 트랙 속성·자유 질문 요청
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/attribute.requested.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context
