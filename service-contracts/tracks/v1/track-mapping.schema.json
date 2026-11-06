@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/tracks/v1/track-mapping.schema.json",
+  "title": "Track mapping file v1",
+  "description": "track-stitcher가 Job마다 S3에 저장하는 로컬 트랙 → 최종 트랙 번역표(JSON 문서 하나, UTF-8). 경로는 track.manifest의 mappingKey이고 `sources/<sourceId>/jobs/<jobId>/tracks/mapping.json`이다. 받은 모든 로컬 트랙이 정확히 한 번 나온다(연결되지 않은 트랙은 자기 혼자 최종 트랙). analysis-api가 읽어 트랙·검출 박스·이벤트의 trackId를 최종 ID로 바꾼다(SPEC-022 R-12).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "normalizationId",
+    "stitchProfile",
+    "embeddingModel",
+    "tracks",
+    "links"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "stitchProfile": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$",
+      "description": "경계 연결·Re-ID 기준값을 담은 프로필 버전"
+    },
+    "embeddingModel": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[^:\\s]+:[^:\\s]+:[^:\\s]+:[^:\\s]+$",
+      "description": "Re-ID에 쓴 크롭 벡터의 인코더 모델 ID. Re-ID를 하지 않았으면 null"
+    },
+    "tracks": {
+      "type": "array",
+      "maxItems": 200000,
+      "description": "최종 트랙마다 한 항목",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "trackId",
+          "className",
+          "startMs",
+          "endMs",
+          "members"
+        ],
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "최종 트랙 ID. jobId와 가장 이른 구성원으로 결정적으로 만든다"
+          },
+          "className": {
+            "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "members": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/member"
+            },
+            "description": "시간순 구성 로컬 트랙"
+          }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 200000,
+      "description": "로컬 트랙 사이의 연결과 근거. 운영자가 잘못된 연결을 찾을 때 쓴다",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "from",
+          "to",
+          "score"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "boundary",
+              "reid"
+            ],
+            "description": "boundary: 인접 청크 겹침 구간 IoU, reid: 재등장 외형 유사도"
+          },
+          "from": {
+            "$ref": "#/$defs/member"
+          },
+          "to": {
+            "$ref": "#/$defs/member"
+          },
+          "score": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1,
+            "description": "boundary는 평균 IoU, reid는 코사인 유사도"
+          },
+          "gapMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "reid만: from 끝과 to 시작 사이 시간"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunkId",
+        "executionId",
+        "trackLocalId"
+      ],
+      "properties": {
+        "chunkId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "executionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "trackLocalId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$",
+          "description": "청크 실행 안에서만 고유한 트랙 ID. segment.ready·벡터 파일의 crops[].trackLocalId와 같은 값이다."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "stitchProfile": "local-1",
+      "embeddingModel": "open_clip:MobileCLIP2-S0:dfndr2b:mean-4",
+      "tracks": [
+        {
+          "trackId": "0192f100-0000-5000-8000-0000000000e1",
+          "className": "person",
+          "startMs": 101000,
+          "endMs": 190000,
+          "members": [
+            {
+              "chunkId": "0192f100-0000-7000-8000-000000000002",
+              "executionId": "0192f100-0000-7000-8000-000000000003",
+              "trackLocalId": "t7"
+            },
+            {
+              "chunkId": "0192f100-0000-7000-8000-000000000012",
+              "executionId": "0192f100-0000-7000-8000-000000000013",
+              "trackLocalId": "t2"
+            }
+          ]
+        }
+      ],
+      "links": [
+        {
+          "kind": "boundary",
+          "from": {
+            "chunkId": "0192f100-0000-7000-8000-000000000002",
+            "executionId": "0192f100-0000-7000-8000-000000000003",
+            "trackLocalId": "t7"
+          },
+          "to": {
+            "chunkId": "0192f100-0000-7000-8000-000000000012",
+            "executionId": "0192f100-0000-7000-8000-000000000013",
+            "trackLocalId": "t2"
+          },
+          "score": 0.83
+        }
+      ]
+    }
+  ]
+}

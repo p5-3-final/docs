@@ -86,6 +86,26 @@
         {
           "const": "analyzer.escalate",
           "description": "후보 재판정(event_judge_escalate 호출과 재시도). 재판정 수를 count로 남긴다 (SPEC-020)"
+        },
+        {
+          "const": "track-stitcher.queue_wait",
+          "description": "track-stitcher 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "track-stitcher.handle",
+          "description": "track-stitcher 소비 그룹: chunk.boundary·segment.embedded·video.deleted 핸들러 전체"
+        },
+        {
+          "const": "stitcher.boundary",
+          "description": "인접 청크 한 쌍의 경계 트랙 연결. 비교한 트랙 쌍 수를 count로 남긴다 (SPEC-022)"
+        },
+        {
+          "const": "stitcher.reid",
+          "description": "Job 전체 재등장 연결(Re-ID). 비교한 트랙 수를 count로 남긴다 (SPEC-022)"
+        },
+        {
+          "const": "stitcher.finalize",
+          "description": "번역표 저장과 track.manifest 발행. 최종 트랙 수를 count로 남긴다 (SPEC-022)"
         }
       ]
     }

@@ -1,10 +1,11 @@
 asyncapi: 3.0.0
 info:
   title: Chunk processor execution events
-  version: 1.1.0
+  version: 1.2.0
   description: |
     SPEC-014. 실제 종료만 발행하며 불명 timeout은 종료로 취급하지 않는다.
     SPEC-019. 검색 경로 입력이 준비되면 실행마다 segment.ready를 한 번 발행한다(구간·크롭이 없어도 발행).
+    SPEC-022(소비 쪽 정의, 생산자 담당자 확인 필요). 이벤트 경로의 추적이 끝나면 실행마다 track.detected(origin chunk)와 chunk.boundary를 한 번씩 발행한다(트랙이 없어도 발행). 트랙 요약 파일은 `../tracks/v1/chunk-tracks.schema.json`이다.
 defaultContentType: application/json
 servers:
   local:
@@ -54,6 +55,36 @@ channels:
               type: string
               format: uuid
               description: sourceId
+  chunkBoundary:
+    address: chunk.boundary
+    description: 실행의 트랙 요약(경계 트랙 포함). track-stitcher가 소비한다. 메시지 키는 sourceId다.
+    messages:
+      chunkBoundary:
+        payload:
+          $ref: '../events/chunk.boundary.schema.json'
+        headers:
+          $ref: '#/components/schemas/Headers'
+        bindings:
+          kafka:
+            key:
+              type: string
+              format: uuid
+              description: sourceId
+  trackDetected:
+    address: track.detected
+    description: 실행의 로컬 트랙과 검출 박스 파일(origin chunk). analysis-api·analysis-loader가 소비한다. 메시지 키는 sourceId다.
+    messages:
+      trackDetected:
+        payload:
+          $ref: '../events/track.detected.schema.json'
+        headers:
+          $ref: '#/components/schemas/Headers'
+        bindings:
+          kafka:
+            key:
+              type: string
+              format: uuid
+              description: sourceId
 operations:
   consumeRequested:
     action: receive
@@ -68,6 +99,16 @@ operations:
     summary: 구간 프레임·크롭을 blurred/ 아래에 저장한 뒤 발행 (SPEC-019)
     channel:
       $ref: '#/channels/segmentReady'
+  publishChunkBoundary:
+    action: send
+    summary: 트랙 요약 파일을 실행 폴더에 저장한 뒤 실행마다 한 번 발행 (SPEC-022)
+    channel:
+      $ref: '#/channels/chunkBoundary'
+  publishTrackDetected:
+    action: send
+    summary: 트랙 요약·검출 박스 파일을 저장한 뒤 실행마다 한 번 발행 (SPEC-022)
+    channel:
+      $ref: '#/channels/trackDetected'
 components:
   schemas:
     Headers:

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/tracks/v1/chunk-tracks.schema.json",
+  "title": "Chunk tracks file v1",
+  "description": "chunk-processor가 실행마다 S3에 저장하는 트랙 요약 파일(JSON 문서 하나, UTF-8). 경로는 chunk.boundary·track.detected(origin chunk)의 tracksKey이고 실행 폴더 아래 `tracks.json`이다. 처리 범위(겹침 포함)에서 추적한 모든 로컬 트랙을 담는다. 경계 겹침 구간의 박스는 track-stitcher의 경계 연결에 쓴다(SPEC-022). 생산자: chunk-processor(다른 담당자 확인 필요). 검출 박스 전체(1~2fps)는 이 파일이 아니라 analysis-loader가 읽는 별도 파일이다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "ownedRange",
+    "processingRange",
+    "detectorProfile",
+    "tracks"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ownedRange": {
+      "$ref": "../../events/chunk.requested.schema.json#/properties/ownedRange"
+    },
+    "processingRange": {
+      "$ref": "../../events/chunk.requested.schema.json#/properties/ownedRange"
+    },
+    "detectorProfile": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$",
+      "description": "추적에 쓴 탐지 프로필 버전"
+    },
+    "tracks": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "trackLocalId",
+          "className",
+          "startMs",
+          "endMs",
+          "touchesHead",
+          "touchesTail",
+          "observationCount",
+          "boundaryBoxes"
+        ],
+        "properties": {
+          "trackLocalId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "청크 실행 안에서만 고유한 트랙 ID. segment.ready·벡터 파일의 crops[].trackLocalId와 같은 값이다."
+          },
+          "className": {
+            "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "처음 관측 시각(처리 범위 안)"
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807,
+            "description": "마지막 관측 시각(처리 범위 안)"
+          },
+          "touchesHead": {
+            "type": "boolean",
+            "description": "처리 범위 앞쪽 겹침 구간(processingRange.startMs ~ ownedRange.startMs)에 관측이 있다. 첫 청크는 늘 false"
+          },
+          "touchesTail": {
+            "type": "boolean",
+            "description": "처리 범위 뒤쪽 겹침 구간(ownedRange.endMs ~ processingRange.endMs)에 관측이 있다. 마지막 청크는 늘 false"
+          },
+          "observationCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "boundaryBoxes": {
+            "type": "array",
+            "maxItems": 512,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ptsMs",
+                "box"
+              ],
+              "properties": {
+                "ptsMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9223372036854775807,
+                  "description": "정규화 사본 기준 밀리초"
+                },
+                "box": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "description": "[x1, y1, x2, y2]. 프레임 너비·높이로 나눈 0~1 좌표, 왼쪽 위가 원점, x1<x2, y1<y2"
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "description": "앞·뒤 겹침 구간 안의 박스만(검출 fps 그대로). touchesHead·touchesTail이 모두 false면 빈 배열"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "ownedRange": {
+        "startMs": 0,
+        "endMs": 120000
+      },
+      "processingRange": {
+        "startMs": 0,
+        "endMs": 125000
+      },
+      "detectorProfile": "industrial-default@1",
+      "tracks": [
+        {
+          "trackLocalId": "t7",
+          "className": "person",
+          "startMs": 101000,
+          "endMs": 124800,
+          "touchesHead": false,
+          "touchesTail": true,
+          "observationCount": 96,
+          "boundaryBoxes": [
+            {
+              "ptsMs": 120200,
+              "box": [
+                0.41,
+                0.22,
+                0.52,
+                0.71
+              ],
+              "confidence": 0.88
+            },
+            {
+              "ptsMs": 120600,
+              "box": [
+                0.42,
+                0.22,
+                0.53,
+                0.71
+              ],
+              "confidence": 0.86
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

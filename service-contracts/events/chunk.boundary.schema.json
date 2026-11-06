@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/chunk.boundary.schema.json",
+  "title": "ChunkBoundary",
+  "description": "청크 실행 하나의 트랙 요약이 준비됐다. 실행마다 한 번, 트랙이 0개여도 발행한다. track-stitcher가 인접 청크의 경계 트랙을 잇고, 영상의 모든 청크가 모였는지 판단하는 데 쓴다. 발행: chunk-processor(다른 담당자 확인 필요). 소비: track-stitcher (SPEC-022 R-1~R-4)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
+  "required": [
+    "jobId",
+    "chunkId",
+    "executionId",
+    "normalizationId",
+    "ownedRange",
+    "processingRange",
+    "sourceDurationMs",
+    "tracksKey",
+    "trackCount",
+    "boundaryTrackCount",
+    "detectorProfile"
+  ],
+  "properties": {
+    "eventType": {
+      "const": "chunk.boundary"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ownedRange": {
+      "$ref": "chunk.requested.schema.json#/properties/ownedRange",
+      "description": "이 청크가 소유하는 범위(chunk.requested와 같은 값)"
+    },
+    "processingRange": {
+      "$ref": "chunk.requested.schema.json#/properties/ownedRange",
+      "description": "겹침을 포함해 추적한 범위(chunk.requested와 같은 값)"
+    },
+    "sourceDurationMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "description": "정규화 사본 전체 길이(video.normalized의 durationMs). 소유 범위가 [0, sourceDurationMs)를 빈틈없이 덮으면 영상의 모든 청크가 모인 것이다"
+    },
+    "tracksKey": {
+      "type": "string",
+      "pattern": "^sources/[0-9a-f-]{36}/jobs/[0-9a-f-]{36}/chunks/[0-9a-f-]{36}/executions/[0-9a-f-]{36}/tracks[.]json$",
+      "description": "트랙 요약 파일(tracks/v1/chunk-tracks.schema.json) 경로. 실행 폴더 아래다"
+    },
+    "trackCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "파일의 트랙 수"
+    },
+    "boundaryTrackCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "touchesHead나 touchesTail이 true인 트랙 수"
+    },
+    "detectorProfile": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$"
+    }
+  },
+  "examples": [
+    {
+      "eventId": "0192f100-0000-5000-8000-0000000000b1",
+      "eventType": "chunk.boundary",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-06T09:00:05Z",
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "chunkId": "0192f100-0000-7000-8000-000000000002",
+      "executionId": "0192f100-0000-7000-8000-000000000003",
+      "normalizationId": "0192f100-0000-7000-8000-000000000004",
+      "ownedRange": {
+        "startMs": 0,
+        "endMs": 120000
+      },
+      "processingRange": {
+        "startMs": 0,
+        "endMs": 125000
+      },
+      "sourceDurationMs": 600000,
+      "tracksKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f100-0000-7000-8000-000000000001/chunks/0192f100-0000-7000-8000-000000000002/executions/0192f100-0000-7000-8000-000000000003/tracks.json",
+      "trackCount": 12,
+      "boundaryTrackCount": 3,
+      "detectorProfile": "industrial-default@1"
+    }
+  ]
+}

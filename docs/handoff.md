@@ -169,7 +169,7 @@ cd repos/ai && uv sync --all-packages
 | spec | 대상 | 상태 |
 | --- | --- | --- |
 | SPEC-021 | 내부 동기 호출 규약 적용(ai-gateway `X-Request-Deadline`·504, ai-client 생성 모델·재시도 규칙·embed·parse) | Approved |
-| SPEC-022 | track-stitcher | 작성 예정 |
+| SPEC-022 | track-stitcher(`chunk.boundary`·`track.detected`·`track.manifest`, 트랙 파일 2종 계약 포함) | Approved |
 | SPEC-023 | event-analyzer 탐지기 후보 | 작성 예정 |
 | SPEC-024 | track-analyzer | 작성 예정 |
 | SPEC-025 | embedding-worker | 작성 예정 |
