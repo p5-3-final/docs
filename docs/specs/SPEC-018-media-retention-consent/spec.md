@@ -1,7 +1,7 @@
 ---
 id: SPEC-018
 title: 학습용 보존 동의와 보존 키
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend, docs]
 created: 2026-11-06
