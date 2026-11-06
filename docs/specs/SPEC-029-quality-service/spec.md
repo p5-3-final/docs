@@ -149,7 +149,7 @@ v5.1([아키텍처 v5.1](../../architecture/architecture.md) 16·17.3절, [ADR-0
 
 quality-service는 이벤트를 발행하지 않아 AsyncAPI 파일이 없다. 소비하는 `event.analyzed`·`stage.timing`·`video.deleted`는 기존 계약 그대로다.
 
-계약 묶음 3.8.0 → 3.9.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
+계약 묶음 3.8.0 → 3.9.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가) 5.0.0(2026-11-07, ADR-0018): `GateResult.failures[].value`·`ReviewItem.analysis` null 허용, `ReviewItem.startMs`·`endMs` int64, `AlertReport.firstAlert*` 설명(quality-service 3.0.0).
 
 ## 7. 성공 지표
 
