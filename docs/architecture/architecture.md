@@ -747,7 +747,7 @@ flowchart LR
 | `version.activated` | analysis-api · stream-service(v5) → search-service | 활성 버전 전환마다, 순번. STREAM은 세션 시작에 1건 |
 | `analysis.completed` · `job.status` | pipeline-service · stream-service(v5) → aggregator · notification-service | `completed`는 업로드 Job마다 또는 실시간 창마다(v5 `jobType: STREAM`, `scope`, `chunkId`), 세션과 직전 소스, counts. `status`는 pipeline-service만 |
 | `source.completed` | aggregator → analysis-api · notification-service · quality-service | Job마다 1건 이상. 결과 파일 경로, v5 `revision`(늦은 이벤트로 다시 낼 때 +1)·`partial`·`missingCounts` |
-| `state.updated` (v5) | aggregator → stream-service · notification-service | 창마다. sequence, 바뀐 스냅샷·위험 전이·노출 증분·규칙 이벤트·`gap` |
+| `state.updated` (v5) | aggregator → stream-service · notification-service | 창마다. sequence, 바뀐 스냅샷·위험 전이·노출 증분·규칙 이벤트, 활성 위험 구역 ID 전체(`activeRiskZoneIds`), `partial`·`gapMs` |
 | `stage.timing` | 모든 소비자 → quality-service | 핸들러당 1건, `StageTiming` 묶음 |
 | `{토픽}.{그룹}.retry` · `{그룹}.dlq` | 각 소비 그룹 | 지터 재시도, 운영자 재처리 |
 
@@ -799,7 +799,7 @@ flowchart LR
 | --- | --- | --- |
 | 세는 신호 | 청크 전부의 `segment.indexed`(적재), `event.manifest`(탐지기 후보 판정), `track.manifest`(연결) 합계 = 계획 | 창의 `segment.indexed`·`event.manifest`. `track.manifest`는 없다 |
 | 세지 않는 것 | 벡터 후보 판정, 긴급 알림, 트랙 속성, 텍스트 임베딩, bbox 주석 | 같다 |
-| 개수 검증 | aggregator가 읽은 이벤트 중 `rule*` 수와 `counts.events`를 비교. 다르면 재시도 토픽, 상한 뒤에는 `source.completed`에 `partial: true`와 빠진 수를 실어 발행한다. 활성 버전은 전환하되 화면에 "일부 누락"을 표시한다 | Redis 대기 집합의 `rule*` 수와 비교. 상한 뒤에는 그 창을 `partial`로 fold하고 `state.updated`에 `partialChunkIds`를 남긴다 |
+| 개수 검증 | aggregator가 읽은 이벤트 중 `rule*` 수와 `counts.events`를 비교. 다르면 재시도 토픽, 상한 뒤에는 `source.completed`에 `partial: true`와 빠진 수를 실어 발행한다. 활성 버전은 전환하되 화면에 "일부 누락"을 표시한다 | Redis 대기 집합의 `rule*` 수와 비교. 상한 뒤에는 그 창을 `partial: true`로 fold해 `state.updated`에 표시한다 |
 | 창 시간 초과 | 해당 없음 | 적재 신호가 프로필 시간(기본 120초) 안에 모이지 않으면 stream-service가 창을 `PARTIAL`로 닫고 그때까지의 counts로 `analysis.completed(chunk)`를 낸다. 늦게 온 신호는 무시한다 |
 | 예산·상한 초과 | `unverified`(`unverifiedReason`)로 발행되고 완료는 정상 진행된다. quality-service가 `event.analyzed`로 운영자 재판정 큐를 만든다. 예산 복구 뒤 운영자가 `REANALYZE`를 돌리면 이미 판정된 후보는 캐시가 적중해 `unverified`였던 후보만 호출된다(기본안 D-7) | 같다. 세션은 계속 돈다 |
 | 활성 버전 전환 | analysis-api가 `source.completed`를 받고 저장 수가 manifest 수와 맞을 때 같은 트랜잭션에서 전환, `version.activated`. revision이 올라간 재전달은 upsert | 세션 시작에 stream-service가 `version.activated` 1건. 전환 없음 |

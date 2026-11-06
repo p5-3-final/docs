@@ -2924,8 +2924,9 @@ quality-service</td>
 <tr>
 <td><code>state.updated</code> (v5)</td>
 <td>aggregator → stream-service · notification-service</td>
-<td>창마다. sequence, 바뀐 스냅샷·위험 전이·노출 증분·규칙
-이벤트·<code>gap</code></td>
+<td>창마다. sequence, 바뀐 스냅샷·위험 전이·노출 증분·규칙 이벤트, 활성
+위험 구역 ID 전체(<code>activeRiskZoneIds</code>),
+<code>partial</code>·<code>gapMs</code></td>
 </tr>
 <tr>
 <td><code>stage.timing</code></td>
@@ -3196,8 +3197,8 @@ ACTIVE. STREAM은 세션 시작에 <code>ACTIVE</code> 하나</td>
 <code>source.completed</code>에 <code>partial: true</code>와 빠진 수를
 실어 발행한다. 활성 버전은 전환하되 화면에 "일부 누락"을 표시한다</td>
 <td>Redis 대기 집합의 <code>rule*</code> 수와 비교. 상한 뒤에는 그 창을
-<code>partial</code>로 fold하고 <code>state.updated</code>에
-<code>partialChunkIds</code>를 남긴다</td>
+<code>partial: true</code>로 fold해 <code>state.updated</code>에
+표시한다</td>
 </tr>
 <tr>
 <td>창 시간 초과</td>

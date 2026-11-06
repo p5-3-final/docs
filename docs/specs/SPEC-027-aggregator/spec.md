@@ -179,7 +179,7 @@ v5.1([아키텍처 v5.1](../../architecture/architecture.md) 9·12절, [ADR-0016
 | `service-contracts/stages/v1/stages.schema.json` | `aggregator.queue_wait`·`aggregator.handle`·`aggregate.read`·`aggregate.compute`·`aggregate.summary`·`aggregate.store` | 예(추가) |
 | `service-contracts/events/analysis.completed.schema.json` | v5.1: `jobType`에 `STREAM`, 선택 필드 `scope`(`job`·`chunk`), `chunkId`, `partial`. 생산자에 stream-service 추가 | 예(열거값·선택 필드 추가) |
 | `service-contracts/events/source.completed.schema.json` | v5.1: 선택 필드 `revision`, `partial`, `missingCounts` | 예(선택 필드 추가) |
-| `service-contracts/events/state.updated.schema.json` | v5.1 신규(생산자 aggregator). sequence, 바뀐 스냅샷·위험 전이·노출 증분·규칙 이벤트, `partialChunkIds`, `gap` | 예(추가) |
+| `service-contracts/events/state.updated.schema.json` | v5.1 신규(생산자 aggregator). sequence, 바뀐 스냅샷·위험 전이·노출 증분·규칙 이벤트, `activeRiskZoneIds`, `partial`·`gapMs` | 예(추가) |
 | `service-contracts/asyncapi/aggregator.yaml` | v5.1: `event.analyzed`·`track.detected` 소비, `state.updated` 발행(1.2.0) | 예(추가) |
 | `service-contracts/openapi/stream-service.yaml` | v5.1: 내부 읽기 `GET /internal/v1/stream/sessions/{id}/zones`(SPEC-036) | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | v5.1: `aggregate.fold` | 예(추가) |
