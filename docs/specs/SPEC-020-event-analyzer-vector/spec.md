@@ -32,7 +32,7 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 - `event.candidate.vector` 소비(소비 그룹 `event-analyzer`)
 - 후보마다 `event_judge` 호출, 조건에 맞으면 `event_judge_escalate` 재판정
 - 최종 `VLMAnalysis` 선택, 판정 방식(`vector+vlm`·`vector+vlm+escalate`), `reviewRequired`
-- ai-gateway 일시 오류의 후보 단위 재시도와 `unknown` 기록
+- ai-gateway 연결 실패의 후보 단위 재시도와, 그 밖의 호출 실패의 `unknown` 기록
 - 후보마다 `event.analyzed` 발행(결정적 eventId)
 - ai-gateway: `event_judge_escalate` taskType 등록(입출력 형식은 `event_judge`와 같음, 모델은 프로필)
 - 처리 단계 측정 `analyzer.judge`·`analyzer.escalate`
@@ -75,8 +75,9 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 
 #### 인수 조건
 
-- Given ai-gateway가 한 번 503을 돌려주고 다음에 성공, When 처리하면, Then 성공한 판정이 담긴다.
-- Given ai-gateway가 재시도 횟수만큼 계속 실패, When 처리하면, Then 그 후보는 `verificationStatus` `unknown`과 실패 코드로 발행되고 다른 후보는 정상 판정된다.
+- Given ai-gateway에 한 번 연결하지 못하고 다음에 성공, When 처리하면, Then 성공한 판정이 담긴다.
+- Given ai-gateway가 503을 돌려주거나 응답이 제한 시간을 넘기면, When 처리하면, Then 다시 부르지 않고 그 후보는 `verificationStatus` `unknown`과 실패 코드로 발행되고 다른 후보는 정상 판정된다.
+- Given ai-gateway에 재시도 횟수만큼 계속 연결하지 못하면, When 처리하면, Then 그 후보는 `unknown`과 실패 코드로 발행된다.
 
 ### US-4 잘못된 메시지와 설정 오류 (P2)
 
@@ -103,9 +104,9 @@ frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷�
 | R-8 | WHEN 한 메시지의 후보를 모두 판정하면, THE event-analyzer SHALL 후보마다 `event.analyzed`를 한 건씩 발행한다. | US-1 |
 | R-9 | THE event-analyzer SHALL `event.analyzed`의 eventId를 후보 ID로 결정적으로 만들어, 같은 메시지를 다시 처리해도 같은 eventId를 쓴다. | US-1 |
 | R-10 | THE event-analyzer SHALL `event.analyzed`에 후보 ID, 구간 ID·시각, 후보 유형, 근거 프레임 경로, 벡터 근거(점수·임계값·프로토타입 버전·인코더 모델 ID), 최종 `VLMAnalysis`, 판정 방식, 판정 호출마다의 taskType·호출 ID·모델·프롬프트 버전·`verificationStatus`·실패 코드, `reviewRequired`와 사유, 분류 체계 버전을 담는다. | US-1 |
-| R-11 | IF ai-gateway 호출이 502·503·시간 초과·연결 실패로 끝나면, THEN THE event-analyzer SHALL 그 호출을 설정한 횟수까지 다시 시도한다. | US-3 |
-| R-12 | IF 1차 판정 호출이 재시도 끝에도 실패하면, THEN THE event-analyzer SHALL 그 후보의 최종 분석을 `verificationStatus` `unknown`(나머지 판정 필드 null, 유형은 후보 유형)으로 만들고 실패 코드를 기록해 발행한다. | US-3 |
-| R-13 | IF 재판정 호출이 재시도 끝에도 실패하면, THEN THE event-analyzer SHALL 1차 판정 결과를 최종 분석으로 쓰고 재판정의 실패 코드를 기록한다. | US-3 |
+| R-11 | IF ai-gateway에 연결하지 못해 요청이 전달되지 않았으면, THEN THE event-analyzer SHALL 그 호출을 설정한 횟수까지 다시 시도하고, 502·503·시간 초과는 다시 시도하지 않는다(overview "통신 규칙" 내부 동기 호출 규약: VLM 호출은 비용이 두 번 들 수 있어 요청이 도착하지 않은 경우만 재시도). | US-3 |
+| R-12 | IF 1차 판정 호출이 실패하면(R-11의 재시도 소진 포함), THEN THE event-analyzer SHALL 그 후보의 최종 분석을 `verificationStatus` `unknown`(나머지 판정 필드 null, 유형은 후보 유형)으로 만들고 실패 코드를 기록해 발행한다. | US-3 |
+| R-13 | IF 재판정 호출이 실패하면(R-11의 재시도 소진 포함), THEN THE event-analyzer SHALL 1차 판정 결과를 최종 분석으로 쓰고 재판정의 실패 코드를 기록한다. | US-3 |
 | R-14 | IF ai-gateway가 판정 호출에 `AI_IMAGE_NOT_FOUND`를 돌려주면, THEN THE event-analyzer SHALL 다시 시도하지 않고 R-12·R-13과 같이 그 호출을 실패로 기록한다. | US-3 |
 | R-15 | IF ai-gateway가 `AI_IMAGE_NOT_FOUND` 외의 4xx를 돌려주면, THEN THE event-analyzer SHALL 그 메시지의 `event.analyzed`를 하나도 발행하지 않고 메시지를 재시도 없이 DLQ로 보낸다. | US-4 |
 | R-16 | IF `event.candidate.vector`가 계약 스키마에 맞지 않으면, THEN THE event-analyzer SHALL `event.analyzed`를 발행하지 않고 메시지를 재시도 없이 DLQ로 보낸다. | US-4 |
