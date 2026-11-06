@@ -141,13 +141,13 @@ event-analyzer로서 재배치나 재시도로 같은 후보를 다시 판정할
 | R-8 | IF R-7에서 기다린 호출이 성공하지 못했거나 그 taskType의 제한 시간(프로필 값) 안에 끝나지 않으면, THEN THE ai-gateway SHALL 직접 모델을 부른다. | US-2 |
 | R-9 | WHEN `video.deleted`를 받으면, THE ai-gateway SHALL 그 영상 ID로 만든 `/v1/analyze` 캐시를 영속 저장소와 앞단 캐시에서 지운다(SPEC-009 R-20과 같은 소비). | US-6 |
 | R-10 | WHEN 캐시에 없는 캐시 대상 호출이 모델을 부르기 전이면, THE ai-gateway SHALL 예상 비용(프로필의 모델 단가 × 예상 토큰)을 호출 서비스의 그날(UTC) 예산과 전체 그날 예산에서 함께 예약한다. | US-3 |
-| R-11 | IF R-10에서 호출 서비스 예산이나 전체 예산의 남은 금액이 예상 비용보다 적으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 예약하지 않으며, 모델이 미설정일 때와 같은 결과를 돌려준다(`/v1/analyze`는 200 `unverified`, `/v1/parse`는 200 `safe-fallback`, `embed_text`는 503 `AI_BUDGET_EXCEEDED`). 호출 로그에는 상태 `budget_exceeded`를 남긴다. | US-3 |
+| R-11 | IF R-10에서 호출 서비스 예산이나 전체 예산의 남은 금액이 예상 비용보다 적으면, THEN THE ai-gateway SHALL 모델을 부르지 않고 예약하지 않으며, 모델이 미설정일 때와 같은 결과를 돌려준다(`/v1/analyze`는 200 `unverified`, `/v1/parse`는 200 `safe-fallback`, `embed_text`는 429 `AI_BUDGET_EXCEEDED`). 호출 로그에는 상태 `budget_exceeded`를 남긴다. | US-3 |
 | R-12 | WHEN 예약한 모델 호출이 끝나면, THE ai-gateway SHALL 공급자가 알려 준 입력·출력 토큰으로 실제 비용을 계산해 예약을 정산한다. 공급자가 토큰 수를 알려 주지 않으면 예상 비용으로 정산한다. | US-3 |
 | R-13 | IF 예약한 모델 호출을 공급자에 보내지 못했으면(연결 불가, R-16으로 차례를 얻지 못함), THEN THE ai-gateway SHALL 예약을 되돌린다. | US-3 |
 | R-22 | IF 예약한 모델 호출을 보낸 뒤 토큰 수 없이 실패하면(제한 시간 초과, 공급자 오류), THEN THE ai-gateway SHALL 이미 과금됐을 수 있으므로 예상 비용으로 정산한다. | US-3 |
 | R-14 | THE ai-gateway SHALL 캐시 적중, 단가가 없는 모델(프로필에 단가가 없는 로컬 모델·mock)의 호출은 비용 0으로 센다. | US-3 |
 | R-15 | WHERE 프로필에 Adapter·모델의 분당 요청 수 또는 분당 토큰 수 한도가 있으면, THE ai-gateway SHALL 모든 Pod의 그 모델 호출을 합쳐 그 한도 안에서만 공급자를 부른다. | US-4 |
-| R-16 | IF R-15의 한도 때문에 그 taskType의 제한 시간 안에 호출 차례를 얻지 못하면, THEN THE ai-gateway SHALL 공급자 일시 오류와 같은 결과로 끝내고(SPEC-009 R-18, SPEC-011 R-20, SPEC-012 R-13) 호출 로그에 상태 `unavailable`, 오류 코드 `AI_RATE_LIMITED`를 남긴다. | US-4 |
+| R-16 | IF R-15의 한도 때문에 그 taskType의 제한 시간 안에 호출 차례를 얻지 못하면, THEN THE ai-gateway SHALL `/v1/analyze`·`embed_text`는 429와 오류 코드 `AI_RATE_LIMITED`로, `/v1/parse`는 공급자 일시 오류와 같은 200 `safe-fallback`(SPEC-012 R-13)으로 끝내고, 호출 로그에 상태 `unavailable`, 오류 코드 `AI_RATE_LIMITED`를 남긴다. | US-4 |
 | R-17 | WHILE 앞단 캐시(Redis)에 연결할 수 없으면, THE ai-gateway SHALL 캐시는 영속 저장소만 쓰고, 동시 호출 합치기(R-7)는 하지 않으며, 분당 한도는 Pod별 한도(프로필 값)로 지키고, 경고 로그를 남긴다. 요청은 거절하지 않는다. | US-5 |
 | R-18 | THE ai-gateway SHALL `/ready` 결과를 앞단 캐시 연결 상태와 상관없이 정한다. | US-5 |
 | R-19 | WHEN 캐시 대상 호출이 끝나면, THE ai-gateway SHALL 호출 로그에 캐시 적중 여부, 예약 비용, 정산 비용을 남긴다. 캐시 적중이면 모델 원문은 남기지 않는다. | US-7 |

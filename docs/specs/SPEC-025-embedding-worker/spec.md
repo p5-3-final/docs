@@ -89,7 +89,7 @@ embedding-worker는 항목마다 문장을 만들고, ai-gateway `/v1/embed`(`em
 | R-6 | THE embedding-worker SHALL ai-gateway `/v1/embed`를 taskType `embed_text`, 문장 하나로 부르고, 응답 벡터를 텍스트 벡터 파일(`vectors/v1/text-vector-file`)로 `sources/<sourceId>/jobs/<jobId>/text-vectors/<itemKind>/<itemId>.json`에 저장한 뒤 `embedding.ready`를 발행한다. | US-1 |
 | R-7 | THE embedding-worker SHALL 파일 `metadata`에 항목 시각(초 단위 값은 ms로)과 항목별 필터 값을 담는다. event는 유형·severity·`verificationStatus`, track은 trackId·클래스·보호구·역할, segment_annotation은 segmentId다. | US-1 |
 | R-8 | THE embedding-worker SHALL 파일과 `embedding.ready`에 문장 규칙 버전(`event-v1`·`track-v1`·`segment_annotation-v1`), 응답의 모델 ID, 차원을 담고, eventId를 itemKind·itemId·모델 ID로 결정적으로 만든다. | US-1 |
-| R-9 | IF `/v1/embed`가 SPEC-021 R-10의 재시도 끝에도 503·연결 실패·시간 초과로 끝나면, THEN THE embedding-worker SHALL 메시지를 재시도 토픽으로 보내 다시 처리한다. 단 오류 코드가 `AI_MODEL_NOT_CONFIGURED`·`AI_BUDGET_EXCEEDED`이면 재시도 없이 DLQ로 보낸다. | US-3 |
+| R-9 | IF `/v1/embed`가 SPEC-021 R-10의 재시도 끝에도 503·연결 실패·시간 초과로 끝나거나 429 `AI_RATE_LIMITED`로 끝나면, THEN THE embedding-worker SHALL 메시지를 재시도 토픽으로 보내 다시 처리한다. 단 오류 코드가 `AI_MODEL_NOT_CONFIGURED`이거나 429 `AI_BUDGET_EXCEEDED`이면 재시도 없이 DLQ로 보낸다. | US-3 |
 | R-10 | IF `/v1/embed`가 4xx를 돌려주거나 응답 벡터 수가 1이 아니거나 벡터 길이가 응답 차원과 다르면, THEN THE embedding-worker SHALL 아무것도 발행하지 않고 재시도 없이 DLQ로 보낸다. | US-3 |
 | R-11 | IF 메시지가 계약 스키마에 맞지 않으면, THEN THE embedding-worker SHALL 재시도 없이 DLQ로 보낸다. | US-3 |
 | R-12 | IF 저장소·Kafka가 일시적으로 응답하지 않으면, THEN THE embedding-worker SHALL 메시지를 재시도 토픽으로 보내 다시 처리하고, 같은 경로·같은 eventId로 다시 쓴다. | US-3 |
