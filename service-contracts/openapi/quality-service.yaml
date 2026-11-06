@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: quality-service API
-  version: 1.1.0
+  version: 1.2.0
   description: '검토 큐, Golden Set 버전, 평가 실행과 CI Gate, 처리 단계 리포트 (SPEC-029). 외부 데이터셋 가져오기, 특징 내보내기, 처리 단계 성능 Gate (SPEC-030).
 
     - `/api/v1/quality/**`는 api-gateway를 거치고 OPERATOR 역할만 쓴다. 역할 검사는 서비스가 `X-User-Roles`로 한다.
@@ -103,6 +103,8 @@ paths:
                     note: 안전모는 썼고 조끼만 없음
                   labeledAt: '2026-11-06T10:05:00Z'
                   createdAt: '2026-11-06T09:00:00Z'
+                  evidenceFrameUrls:
+                  - https://storage.example/vlm/...signed
                 page:
                   page: 0
                   size: 20
@@ -173,6 +175,8 @@ paths:
                   note: 안전모는 썼고 조끼만 없음
                 labeledAt: '2026-11-06T10:05:00Z'
                 createdAt: '2026-11-06T09:00:00Z'
+                evidenceFrameUrls:
+                - https://storage.example/vlm/...signed
         '404':
           $ref: '#/components/responses/ReviewNotFound'
         '401':
@@ -231,6 +235,8 @@ paths:
                 label: null
                 labeledAt: null
                 createdAt: '2026-11-06T09:00:00Z'
+                evidenceFrameUrls:
+                - https://storage.example/vlm/...signed
         '404':
           $ref: '#/components/responses/ReviewNotFound'
         '409':
@@ -351,6 +357,8 @@ paths:
                   note: 안전모는 썼고 조끼만 없음
                 labeledAt: '2026-11-06T10:05:00Z'
                 createdAt: '2026-11-06T09:00:00Z'
+                evidenceFrameUrls:
+                - https://storage.example/vlm/...signed
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -1774,6 +1782,7 @@ components:
       - reason
       - reviewReasons
       - evidenceFrameKeys
+      - evidenceFrameUrls
       - analysis
       - status
       - assigneeId
@@ -1821,7 +1830,13 @@ components:
           items:
             type: string
             maxLength: 1024
-          description: 블러 사본 경로. 화면은 서명 주소로 바꿔 보여 준다
+          description: 블러 사본 저장소 경로. 화면은 evidenceFrameUrls를 쓴다
+        evidenceFrameUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: evidenceFrameKeys와 같은 순서의 서명 주소(1시간). 화면 표시용이고 로그·저장소에 남기지 않는다 (SPEC-035 R-4)
         analysis:
           type: object
           description: 판정 결과 VLMAnalysis. 형식은 `events/_vlm-analysis.schema.json`이다

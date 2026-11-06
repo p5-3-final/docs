@@ -182,7 +182,7 @@ cd repos/ai && uv sync --all-packages
 | SPEC-032 | frontend 클릭 조회·오버레이·객체 질문·위험구역 편집. analysis-api 공개 API 2부 계약 초안 | Approved |
 | SPEC-033 | frontend 검색·RAG·주석 클립. search-service 공개 API 계약 초안 | Approved |
 | SPEC-034 | frontend 작업 세션·분석 이력·설정(학습용 보존). 계약 변경 없음 | Approved |
-| SPEC-035 | frontend 품질 화면(운영자) | 작성 예정 |
+| SPEC-035 | frontend 품질 화면(운영자). quality-service 검토 항목 서명 주소 필드 | Approved |
 
 plan 단계에서 사용자에게 먼저 확인할 것(새 라이브러리 도입 규칙):
 
