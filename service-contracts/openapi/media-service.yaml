@@ -1,9 +1,10 @@
 openapi: 3.1.0
 info:
   title: media-service API
-  version: 1.2.1
+  version: 1.3.0
   description: |
-    영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003), 원본 재생·내려받기 주소 발급 (SPEC-006).
+    영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003), 원본 재생·내려받기 주소 발급 (SPEC-006),
+    작업 세션 (SPEC-017), 학습용 보존 동의·보존 중인 삭제 영상·철회 (SPEC-018).
     외부 경로(`/api/v1/media/**`)는 api-gateway를 거쳐 호출한다.
     영상 파일 바이트는 media-service를 거치지 않고 응답으로 받은 주소로 저장소에 바로 올리고 바로 읽는다. (SPEC-003 NFR-1, SPEC-006 NFR-1)
     상태가 바뀔 때 발행하는 이벤트는 `../asyncapi/media-service.yaml`에 있다.
@@ -13,6 +14,10 @@ servers:
 tags:
   - name: videos
     description: 영상 업로드와 관리
+  - name: sessions
+    description: 작업 세션. 영상 여러 개를 작업 하나(작업 전·중·후)로 묶는다. (SPEC-017)
+  - name: retention
+    description: 학습용 보존 동의, 보존 중인 삭제 영상과 철회 (SPEC-018, ADR-0011)
 paths:
   /api/v1/media/videos:
     post:
@@ -22,7 +27,9 @@ paths:
         영상을 "업로드 중"(`UPLOADING`) 상태로 만들고 업로드 방법을 돌려준다.
         100MB(104,857,600바이트) 이하는 단일 업로드(`SINGLE`), 넘으면 멀티파트 업로드(`MULTIPART`)다.
         업로드 주소는 1시간 동안 유효하다. 24시간 안에 완료하지 않으면 영상은 만료된다.
-        (SPEC-003 R-1~R-6, NFR-6)
+        `sessionId`·`role`을 함께 보내면 영상을 요청자의 작업 세션에 넣는다. 세션과 역할은 이 요청에서만 정하고 나중에 바꾸지 않는다.
+        `retentionConsent`를 보내지 않으면 계정 기본값(`GET /api/v1/media/retention-settings`)을 따른다.
+        (SPEC-003 R-1~R-6, NFR-6, SPEC-017 R-6~R-10, SPEC-018 R-3·R-4)
       tags: [videos]
       parameters:
         - $ref: './_common.yaml#/components/parameters/XUserId'
@@ -62,6 +69,8 @@ paths:
                       status: UPLOADING
                       createdAt: '2026-11-02T09:30:00Z'
                       uploadedAt: null
+                      session: null
+                      retentionConsent: false
                     upload:
                       method: SINGLE
                       url: https://vlm-media.s3.ap-northeast-2.amazonaws.com/
@@ -86,6 +95,8 @@ paths:
                       status: UPLOADING
                       createdAt: '2026-11-02T09:30:00Z'
                       uploadedAt: null
+                      session: null
+                      retentionConsent: false
                     upload:
                       method: MULTIPART
                       partSizeBytes: 67108864
@@ -103,6 +114,20 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
+        '409':
+          description: 세션에 "삭제"가 아닌 영상이 이미 100개 있음 (`MEDIA_SESSION_FULL`) (SPEC-017 R-10)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: 세션에는 영상을 100개까지 넣을 수 있습니다.
+                code: MEDIA_SESSION_FULL
     get:
       operationId: listVideos
       summary: 내 영상 목록
@@ -146,6 +171,8 @@ paths:
                     status: UPLOADED
                     createdAt: '2026-11-02T09:30:00Z'
                     uploadedAt: '2026-11-02T09:31:12Z'
+                    session: null
+                    retentionConsent: false
                 page:
                   page: 0
                   size: 20
@@ -183,6 +210,8 @@ paths:
                 status: UPLOADED
                 createdAt: '2026-11-02T09:30:00Z'
                 uploadedAt: '2026-11-02T09:31:12Z'
+                session: null
+                retentionConsent: false
         '401':
           $ref: './_common.yaml#/components/responses/Unauthenticated'
         '404':
@@ -247,6 +276,8 @@ paths:
                 status: UPLOADED
                 createdAt: '2026-11-02T09:30:00Z'
                 uploadedAt: '2026-11-02T09:31:12Z'
+                session: null
+                retentionConsent: false
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -320,6 +351,318 @@ paths:
                 status: 409
                 detail: 업로드가 끝난 영상만 재생할 수 있습니다.
                 code: MEDIA_NOT_PLAYABLE
+  /api/v1/media/videos/{videoId}/retention-consent:
+    parameters:
+      - $ref: '#/components/parameters/VideoId'
+    put:
+      operationId: updateVideoRetentionConsent
+      summary: 영상 보존 동의 바꾸기
+      description: |
+        "삭제"가 아닌 영상의 학습용 보존 동의를 바꾼다. 이벤트는 발행하지 않는다. 영상을 지울 때의 값이 적용된다.
+        소유자만 바꿀 수 있다(ADMIN 포함 다른 사용자는 404). (SPEC-018 R-6·R-7)
+      tags: [retention]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetentionConsentRequest'
+            example:
+              consent: true
+      responses:
+        '200':
+          description: 바뀐 영상 정보
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoResponse'
+              example:
+                id: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                fileName: parking-lot-0930.mp4
+                sizeBytes: 52428800
+                contentType: video/mp4
+                status: READY
+                createdAt: '2026-11-02T09:30:00Z'
+                uploadedAt: '2026-11-02T09:31:12Z'
+                session: null
+                retentionConsent: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/VideoNotFound'
+  /api/v1/media/sessions:
+    post:
+      operationId: createWorkSession
+      summary: 작업 세션 만들기
+      description: |
+        요청자를 소유자로 하는 작업 세션을 만든다. 현장·구역은 표시용 문자열이다. (SPEC-017 R-1·R-2)
+      tags: [sessions]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkSessionRequest'
+            example:
+              name: 3번 라인 방호벽 교체
+              site: 평택 공장
+              area: 3번 라인 프레스 앞
+      responses:
+        '201':
+          description: 만든 세션
+          headers:
+            Location:
+              description: 만든 세션의 상세 경로
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkSession'
+              example:
+                id: 0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                name: 3번 라인 방호벽 교체
+                site: 평택 공장
+                area: 3번 라인 프레스 앞
+                createdAt: '2026-11-06T09:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+    get:
+      operationId: listWorkSessions
+      summary: 내 작업 세션 목록
+      description: 요청자가 소유한 세션을 만든 시각 최신순으로 돌려준다. (SPEC-017 R-3)
+      tags: [sessions]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 세션 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkSessionPage'
+              example:
+                items:
+                  - id: 0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                    ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                    name: 3번 라인 방호벽 교체
+                    site: 평택 공장
+                    area: null
+                    createdAt: '2026-11-06T09:00:00Z'
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /api/v1/media/sessions/{sessionId}:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        description: 작업 세션 ID
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getWorkSession
+      summary: 작업 세션 상세
+      description: |
+        세션 정보와 세션에 속한 "삭제"가 아닌 영상을 돌려준다. 영상은 역할 순서(`BEFORE` → `DURING` → `AFTER`)로,
+        같은 역할 안에서는 업로드 완료 시각 순으로, 업로드를 완료하지 않은 영상은 그 역할의 끝에 만든 시각 순으로 놓는다.
+        소유자와 ADMIN만 볼 수 있다. 없는 세션과 볼 권한이 없는 세션은 구분하지 않고 404다. (SPEC-017 R-4·R-5·R-7)
+      tags: [sessions]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '200':
+          description: 세션과 속한 영상
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkSessionDetail'
+              example:
+                id: 0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                name: 3번 라인 방호벽 교체
+                site: 평택 공장
+                area: 3번 라인 프레스 앞
+                createdAt: '2026-11-06T09:00:00Z'
+                videos:
+                  - id: 0192f0e1-0000-7000-8000-000000000001
+                    ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                    fileName: before.mp4
+                    sizeBytes: 52428800
+                    contentType: video/mp4
+                    status: READY
+                    createdAt: '2026-11-06T09:20:00Z'
+                    uploadedAt: '2026-11-06T09:21:00Z'
+                    session:
+                      sessionId: 0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                      role: BEFORE
+                    retentionConsent: false
+                  - id: 0192f0e1-0000-7000-8000-000000000002
+                    ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                    fileName: after.mp4
+                    sizeBytes: 41943040
+                    contentType: video/mp4
+                    status: UPLOADED
+                    createdAt: '2026-11-06T09:10:00Z'
+                    uploadedAt: '2026-11-06T09:11:00Z'
+                    session:
+                      sessionId: 0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                      role: AFTER
+                    retentionConsent: false
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
+  /api/v1/media/retention-settings:
+    get:
+      operationId: getRetentionSettings
+      summary: 보존 설정 조회
+      description: 요청자 계정의 학습용 보존 기본 동의 값. 바꾼 적이 없으면 `false`다. (SPEC-018 R-1)
+      tags: [retention]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '200':
+          description: 보존 설정
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetentionSettings'
+              example:
+                defaultConsent: false
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+    put:
+      operationId: updateRetentionSettings
+      summary: 보존 기본값 바꾸기
+      description: 이후에 만드는 영상의 기본 동의 값을 바꾼다. 이미 있는 영상의 동의는 바꾸지 않는다. (SPEC-018 R-2)
+      tags: [retention]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetentionSettings'
+            example:
+              defaultConsent: true
+      responses:
+        '200':
+          description: 저장한 보존 설정
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetentionSettings'
+              example:
+                defaultConsent: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /api/v1/media/retained-videos:
+    get:
+      operationId: listRetainedVideos
+      summary: 보존 중인 삭제 영상 목록
+      description: |
+        보존에 동의한 채 지운 영상 중 철회하지 않았고 보존 만료 시각이 지나지 않은 것을 삭제 시각 최신순으로 돌려준다.
+        파일 이름은 남기지 않으므로 영상 ID와 시각만 있다(ADR-0011). (SPEC-018 R-13)
+      tags: [retention]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 보존 중인 삭제 영상 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetainedVideoPage'
+              example:
+                items:
+                  - videoId: 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    deletedAt: '2026-11-06T12:00:00Z'
+                    retainUntil: '2027-11-06T12:00:00Z'
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+    delete:
+      operationId: revokeAllRetainedVideos
+      summary: 보존 동의 전체 철회
+      description: |
+        요청자의 보존 중인 삭제 영상마다 `video.retention.revoked`를 하나씩 발행하고 목록을 비운다. 목록이 비어 있어도 204다. (SPEC-018 R-16)
+      tags: [retention]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '204':
+          description: 모두 철회함
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+  /api/v1/media/retained-videos/{videoId}:
+    parameters:
+      - $ref: '#/components/parameters/VideoId'
+    delete:
+      operationId: revokeRetainedVideo
+      summary: 보존 동의 철회
+      description: |
+        지운 영상의 보존 동의를 철회한다. `video.retention.revoked`를 발행하고 목록에서 뺀다.
+        소유자만 요청할 수 있다. (SPEC-018 R-14·R-15)
+      tags: [retention]
+      parameters:
+        - $ref: './_common.yaml#/components/parameters/XUserId'
+        - $ref: './_common.yaml#/components/parameters/XUserRoles'
+      responses:
+        '204':
+          description: 철회함
+        '401':
+          $ref: './_common.yaml#/components/responses/Unauthenticated'
+        '404':
+          description: 보존 중이 아니거나(동의하지 않음, 이미 철회, 만료) 소유자가 아님 (`MEDIA_RETAINED_VIDEO_NOT_FOUND`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                detail: 보존 중인 영상을 찾을 수 없습니다.
+                code: MEDIA_RETAINED_VIDEO_NOT_FOUND
 components:
   securitySchemes:
     bearerAuth:
@@ -336,6 +679,25 @@ components:
       schema:
         type: string
         format: uuid
+    Page:
+      name: page
+      in: query
+      required: false
+      description: 0부터 시작하는 페이지 번호
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      description: 페이지 크기
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
   responses:
     BadRequest:
       description: |
@@ -351,6 +713,18 @@ components:
             status: 400
             detail: mp4, mov, mkv, avi 영상만 올릴 수 있습니다.
             code: MEDIA_UNSUPPORTED_FORMAT
+    SessionNotFound:
+      description: 없는 세션이거나 요청자가 볼(넣을) 권한이 없는 세션 (`MEDIA_SESSION_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: 작업 세션을 찾을 수 없습니다.
+            code: MEDIA_SESSION_NOT_FOUND
     VideoNotFound:
       description: 없는 영상, 삭제된 영상, 볼 권한이 없는 영상 (`MEDIA_VIDEO_NOT_FOUND`)
       content:
@@ -394,6 +768,17 @@ components:
           description: 파일 크기(바이트). 최대 5GB
         contentType:
           $ref: '#/components/schemas/VideoContentType'
+        sessionId:
+          type: string
+          format: uuid
+          description: 넣을 작업 세션. 요청자가 소유한 세션이어야 하고 `role`과 함께 보낸다. (SPEC-017 R-6·R-8·R-9)
+        role:
+          description: 세션 안 역할. `sessionId`와 함께 보낸다. 하나만 보내면 400 `MEDIA_INVALID_REQUEST`다. (SPEC-017 R-8)
+          allOf:
+            - $ref: '#/components/schemas/SessionRole'
+        retentionConsent:
+          type: boolean
+          description: 학습용 보존 동의. 보내지 않으면 계정 기본값을 따른다. (SPEC-018 R-3·R-4)
     CreateVideoResponse:
       type: object
       required: [video, upload]
@@ -477,7 +862,7 @@ components:
                 minLength: 1
     VideoResponse:
       type: object
-      required: [id, ownerId, fileName, sizeBytes, contentType, status, createdAt, uploadedAt]
+      required: [id, ownerId, fileName, sizeBytes, contentType, status, createdAt, uploadedAt, session, retentionConsent]
       properties:
         id:
           type: string
@@ -511,6 +896,20 @@ components:
           minimum: 0
           description: 예상 분석 처리 시간(초). 영상 길이 × 처리 계수로 낸 추정치다. `READY`가 아니면 null (SPEC-007 R-20, R-21)
           example: 613
+        session:
+          type: [object, 'null']
+          description: 속한 작업 세션과 역할. 세션이 없으면 null (SPEC-017 R-13)
+          # rejectReason과 같은 이유로 oneOf 대신 type 배열로 쓴다(계약 검증 도구의 oneOf null 처리).
+          required: [sessionId, role]
+          properties:
+            sessionId:
+              type: string
+              format: uuid
+            role:
+              $ref: '#/components/schemas/SessionRole'
+        retentionConsent:
+          type: boolean
+          description: 학습용 보존 동의. 영상을 지울 때의 값으로 보존 여부를 정한다. (SPEC-018 R-5)
         rejectReason:
           type: [string, 'null']
           description: |
@@ -547,5 +946,104 @@ components:
           type: string
           format: date-time
           description: 두 주소의 만료 시각 (발급 시점 + 1시간)
+    SessionRole:
+      type: string
+      description: 세션 안 역할. `BEFORE`(작업 전), `DURING`(작업 중), `AFTER`(작업 후). 이 순서가 세션 안 영상 순서다. (SPEC-017 R-7)
+      enum: [BEFORE, DURING, AFTER]
+    CreateWorkSessionRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        site:
+          type: [string, 'null']
+          maxLength: 100
+          description: 현장 이름(표시용)
+        area:
+          type: [string, 'null']
+          maxLength: 100
+          description: 구역 이름(표시용). 분석의 구역 정의와 잇지 않는다.
+    WorkSession:
+      type: object
+      required: [id, ownerId, name, site, area, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          type: [string, 'null']
+        area:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    WorkSessionDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorkSession'
+        - type: object
+          required: [videos]
+          properties:
+            videos:
+              type: array
+              maxItems: 100
+              description: 세션에 속한 "삭제"가 아닌 영상. 순서는 `getWorkSession` 설명을 따른다.
+              items:
+                $ref: '#/components/schemas/VideoResponse'
+    WorkSessionPage:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkSession'
+        page:
+          $ref: './_common.yaml#/components/schemas/PageMeta'
+    RetentionSettings:
+      type: object
+      required: [defaultConsent]
+      properties:
+        defaultConsent:
+          type: boolean
+          description: 새 영상의 학습용 보존 기본 동의 값
+    RetentionConsentRequest:
+      type: object
+      required: [consent]
+      properties:
+        consent:
+          type: boolean
+    RetainedVideo:
+      type: object
+      description: 보존 중인 삭제 영상의 최소 기록. 파일 이름은 남기지 않는다(ADR-0011).
+      required: [videoId, deletedAt, retainUntil]
+      properties:
+        videoId:
+          type: string
+          format: uuid
+        deletedAt:
+          type: string
+          format: date-time
+        retainUntil:
+          type: string
+          format: date-time
+          description: 보존 만료 시각(삭제 시각에서 1년 뒤). 지나면 기록과 각 서비스의 보존 데이터가 지워진다.
+    RetainedVideoPage:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetainedVideo'
+        page:
+          $ref: './_common.yaml#/components/schemas/PageMeta'
 security:
   - bearerAuth: []

@@ -23,7 +23,7 @@ updated: 2026-11-04
 | D-4 | 분류 체계 v2: 이벤트 유형 8종(`equipment_abandoned`, `object_moved` 추가), 탐지 프로필 스키마(버전·학습 출처·체크섬·`supported_events`). v1과 클래스 대응표는 지우고 `event_judge`를 v2로 옮긴다(7절 결정 6·7) | ① | 완료 | #69, #70 |
 | D-5 | 모델 산출물 규약: `models/<종류>/<버전>/manifest.json` 스키마(`service-contracts/models/manifest.schema.json`, 파일 체크섬·크기, 차원·클래스, 학습 출처, 라이선스). SPEC-011 R-15·R-16·R-18 갱신, 로컬 업로드 스크립트가 manifest를 올림 | ② | 완료 | #78 |
 | D-6 | 처리 단계 계약: 단계 ID 목록(`service-contracts/stages/`), `StageTiming` 스키마, `stage.timing` 토픽, 봉투 `producedAt`(하위호환 추가). 요구사항은 [SPEC-013](../specs/SPEC-013-stage-timing/spec.md) | ⑩ | 완료 | #85 |
-| D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 대기 | |
+| D-7 | Media 계약: 작업 세션 API, `video.uploaded`의 `sessionId`·`role`, `video.deleted`의 보존 등급·보존 키, 동의 철회 이벤트, 영상별 동의·계정 기본값 API | ④⑧ | 완료 | docs #101 |
 
 ## 1-1. 서비스 간 계약 배포 ([ADR-0013](../adr/0013-service-contracts-release.md))
 
@@ -67,8 +67,8 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
-| F-1 | media 작업 세션: `work_session` 테이블·API, `video.uploaded`에 `sessionId`·`role` | ④ | 대기 | |
-| F-2 | media 보존 등급(ADR-0011): 영상별 동의·계정 기본값 저장, 삭제 영상 최소 기록(1년), 보존 키 계산, `video.deleted`에 등급·보존 키, 동의 철회 이벤트 | ⑧ | 대기 | |
+| F-1 | media 작업 세션: `work_session` 테이블·API, `video.uploaded`에 `sessionId`·`role`([SPEC-017](../specs/SPEC-017-media-work-session/spec.md)) | ④ | 대기 | |
+| F-2 | media 보존 등급(ADR-0011): 영상별 동의·계정 기본값 저장, 삭제 영상 최소 기록(1년), 보존 키 계산, `video.deleted`에 등급·보존 키, 동의 철회 이벤트([SPEC-018](../specs/SPEC-018-media-retention-consent/spec.md)) | ⑧ | 대기 | |
 | F-3 | media 외부 데이터셋 가져오기: Quality의 매니페스트 대량 등록 경로, 데이터셋 영상은 삭제 전파 제외 | ⑨ | 대기 | |
 | F-4 | `common-messaging` 처리 시간 측정: 발행 시 `producedAt`, 공통 소비 래퍼로 큐 대기·처리 시간, `stage.timing` 발행. media `media.upload` 단계. 7절 결정 5 | ⑩ | 보류 | |
 | F-5 | api-gateway Quality 라우트와 `OPERATOR` 제한(Quality를 만들 때) | ⑨ | 보류 | |

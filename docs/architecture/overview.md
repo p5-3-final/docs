@@ -104,7 +104,7 @@ flowchart LR
 ```
 
 1. 클라이언트가 media-service에서 업로드 자리(영상 ID와 업로드 주소)를 받는다. 100MB 이하는 presigned POST(크기 고정), 넘으면 멀티파트 presigned URL이다([SPEC-003](../specs/SPEC-003-video-upload/spec.md)).
-2. `/complete` 요청이 `UPLOADING → UPLOADED` 조건부 전이에 성공하면 같은 트랜잭션에서 `video.uploaded`를 Outbox에 넣는다. 운영에서는 S3 업로드 이벤트도 같은 전이를 시도하고, 나중에 온 신호는 아무것도 하지 않는다. 영상이 작업 세션에 속하면 `video.uploaded`에 `sessionId`와 역할(`before`·`during`·`after`)을 싣는다(v4 ④).
+2. `/complete` 요청이 `UPLOADING → UPLOADED` 조건부 전이에 성공하면 같은 트랜잭션에서 `video.uploaded`를 Outbox에 넣는다. 운영에서는 S3 업로드 이벤트도 같은 전이를 시도하고, 나중에 온 신호는 아무것도 하지 않는다. 영상이 작업 세션에 속하면 `video.uploaded`에 `sessionId`와 역할(`BEFORE`·`DURING`·`AFTER`)을 싣는다(v4 ④, [SPEC-017](../specs/SPEC-017-media-work-session/spec.md)).
 3. backend 소유 normalize가 ffprobe로 검증하고(video 스트림·duration·fps가 없으면 `REJECTED`), 재생 정보를 앞으로 옮기거나 고정 fps로 다시 인코딩한 불변 normalizationId별 사본과 HLS 조각을 S3에 저장한다. 재정규화는 새 식별자·경로를 쓴다. 영상 길이와 예상 처리 시간을 담아 `video.normalized`를 발행하고, media-service가 이를 받아 source 상태를 바꾼다.
 4. pipeline-service는 구간을 계산해 Job·Chunk와 정규화 수신 완료 기록만 원자적으로 저장한다. 전체 청크 요청 Outbox를 미리 쓰지 않는다. 후속 배정기가 사용자별 → 소스별 → 전체 한도와 공정성을 적용한 뒤 실행 시도·배정 상태·슬롯 점유·`chunk.requested` Outbox를 같은 트랜잭션에 기록한다. Publisher는 발행만 담당한다.
 5. backend의 chunk-processor는 배정받은 processingRange만 실제 추출·디코딩하고 AI 입력을 준비하고 객체 저장소에 보존한다. 추론은 내부 HTTP로 AI 서버에 요청하고 결과 저장·시간 매핑·이벤트 처리는 backend가 담당한다. 아래 두 경로의 v3 모델·후처리 역할을 이 추론 경계에 맞춰 연결하며, 새 결과 스키마는 추측하지 않는다.
@@ -384,7 +384,7 @@ sequenceDiagram
 | 경로 | 서비스 · 역할 |
 | --- | --- |
 | `POST /api/v1/auth/signup · login · refresh · logout`, `GET /api/v1/auth/me`, `POST /api/v1/auth/sse-tickets`, `GET /api/v1/auth/oidc/{provider}/authorize · callback` | auth-service · 가입, 로그인, 재발급(회전), 로그아웃, 내 정보, 알림 연결 티켓, 외부 로그인 |
-| `POST · GET /api/v1/media/videos`, `GET · DELETE …/{id}`, `POST …/{id}/complete`, `GET …/{id}/playback`, `GET …/{id}/estimate` | media-service · 업로드 자리 발급, 내 영상 목록·상세, 삭제(전 서비스 전파), 완료, 원본 재생 주소, 예상 처리 시간. v4: 작업 세션, 영상별 학습용 보존 동의·계정 기본값(경로는 계약에서 정함) |
+| `POST · GET /api/v1/media/videos`, `GET · DELETE …/{id}`, `POST …/{id}/complete`, `GET …/{id}/playback`, `GET …/{id}/estimate`, `PUT …/{id}/retention-consent`, `POST · GET /api/v1/media/sessions`, `GET …/sessions/{id}`, `GET · PUT /api/v1/media/retention-settings`, `GET · DELETE /api/v1/media/retained-videos`, `DELETE …/retained-videos/{id}` | media-service · 업로드 자리 발급, 내 영상 목록·상세, 삭제(전 서비스 전파), 완료, 원본 재생 주소, 예상 처리 시간. v4: 작업 세션([SPEC-017](../specs/SPEC-017-media-work-session/spec.md)), 영상별 학습용 보존 동의·계정 기본값, 보존 중인 삭제 영상 목록·철회([SPEC-018](../specs/SPEC-018-media-retention-consent/spec.md)) |
 | `GET /api/v1/jobs/{sourceId}`, `POST …/{sourceId}/reanalyze · reembed` | pipeline-service · 진행 상태, 재판정(`use_previous_state` 옵션)·재임베딩(운영자) |
 | `GET /api/v1/analysis/sources/{id}/events · risks · snapshots · summary · overlay · inspect`, `GET · PUT …/sources/{id}/zones`, `GET /api/v1/analysis/events/{id}`, `PUT …/events/{id}/review`, `POST /api/v1/analysis/tracks/{trackId}/ask`, `PUT …/sources/{id}/active-version` | analysis-api · 이벤트 타임라인·상세·검토, 위험 상태, 상태 스냅샷, 요약, 오버레이, 클릭 조회, 위험구역 정의, 객체 자유 질문, 활성 버전 전환(운영자) |
 | `GET /api/v1/search/sources/{id}/moments?q=&precise=`, `GET /api/v1/search/moments?q=`, `POST /api/v1/search/moments/by-image`, `GET /api/v1/search/sources/{id}/answer?q=`, `POST …/moments/{id}/feedback` | search-service · 영상 안·내 영상 전체에서 장면 찾기, 이미지로 찾기, Video RAG, 이동·재생 기록과 맞음·틀림 |
@@ -395,8 +395,8 @@ sequenceDiagram
 
 | 토픽 | 키 | 발행 → 소비 |
 | --- | --- | --- |
-| `video.uploaded` · `video.normalized` · `video.deleted` | sourceId | media-service · normalize → pipeline-service · media-service · search-service · 전 서비스 (v4: `video.uploaded`에 `sessionId`·역할, `video.deleted`에 보존 등급·보존 키) |
-| 보존 동의 철회 (v4, 이름은 계약에서 정함) | sourceId | media-service → DB를 가진 서비스 (보존 키. 받은 서비스는 그 키의 보존 데이터를 지움) |
+| `video.uploaded` · `video.normalized` · `video.deleted` | sourceId | media-service · normalize → pipeline-service · media-service · search-service · 전 서비스 (v4: `video.uploaded`에 `sessionId`·역할, `video.deleted`에 보존 키·보존 만료 시각 `retention`) |
+| `video.retention.revoked` (v4) | sourceId | media-service → DB를 가진 서비스 (보존 키. 받은 서비스는 그 키의 보존 데이터를 지움) |
 | `chunk.requested` | sourceId | pipeline-service → chunk-processor |
 | `segment.ready` | sourceId | chunk-processor → frame-encoder (구간 목록·대표 프레임·크롭 경로·개수) |
 | `segment.embedded` | sourceId | frame-encoder → search-service · track-stitcher (벡터 파일 경로·개수·`embedding_model`·차원) |

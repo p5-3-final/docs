@@ -2,13 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/events/video.uploaded.schema.json",
   "title": "VideoUploaded",
-  "description": "영상이 '업로드 완료'(UPLOADED)로 바뀌었다. 영상마다 한 번 발행한다(재시도 시 같은 eventId). 발행: media-service. 소비: normalize, pipeline-service (SPEC-003 R-9, R-21)",
+  "description": "영상이 '업로드 완료'(UPLOADED)로 바뀌었다. 영상마다 한 번 발행한다(재시도 시 같은 eventId). 영상이 작업 세션에 속하면 sessionId와 role을 함께 싣고, 아니면 둘 다 없다. 발행: media-service. 소비: normalize, pipeline-service (SPEC-003 R-9, R-21, SPEC-017 R-11·R-12)",
   "type": "object",
-  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "_envelope.schema.json"
+    }
+  ],
   "required": ["storageKey", "sizeBytes", "contentType"],
   "properties": {
-    "eventType": { "const": "video.uploaded" },
-    "schemaVersion": { "const": 1 },
+    "eventType": {
+      "const": "video.uploaded"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
     "storageKey": {
       "type": "string",
       "description": "원본 파일의 저장소 키. 영상 ID로만 만든다. 예: sources/<sourceId>/original"
@@ -21,6 +29,16 @@
     "contentType": {
       "type": "string",
       "enum": ["video/mp4", "video/quicktime", "video/x-matroska", "video/x-msvideo"]
+    },
+    "sessionId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "영상이 속한 작업 세션. 세션 안 순서는 role 순서(BEFORE → DURING → AFTER), 같은 역할 안에서는 업로드 완료 시각(occurredAt) 순이다(SPEC-017 R-7)."
+    },
+    "role": {
+      "type": "string",
+      "enum": ["BEFORE", "DURING", "AFTER"],
+      "description": "세션 안 역할(작업 전·중·후)"
     }
   },
   "examples": [
@@ -34,6 +52,23 @@
       "storageKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/original",
       "sizeBytes": 52428800,
       "contentType": "video/mp4"
+    },
+    {
+      "eventId": "0192f0d3-0000-7000-8000-000000000003",
+      "eventType": "video.uploaded",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T09:31:12Z",
+      "sourceId": "0192f0e1-0000-7000-8000-000000000001",
+      "ownerId": "0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d",
+      "storageKey": "sources/0192f0e1-0000-7000-8000-000000000001/original",
+      "sizeBytes": 52428800,
+      "contentType": "video/mp4",
+      "sessionId": "0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f",
+      "role": "BEFORE"
     }
-  ]
+  ],
+  "dependentRequired": {
+    "sessionId": ["role"],
+    "role": ["sessionId"]
+  }
 }
