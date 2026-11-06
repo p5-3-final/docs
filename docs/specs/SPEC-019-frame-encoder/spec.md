@@ -1,7 +1,7 @@
 ---
 id: SPEC-019
 title: frame-encoder 구간·크롭 벡터와 프로토타입 후보
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06

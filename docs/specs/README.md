@@ -23,6 +23,6 @@
 | [SPEC-016](SPEC-016-ai-gateway-cache-budget/spec.md) | ai-gateway 결과 캐시·예산·호출 한도 | Implementing | ai, docs | | 2026-11-06 |
 | [SPEC-017](SPEC-017-media-work-session/spec.md) | 작업 세션 | Implementing | backend, docs | | 2026-11-06 |
 | [SPEC-018](SPEC-018-media-retention-consent/spec.md) | 학습용 보존 동의와 보존 키 | Implementing | backend, docs | | 2026-11-06 |
-| [SPEC-019](SPEC-019-frame-encoder/spec.md) | frame-encoder 구간·크롭 벡터와 프로토타입 후보 | Approved | ai, docs | | 2026-11-06 |
+| [SPEC-019](SPEC-019-frame-encoder/spec.md) | frame-encoder 구간·크롭 벡터와 프로토타입 후보 | Implementing | ai, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
