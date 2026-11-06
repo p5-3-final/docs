@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: media-service API
-  version: 1.3.0
+  version: 1.3.1
   description: |
     영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003), 원본 재생·내려받기 주소 발급 (SPEC-006),
     작업 세션 (SPEC-017), 학습용 보존 동의·보존 중인 삭제 영상·철회 (SPEC-018).
@@ -986,17 +986,32 @@ components:
           type: string
           format: date-time
     WorkSessionDetail:
-      allOf:
-        - $ref: '#/components/schemas/WorkSession'
-        - type: object
-          required: [videos]
-          properties:
-            videos:
-              type: array
-              maxItems: 100
-              description: 세션에 속한 "삭제"가 아닌 영상. 순서는 `getWorkSession` 설명을 따른다.
-              items:
-                $ref: '#/components/schemas/VideoResponse'
+      type: object
+      # WorkSession과 같은 필드에 videos를 더한다. 계약 검증 도구(swagger-request-validator)가 allOf의 각 부분에
+      # 추가 필드 금지를 적용해 allOf로 합치면 맞는 응답도 거절하므로 필드를 펼쳐 쓴다.
+      required: [id, ownerId, name, site, area, createdAt, videos]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          type: [string, 'null']
+        area:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+        videos:
+          type: array
+          maxItems: 100
+          description: 세션에 속한 "삭제"가 아닌 영상. 순서는 `getWorkSession` 설명을 따른다.
+          items:
+            $ref: '#/components/schemas/VideoResponse'
     WorkSessionPage:
       type: object
       required: [items, page]
