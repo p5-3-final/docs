@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/quality/v1/feature-row.schema.json",
+  "title": "FeatureRow",
+  "description": "예측 학습용 특징 내보내기 파일(exports/<exportId>/features.jsonl)의 한 줄. 위험 상태 하나가 한 줄이다. 작성: quality-service. 읽기: AI 담당자 학습 노트북 (SPEC-030)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "riskId",
+    "riskType",
+    "zoneId",
+    "status",
+    "carriedOver",
+    "firstSeenMs",
+    "durationMs",
+    "activeSeconds",
+    "exposureCount",
+    "exposureSeconds",
+    "relatedEventCount",
+    "forecast",
+    "split"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "riskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "riskType": {
+      "type": "string"
+    },
+    "zoneId": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "resolved"
+      ]
+    },
+    "carriedOver": {
+      "type": "boolean"
+    },
+    "firstSeenMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "activeSeconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "exposureCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "exposureSeconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "relatedEventCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "forecast": {
+      "anyOf": [
+        {
+          "$ref": "../../events/_risk-forecast.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "split": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "dev",
+        "eval",
+        null
+      ],
+      "description": "Golden Set 기준으로 내보낸 경우 그 분할, 기간 기준이면 null"
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f0d5-0000-7000-8000-000000000001",
+      "riskId": "0192f500-0000-5000-8000-000000000004",
+      "riskType": "ppe_missing",
+      "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+      "status": "active",
+      "carriedOver": false,
+      "firstSeenMs": 100000,
+      "durationMs": 125001,
+      "activeSeconds": 25.001,
+      "exposureCount": 1,
+      "exposureSeconds": 20.0,
+      "relatedEventCount": 1,
+      "forecast": null,
+      "split": null
+    }
+  ]
+}

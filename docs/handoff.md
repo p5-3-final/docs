@@ -177,7 +177,7 @@ cd repos/ai && uv sync --all-packages
 | SPEC-027 | aggregator 핵심(`analysis.completed`·`source.completed`, analysis-api 내부 읽기 API, 결과 파일, `source_summary`) | Approved |
 | SPEC-028 | aggregator 정적 객체 재고 비교·장비 방치·예측(`chunk.manifest`, 청크 재고 파일, ai-gateway `state_compare`·`risk_forecast`) | Approved |
 | SPEC-029 | quality-service 핵심(검토 큐, Golden Set 버전, 평가 실행·CI Gate, 처리 단계 리포트, `openapi/quality-service.yaml`) | Approved |
-| SPEC-030 | quality-service 데이터셋 가져오기·라벨 3종·temporal IoU·특징 내보내기·성능 Gate | 작성 예정 |
+| SPEC-030 | quality-service 데이터셋 가져오기·라벨 3종·temporal IoU·특징 내보내기·성능 Gate(media 내부 등록 API 포함) | Approved |
 | SPEC-031~ | frontend 나머지 화면 | 작성 예정 |
 
 plan 단계에서 사용자에게 먼저 확인할 것(새 라이브러리 도입 규칙):
