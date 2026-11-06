@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: analysis-api API
-  version: 0.4.0
+  version: 0.5.0
   description: 'analysis-api의 내부 읽기 전용 API. aggregator가 job 하나의 적재 결과를 한 번 읽는 데 쓴다(SPEC-027).
 
     다른 담당자 서비스이고, 이 파일은 소비 쪽 spec이 아키텍처 문서대로 먼저 정한 내부 경로만 담는다(생산자 담당자 확인 필요). 공개 API(`/api/v1/analysis/**`)도 화면 spec(SPEC-031·SPEC-032)이 아키텍처 문서 "외부 API" 표대로 먼저 정했다(생산자 담당자 확인 필요). 공개 API는 api-gateway를
@@ -1525,6 +1525,13 @@ components:
       - mergedInto
       - origin
       properties:
+        unverifiedReason:
+          type: string
+          enum:
+          - budget_exceeded
+          - model_unavailable
+          - call_cap_reached
+          description: verificationStatus가 unverified인 이유(v5.1, event.analyzed.unverifiedReason 그대로). 없으면 사유 없음. 생산자 analysis-api 확인 필요 (SPEC-031 R-23)
         eventId:
           type: string
           format: uuid
@@ -1856,6 +1863,38 @@ components:
       - timeline
       - analyzedAt
       properties:
+        partial:
+          type: boolean
+          description: 개수 대조 재시도 상한 뒤 빠진 이벤트가 있는 채로 집계됨(v5.1, source.completed.partial 그대로). 없으면 false. 생산자 analysis-api 확인 필요 (SPEC-031 R-22)
+        missingCounts:
+          type: object
+          additionalProperties: false
+          description: partial일 때 빠진 수(source.completed.missingCounts 그대로)
+          properties:
+            events:
+              type: integer
+              minimum: 0
+            tracks:
+              type: integer
+              minimum: 0
+        revision:
+          type: integer
+          minimum: 1
+          description: 활성 결과의 발행 차수(source.completed.revision). 없으면 1
+        unverifiedCounts:
+          type: object
+          additionalProperties: false
+          description: 활성 분석 버전에서 unverified로 남은 이벤트 수를 사유별로 센 값(v5.1). 화면이 첫 쪽만 세지 않게 한다. 생산자 analysis-api 확인 필요 (SPEC-031 R-23)
+          properties:
+            budget_exceeded:
+              type: integer
+              minimum: 0
+            call_cap_reached:
+              type: integer
+              minimum: 0
+            model_unavailable:
+              type: integer
+              minimum: 0
         sourceId:
           type: string
           format: uuid

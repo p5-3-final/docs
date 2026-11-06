@@ -773,7 +773,7 @@ flowchart LR
 | 서비스 | 요구 | 없으면 |
 | --- | --- | --- |
 | pipeline-service | `jobType: STREAM`인 `chunk.manifest`·`segment.indexed`·`event.manifest`를 무시한다(DLQ 아님) | 실시간 메시지가 pipeline DLQ에 쌓인다. 실시간 기능은 동작한다 |
-| analysis-api | 같은 jobId의 `source.completed`가 `revision`을 올려 다시 오면 결정적 ID로 upsert한다 | 늦은 벡터 이벤트가 보관 결과에 반영되지 않는다(결과 파일에는 있다) |
+| analysis-api | 같은 jobId의 `source.completed`가 `revision`을 올려 다시 오면 결정적 ID로 upsert한다. 요약 응답에 `partial`·`missingCounts`·`revision`·`unverifiedCounts`, 이벤트 응답에 `unverifiedReason`을 그대로 노출한다(계약 analysis-service 0.5.0 선택 필드) | 늦은 벡터 이벤트가 보관 결과에 반영되지 않는다(결과 파일에는 있다). 화면의 누락·예산 초과 안내가 비어 보인다 |
 | search-service | `(source_id, analysis_version, embedding_model)` B-tree(14.1절). STREAM의 `version.activated`는 기존 로직 | 필터 검색 재현율 0 위험 |
 | notification-service | `alert.raised`·`state.updated`를 SSE로 전달한다 | stream-service 조회 API를 화면이 주기적으로 읽는다(긴급 알림 지연이 커진다) |
 
