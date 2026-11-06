@@ -71,9 +71,9 @@ cd repos/ai && uv sync --all-packages
 | normalize | ai | SPEC-007 Implementing |
 | ai-gateway | ai | SPEC-009·011·012·016 Implementing, SPEC-020 R-20(`event_judge_escalate`) 완료 |
 | frame-encoder | ai | SPEC-019 Implementing |
-| event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로는 7절 |
-| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지(7절). 구현 전 결정은 8절 |
-| quality-service | backend | spec·계약·plan·tasks 머지(7절). 구현 전 결정은 8절 |
+| event-analyzer | ai | SPEC-020 벡터 후보 경로 구현·머지(ai #38). 탐지기 후보 경로(SPEC-023)는 plan·tasks까지 머지 |
+| track-stitcher, track-analyzer, embedding-worker, grounding-worker, aggregator | ai | spec·계약·plan·tasks 머지. 구현 전 결정은 6절 |
+| quality-service | backend | spec·계약·plan·tasks 머지. 구현 전 결정은 6절 |
 | infra, gitops | infra, gitops | **사용자가 지시할 때만** 작업한다 |
 
 ### 2.3 AI 모델·학습은 별도 담당자
@@ -142,22 +142,11 @@ cd repos/ai && uv sync --all-packages
 - 메모리 상한은 overview "로컬 개발 환경" 표를 따른다(나머지 워커 256M).
 - SeaweedFS 키는 `local/seaweedfs/s3.json`의 로컬 전용 샘플값이다(비밀값 아님).
 
-## 5. 구현 완료 기록 (2026-11-06 기준)
-
-| 영역 | 내용 | 레포 PR |
-| --- | --- | --- |
-| 계약 묶음 | 3.0.0 (ai-gateway OpenAPI 1.0.0, `event.analyzed`, `_vlm-analysis`) | docs #109 |
-| 계약 묶음 | 3.14.0 (SPEC-021~035 계약 전체). 각 레포 lock은 아직 이전 버전이고, 구현 첫 태스크에서 올린다 | docs #115~#130 |
-| plan·tasks | ai SPEC-021~028·030, backend SPEC-029·030, frontend SPEC-031~035 | ai #40·#41, backend #52, frontend #34 |
-| event-analyzer | 벡터 후보 판정·재판정·발행, 재시도, DLQ, 단계 측정 | ai #38, #39 |
-| libs/ai-client | `/v1/analyze` REST 클라이언트(재시도 포함). `/v1/embed`·`/v1/parse` 메서드는 아직 없음 | ai #38 |
-| 로컬 compose | event-analyzer, 토픽 | docs #113 |
-
-## 6. 이어서 할 일
+## 5. 이어서 할 일
 
 문서는 모두 머지했다. 아래 순서로 구현한다. 앞의 것이 뒤의 입력을 만든다.
 
-1. 8절의 사용자 결정(D-*)을 받고, "먼저 고칠 것"(C-1~C-4)과 정리할 계약 수정을 docs PR 하나로 반영한다(계약 묶음 minor·patch).
+1. 6절의 사용자 결정(D-*)을 받고, "먼저 고칠 것"(C-1~C-4)과 정리할 계약 수정을 docs PR 하나로 반영한다(계약 묶음 minor·patch).
 2. SPEC-021(ai): 계약 lock 3.14.0으로 올리기(기존 계약 테스트 4건을 같이 맞춤), ai-gateway 마감, 생성 클라이언트, 재시도 규칙, embed·parse
 3. SPEC-024 track-analyzer → SPEC-025 embedding-worker → SPEC-023 event-analyzer 탐지기 경로 → SPEC-022 track-stitcher → SPEC-026 grounding-worker → SPEC-027·028 aggregator
 4. SPEC-029·030 quality-service(backend), SPEC-030 evals(ai)
@@ -168,41 +157,15 @@ cd repos/ai && uv sync --all-packages
 - 레포마다 plan의 "의존" 절을 먼저 읽는다. 두 plan이 같은 준비 태스크(lock 올리기 등)를 가리키면 먼저 구현하는 쪽이 한다.
 - 다른 담당자 서비스의 계약(생산자 확인 필요)을 생산자가 바꾸면 소비 쪽 plan·코드를 맞춘다.
 
-## 7. 문서 작성 현황
+## 6. 구현 전에 정할 사항
 
-2026-11-06에 사용자가 "담당 서비스 전부 문서부터 작성하고 한 번에 구현"하기로 했다. 범위: ai 워커 6개, quality-service, frontend 나머지 화면. 깊이: spec + 계약 + 각 레포 plan·tasks. 모두 머지했고, plan을 쓰며 나온 결정 사항은 8절에 있다.
-
-| spec | 대상 | 상태 |
-| --- | --- | --- |
-| SPEC-021 | 내부 동기 호출 규약 적용(ai-gateway `X-Request-Deadline`·504, ai-client 생성 모델·재시도 규칙·embed·parse) | Approved |
-| SPEC-022 | track-stitcher(`chunk.boundary`·`track.detected`·`track.manifest`, 트랙 파일 2종 계약 포함) | Approved |
-| SPEC-023 | event-analyzer 탐지기·규칙 후보(`event.candidate`·`event.manifest`, `event.analyzed` 판정 방식 `rule*`) | Approved |
-| SPEC-024 | track-analyzer(`attribute.requested`·`track.analyzed`, ai-gateway `track_attribute`·`object_question`, 트랙 요약 파일 대표 크롭) | Approved |
-| SPEC-025 | embedding-worker(`segment.annotated`·`embedding.ready`, 텍스트 벡터 파일) | Approved |
-| SPEC-026 | grounding-worker(`grounding.requested`·`grounding.completed`, 결과 파일 `groundings/v1`) | Approved |
-| SPEC-027 | aggregator 핵심(`analysis.completed`·`source.completed`, analysis-api 내부 읽기 API, 결과 파일, `source_summary`) | Approved |
-| SPEC-028 | aggregator 정적 객체 재고 비교·장비 방치·예측(`chunk.manifest`, 청크 재고 파일, ai-gateway `state_compare`·`risk_forecast`) | Approved |
-| SPEC-029 | quality-service 핵심(검토 큐, Golden Set 버전, 평가 실행·CI Gate, 처리 단계 리포트, `openapi/quality-service.yaml`) | Approved |
-| SPEC-030 | quality-service 데이터셋 가져오기·라벨 3종·temporal IoU·특징 내보내기·성능 Gate(media 내부 등록 API 포함) | Approved |
-| SPEC-031 | frontend 분석 결과(요약·이벤트·위험·스냅샷, 이벤트 메뉴)와 실시간 알림. analysis-api 공개 API 1부·notification SSE 계약 초안 | Approved |
-| SPEC-032 | frontend 클릭 조회·오버레이·객체 질문·위험구역 편집. analysis-api 공개 API 2부 계약 초안 | Approved |
-| SPEC-033 | frontend 검색·RAG·주석 클립. search-service 공개 API 계약 초안 | Approved |
-| SPEC-034 | frontend 작업 세션·분석 이력·설정(학습용 보존). 계약 변경 없음 | Approved |
-| SPEC-035 | frontend 품질 화면(운영자). quality-service 검토 항목 서명 주소 필드 | Approved |
-
-plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
-
-번호는 작성하면서 바뀔 수 있다. 실제 번호와 상태는 [spec 목록](specs/README.md)이 원본이다.
-
-## 8. 구현 전에 정할 사항 (2026-11-06 plan 작성 결과)
-
-모든 spec(SPEC-021~035)과 각 레포 plan·tasks를 머지했다(ai #40·#41, backend·frontend 아래 표). plan을 쓰며 나온 결정 사항과 spec·계약 불일치를 여기에 모았다.
+plan을 쓰며 나온 결정 사항과 spec·계약 불일치다.
 
 - 각 plan에는 기본안이 이미 적혀 있다. 사용자가 다르게 정하지 않으면 기본안대로 구현한다.
 - "계약·spec 수정"은 구현 전에 docs PR을 먼저 연다.
 - 정한 항목은 이 표의 "결정" 칸을 채우고 해당 plan을 같은 흐름에서 고친다.
 
-### 8.1 사용자 결정이 필요한 항목
+### 6.1 사용자 결정이 필요한 항목
 
 | # | spec | 항목 | 기본안 | 결정 |
 | --- | --- | --- | --- | --- |
@@ -236,10 +199,8 @@ plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 | D-28 | SPEC-029 R-24 | 추이 조회에 `versionKey`만 있을 때 | 400 | |
 | D-29 | SPEC-030 | media 보존 등급 `DATASET`의 삭제 동작 | 이번에는 등급만 저장한다. 운영자가 삭제할 때 `video.deleted`를 낼지 막을지는 미정 | |
 | D-30 | SPEC-030 | 같은 매니페스트 다시 가져오기 | importId를 manifestKey로 결정적으로 만들어 같은 videoId를 보장한다. 대신 같은 경로의 가져오기 이력은 한 행에 덮어쓴다 | |
-| D-31 | 공통(ADR-0009) | 청크 단위 토픽의 Kafka 키 | 미정. docs #40(2026-11-03, pipeline 담당자)이 envelope 규칙(sourceId를 키로 씀)과 맞추려고 chunkId 키를 sourceId로 바꾸고, 병렬성은 "offset 연속 커밋·워커 동시 처리"로 풀기로 했다(ADR-0009). ai `libs/messaging` 워커는 메시지를 하나씩 처리해서 영상 하나의 청크(1시간이면 30개)가 Pod 하나에서 차례로 돈다. A 청크 단위 토픽 키를 chunkId로(계약 변경, 다른 담당자와 협의), B 공통 라이브러리에 동시 처리와 연속 offset 커밋 구현 | |
-| D-32 | 공통 | ai-gateway 역할 | 미정. 지금은 외부 모델 관문(라우팅·프롬프트·출력 검증·캐시·예산·분당 한도·호출 로그)과 프로세스 안 연산(MobileCLIP 질의 인코더, 질의 사전)을 함께 한다. 분당 한도·하루 예산이 호출자 구분 없이 공유돼 배치 판정이 검색 동기 호출을 밀어낸다. 역할을 나누는 안은 사용자와 정한다 | |
 
-### 8.2 spec·계약 수정이 필요한 항목
+### 6.2 spec·계약 수정이 필요한 항목
 
 먼저 고칠 것(구현을 막음)
 
@@ -255,7 +216,7 @@ plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 | # | 대상 | 문제 | 수정안 |
 | --- | --- | --- | --- |
 | C-5 | SPEC-025 제외 항목 | "같은 항목·다른 모델이면 다른 파일"이라고 적었지만 경로·`vectorKey`에 모델이 없어 덮어쓴다 | spec을 "eventId만 다르고 파일은 마지막 모델 결과로 덮어씀. 모델 교체 중 공존은 REEMBED spec에서"로 고치거나 경로에 모델 단계를 넣는다(계약 변경) |
-| C-6 | SPEC-025 R-9 | `AI_MODEL_NOT_CONFIGURED`는 503이라 ai-client가 2회 헛재시도한 뒤 DLQ로 간다. `AI_BUDGET_EXCEEDED`는 2026-11-06에 429로 바꿔 해결했다(계약 3.15.0) | 그대로 두거나 SPEC-021 R-10에서 `AI_MODEL_NOT_CONFIGURED`를 재시도하지 않게 한다 |
+| C-6 | SPEC-025 R-9 | `AI_MODEL_NOT_CONFIGURED`는 503이라 ai-client가 2회 헛재시도한 뒤 DLQ로 간다 | 그대로 두거나 SPEC-021 R-10에서 이 코드를 재시도하지 않게 한다 |
 | C-7 | 서비스 카탈로그 embedding-worker 행 | 저장소 "—", "묶음" 임베딩으로 적혀 spec(S3 저장, 묶음 제외)과 다르다 | 카탈로그를 고친다 |
 | C-8 | SPEC-026 R-17 | `grounding.completed`에 기준 신뢰도를 기록하라고 하지만 계약에 필드가 없다 | R-17을 결과 파일만으로 줄인다 |
 | C-9 | SPEC-026 R-9 | eventId가 groundingId·탐지기 버전뿐이라, FAILED 뒤 READY나 다른 requestId의 결과가 같은 eventId가 된다 | eventId에 requestId·outcome을 넣는다 |
@@ -285,7 +246,3 @@ plan 단계 확인 항목은 8절 D-1·D-2·D-15로 옮겼다.
 | C-33 | media `registerDatasetVideo` | `X-Request-Deadline`·504가 없다 | 계약에 더한다 |
 | C-34 | quality 계약 설명의 요구사항 번호, `ReviewItem` 예시 | 번호가 틀렸다(R-8→R-9, R-12~R-15→R-13~R-15). 예시 `judgments_disagree`가 이벤트 enum `judgment_disagreement`와 다르다 | 설명과 예시를 고친다(patch) |
 | C-35 | backend Docker 이미지 빌드 | 빌드 컨텍스트에 계약 파일이 없어 생성 코드를 빌드하지 못한다 | `CONTRACTS_DIR` 빌드 인자(SPEC-029 T037) |
-| C-36 | ai-gateway 호출 로그 | 호출 로그 저장이 모든 응답에 필수라 ai DB가 멈추면 규칙 사전 parse와 로컬 인코더 embed도 500이다. 설계 원본은 VLM이 멈춰도 기본 검색이 유지된다고 적었다 | 호출 로그 저장 실패는 경고만 남기고 응답한다(spec 수정) |
-| C-37 | SPEC-020 R-11·R-12 | ai-gateway 연결 실패는 클라이언트 재시도 2회(약 3초) 뒤 `unknown`으로 확정된다. 롤링 배포 중에도 후보가 `unknown`으로 남는다 | 재시도를 소진한 연결 실패는 메시지 재시도 토픽으로 넘긴다(요청이 도착하지 않아 비용이 없다) |
-| C-38 | SPEC-021 | 설계 원본의 "서킷 브레이커는 클라이언트 쪽"이 어느 spec에도 없다 | ai-client에 둘지 정한다. search-service 쪽은 다른 담당자 몫 |
-| C-39 | ai `scripts/` | 설계 원본의 "운영자 재처리"(DLQ → 원래 토픽) 도구가 없다 | 재처리 스크립트를 더한다 |
