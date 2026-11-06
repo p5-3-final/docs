@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: quality-service API
-  version: 1.0.0
-  description: '검토 큐, Golden Set 버전, 평가 실행과 CI Gate, 처리 단계 리포트 (SPEC-029).
+  version: 1.1.0
+  description: '검토 큐, Golden Set 버전, 평가 실행과 CI Gate, 처리 단계 리포트 (SPEC-029). 외부 데이터셋 가져오기, 특징 내보내기, 처리 단계 성능 Gate (SPEC-030).
 
     - `/api/v1/quality/**`는 api-gateway를 거치고 OPERATOR 역할만 쓴다. 역할 검사는 서비스가 `X-User-Roles`로 한다.
 
@@ -23,6 +23,10 @@ tags:
   description: 처리 단계 리포트
 - name: internal
   description: 클러스터 내부 전용
+- name: datasets
+  description: 외부 데이터셋 가져오기
+- name: exports
+  description: 특징 내보내기
 paths:
   /api/v1/quality/review-items:
     get:
@@ -295,6 +299,7 @@ paths:
                 latestVersion: null
                 baselineRunId: null
                 createdAt: '2026-11-06T09:00:00Z'
+                origin: review
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -350,6 +355,7 @@ paths:
                   latestVersion: 2
                   baselineRunId: 0192fc00-0000-7000-8000-000000000001
                   createdAt: '2026-11-06T09:00:00Z'
+                  origin: review
                 page: *id010
         '401': *id004
         '403': *id005
@@ -415,7 +421,7 @@ paths:
         '404':
           $ref: '#/components/responses/GoldenNotFound'
         '409':
-          description: 라벨이 없거나 uncertain이거나 이미 들어 있음 (`QUALITY_REVIEW_NOT_LABELED`, `QUALITY_GOLDEN_ENTRY_DUPLICATED`)
+          description: 라벨이 없거나 uncertain이거나 이미 들어 있거나 데이터셋 Golden Set임 (`QUALITY_REVIEW_NOT_LABELED`, `QUALITY_GOLDEN_ENTRY_DUPLICATED`, `QUALITY_GOLDEN_ORIGIN_MISMATCH`)
           content:
             application/problem+json:
               schema:
@@ -827,6 +833,294 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401': *id004
         '403': *id005
+  /api/v1/quality/dataset-imports:
+    post:
+      operationId: createDatasetImport
+      summary: 외부 데이터셋 가져오기 시작
+      description: 매니페스트를 검증하고 영상마다 media-service에 등록한 뒤 라벨을 <이름>-dev·<이름>-eval Golden Set에 나눠 넣고 각각 새 버전으로 확정한다. 비동기로 처리하고 상태는 조회로 본다. 같은 매니페스트 경로의 가져오기가 진행 중이면 409 (SPEC-030 R-1~R-9)
+      tags:
+      - datasets
+      parameters:
+      - &id017
+        $ref: ./_common.yaml#/components/parameters/XUserId
+      - &id018
+        $ref: ./_common.yaml#/components/parameters/XUserRoles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatasetImportRequest'
+            example:
+              manifestKey: imports/physicalai-2026-11/manifest.json
+              evalRatio: 0.2
+              splitSeed: 7
+      responses:
+        '202':
+          description: 가져오기 접수
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetImport'
+              example:
+                importId: 0192fd00-0000-7000-8000-000000000001
+                datasetName: null
+                manifestKey: imports/physicalai-2026-11/manifest.json
+                evalRatio: 0.2
+                splitSeed: 7
+                status: PENDING
+                counts:
+                  videos: 0
+                  registered: 0
+                  failed: 0
+                  labels: 0
+                  dev: 0
+                  eval: 0
+                goldenSets: null
+                errors: []
+                requestedBy: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                createdAt: '2026-11-06T12:00:00Z'
+                finishedAt: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: 같은 매니페스트의 가져오기가 진행 중 (`QUALITY_IMPORT_IN_PROGRESS`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: QUALITY_IMPORT_IN_PROGRESS
+        '401': &id019
+          $ref: ./_common.yaml#/components/responses/Unauthenticated
+        '403': &id020
+          $ref: '#/components/responses/Forbidden'
+    get:
+      operationId: listDatasetImports
+      summary: 가져오기 목록
+      description: 접수 시각 내림차순
+      tags:
+      - datasets
+      parameters:
+      - *id017
+      - *id018
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 가져오기 한 쪽
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - items
+                - page
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DatasetImport'
+                  page:
+                    $ref: ./_common.yaml#/components/schemas/PageMeta
+              example:
+                items:
+                - &id021
+                  importId: 0192fd00-0000-7000-8000-000000000001
+                  datasetName: physicalai-events
+                  manifestKey: imports/physicalai-2026-11/manifest.json
+                  evalRatio: 0.2
+                  splitSeed: 7
+                  status: COMPLETED
+                  counts:
+                    videos: 120
+                    registered: 119
+                    failed: 1
+                    labels: 3400
+                    dev: 95
+                    eval: 24
+                  goldenSets:
+                    devSetId: 0192fb00-0000-7000-8000-000000000011
+                    evalSetId: 0192fb00-0000-7000-8000-000000000012
+                    devVersion: 1
+                    evalVersion: 1
+                  errors:
+                  - externalId: clip-0077
+                    code: QUALITY_IMPORT_VIDEO_NOT_FOUND
+                    message: videos/clip-0077.mp4 없음
+                  requestedBy: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+                  createdAt: '2026-11-06T12:00:00Z'
+                  finishedAt: '2026-11-06T12:30:00Z'
+                page:
+                  page: 0
+                  size: 20
+                  totalElements: 1
+                  totalPages: 1
+        '401': *id019
+        '403': *id020
+  /api/v1/quality/dataset-imports/{importId}:
+    get:
+      operationId: getDatasetImport
+      summary: 가져오기 상태
+      description: 개수·오류·만든 Golden Set 버전 (SPEC-030 R-8)
+      tags:
+      - datasets
+      parameters:
+      - *id017
+      - *id018
+      - $ref: '#/components/parameters/ImportId'
+      responses:
+        '200':
+          description: 가져오기
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetImport'
+              example: *id021
+        '404':
+          $ref: '#/components/responses/ImportNotFound'
+        '401': *id019
+        '403': *id020
+  /api/v1/quality/feature-exports:
+    post:
+      operationId: createFeatureExport
+      summary: 예측 학습용 특징 내보내기 시작
+      description: Golden Set(가져온 데이터셋·검토 라벨의 영상) 또는 기간(source.completed 받은 날짜, 최대 90일)으로 고른 영상의 위험 상태를 한 줄씩 JSON Lines로 쓴다 (SPEC-030 R-12~R-15)
+      tags:
+      - exports
+      parameters:
+      - *id017
+      - *id018
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFeatureExportRequest'
+            example:
+              goldenSetId: 0192fb00-0000-7000-8000-000000000012
+      responses:
+        '202':
+          description: 내보내기 접수
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureExport'
+              example:
+                exportId: 0192fe00-0000-7000-8000-000000000001
+                status: PENDING
+                goldenSetId: 0192fb00-0000-7000-8000-000000000012
+                from: null
+                to: null
+                fileKey: null
+                rowCount: 0
+                sourceCount: 0
+                createdAt: '2026-11-06T13:00:00Z'
+                finishedAt: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/GoldenNotFound'
+        '401': *id019
+        '403': *id020
+  /api/v1/quality/feature-exports/{exportId}:
+    get:
+      operationId: getFeatureExport
+      summary: 내보내기 상태
+      description: 완료되면 파일 경로와 줄 수 (SPEC-030 R-14)
+      tags:
+      - exports
+      parameters:
+      - *id017
+      - *id018
+      - $ref: '#/components/parameters/ExportId'
+      responses:
+        '200':
+          description: 내보내기
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureExport'
+              example:
+                exportId: 0192fe00-0000-7000-8000-000000000001
+                status: COMPLETED
+                goldenSetId: 0192fb00-0000-7000-8000-000000000012
+                from: null
+                to: null
+                fileKey: exports/0192fe00-0000-7000-8000-000000000001/features.jsonl
+                rowCount: 310
+                sourceCount: 24
+                createdAt: '2026-11-06T13:00:00Z'
+                finishedAt: '2026-11-06T13:01:00Z'
+        '404':
+          $ref: '#/components/responses/ExportNotFound'
+        '401': *id019
+        '403': *id020
+  /internal/v1/quality/stage-gates:
+    post:
+      operationId: evaluateStageGate
+      summary: 처리 단계 성능 Gate 계산 (내부 전용)
+      description: 두 벤치마크 실행의 영상 목록으로 단계별 p95를 비교한다. 원본 보존 기간(90일) 안의 기록만 쓴다. 저장하지 않는 계산 요청이다 (SPEC-030 R-16~R-18)
+      tags:
+      - internal
+      parameters:
+      - $ref: '#/components/parameters/XCaller'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StageGateRequest'
+            example:
+              baselineSourceIds:
+              - 0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+              candidateSourceIds:
+              - 0192f0d2-0000-7000-8000-0000000000bb
+              maxRegressionRatio: 0.2
+              minSamples: 5
+      responses:
+        '200':
+          description: 단계별 비교
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StageGateResult'
+              example:
+                passed: false
+                maxRegressionRatio: 0.2
+                stages:
+                - stageId: analyzer.judge
+                  baselineP95Ms: 3400.0
+                  candidateP95Ms: 4300.0
+                  ratio: 1.265
+                  baselineCount: 30
+                  candidateCount: 31
+                  status: failed
+                - stageId: normalize.transcode
+                  baselineP95Ms: 8000.0
+                  candidateP95Ms: null
+                  ratio: null
+                  baselineCount: 3
+                  candidateCount: 0
+                  status: skipped
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: 허용 호출자가 아님 (`QUALITY_CALLER_NOT_ALLOWED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: ./_common.yaml#/components/schemas/ProblemDetail
+              example:
+                type: about:blank
+                title: Forbidden
+                status: 403
+                code: QUALITY_CALLER_NOT_ALLOWED
 components:
   securitySchemes:
     bearerAuth:
@@ -839,7 +1133,7 @@ components:
       in: path
       required: true
       description: 검토 항목 ID(eventId로 결정적)
-      schema: &id017
+      schema: &id022
         type: string
         format: uuid
     SetId:
@@ -847,25 +1141,25 @@ components:
       in: path
       required: true
       description: Golden Set ID
-      schema: *id017
+      schema: *id022
     EntryId:
       name: entryId
       in: path
       required: true
       description: 초안 항목 ID
-      schema: *id017
+      schema: *id022
     RunId:
       name: runId
       in: path
       required: true
       description: 평가 실행 ID
-      schema: *id017
+      schema: *id022
     SourceId:
       name: sourceId
       in: path
       required: true
       description: 영상 ID
-      schema: *id017
+      schema: *id022
     ReviewStatus:
       name: status
       in: query
@@ -895,7 +1189,7 @@ components:
       name: goldenSetId
       in: query
       required: false
-      schema: *id017
+      schema: *id022
     StageIdQuery:
       name: stageId
       in: query
@@ -968,6 +1262,18 @@ components:
         type: string
         pattern: ^[a-z][a-z0-9-]{1,62}$
       example: quality-eval
+    ImportId:
+      name: importId
+      in: path
+      required: true
+      schema: &id023
+        type: string
+        format: uuid
+    ExportId:
+      name: exportId
+      in: path
+      required: true
+      schema: *id023
   responses:
     BadRequest:
       description: 요청 형식이 잘못됨 (`QUALITY_INVALID_REQUEST`)
@@ -1035,6 +1341,28 @@ components:
             title: Not Found
             status: 404
             code: QUALITY_SOURCE_NOT_FOUND
+    ImportNotFound:
+      description: 가져오기가 없음 (`QUALITY_IMPORT_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: QUALITY_IMPORT_NOT_FOUND
+    ExportNotFound:
+      description: 내보내기가 없음 (`QUALITY_EXPORT_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: ./_common.yaml#/components/schemas/ProblemDetail
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: QUALITY_EXPORT_NOT_FOUND
   schemas:
     ReviewLabel:
       type: object
@@ -1110,16 +1438,16 @@ components:
       - labeledAt
       - createdAt
       properties:
-        itemId: *id017
-        eventId: *id017
-        sourceId: *id017
-        jobId: *id017
+        itemId: *id022
+        eventId: *id022
+        sourceId: *id022
+        jobId: *id022
         eventType:
           $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
-        startMs: &id018
+        startMs: &id024
           type: integer
           minimum: 0
-        endMs: *id018
+        endMs: *id024
         judgmentMethod:
           type: string
           maxLength: 50
@@ -1149,8 +1477,8 @@ components:
           - UNASSIGNED
           - ASSIGNED
           - LABELED
-        assigneeId: &id019
-          type: &id020
+        assigneeId: &id025
+          type: &id026
           - string
           - 'null'
           format: uuid
@@ -1203,8 +1531,9 @@ components:
       - latestVersion
       - baselineRunId
       - createdAt
+      - origin
       properties:
-        setId: *id017
+        setId: *id022
         name:
           type: string
         split:
@@ -1224,17 +1553,23 @@ components:
           - integer
           - 'null'
           minimum: 1
-        baselineRunId: *id019
+        baselineRunId: *id025
         createdAt:
           type: string
           format: date-time
+        origin:
+          type: string
+          enum:
+          - review
+          - import
+          description: 'review: 검토 라벨, import: 외부 데이터셋(SPEC-030)'
     AddGoldenSetEntryRequest:
       type: object
       additionalProperties: false
       required:
       - reviewItemId
       properties:
-        reviewItemId: *id017
+        reviewItemId: *id022
     GoldenSetEntry:
       type: object
       additionalProperties: false
@@ -1247,11 +1582,11 @@ components:
       - label
       - addedAt
       properties:
-        entryId: *id017
-        setId: *id017
-        reviewItemId: *id017
-        sourceId: *id017
-        eventId: *id017
+        entryId: *id022
+        setId: *id022
+        reviewItemId: *id022
+        sourceId: *id022
+        eventId: *id022
         label:
           $ref: '#/components/schemas/ReviewLabel'
         addedAt:
@@ -1268,7 +1603,7 @@ components:
       - frozenAt
       - frozenBy
       properties:
-        setId: *id017
+        setId: *id022
         version:
           type: integer
           minimum: 1
@@ -1282,14 +1617,14 @@ components:
         frozenAt:
           type: string
           format: date-time
-        frozenBy: *id017
+        frozenBy: *id022
     SetBaselineRequest:
       type: object
       additionalProperties: false
       required:
       - runId
       properties:
-        runId: *id017
+        runId: *id022
     Metric:
       type: object
       additionalProperties: false
@@ -1363,41 +1698,41 @@ components:
       - trigger
       - commitSha
       properties:
-        runId: &id021
+        runId: &id027
           type: string
           format: uuid
           description: 평가 잡이 만든 ID. 다시 보내도 한 번만 저장된다
-        goldenSetId: *id017
-        goldenSetVersion: &id022
+        goldenSetId: *id022
+        goldenSetVersion: &id028
           type: integer
           minimum: 1
-        kind: &id023
+        kind: &id029
           type: string
           enum:
           - event
           - search
           - track_attribute
-        versions: &id024
+        versions: &id030
           $ref: '#/components/schemas/RunVersions'
-        metrics: &id025
+        metrics: &id031
           type: array
           minItems: 1
           maxItems: 500
           items:
             $ref: '#/components/schemas/Metric'
-        startedAt: &id026
+        startedAt: &id032
           type: string
           format: date-time
-        finishedAt: &id027
+        finishedAt: &id033
           type: string
           format: date-time
-        trigger: &id028
+        trigger: &id034
           type: string
           enum:
           - ci
           - scheduled
           - manual
-        commitSha: &id029
+        commitSha: &id035
           type:
           - string
           - 'null'
@@ -1412,7 +1747,7 @@ components:
       - failures
       properties:
         baselineRunId:
-          type: *id020
+          type: *id026
           format: uuid
           description: 받을 때의 기준 실행. 없으면 null
         passed:
@@ -1481,7 +1816,7 @@ components:
       - recordCount
       - stages
       properties:
-        sourceId: *id017
+        sourceId: *id022
         recordCount:
           type: integer
           minimum: 0
@@ -1558,20 +1893,319 @@ components:
       - gate
       - receivedAt
       properties:
-        runId: *id021
-        goldenSetId: *id017
-        goldenSetVersion: *id022
-        kind: *id023
-        versions: *id024
-        metrics: *id025
-        startedAt: *id026
-        finishedAt: *id027
-        trigger: *id028
-        commitSha: *id029
+        runId: *id027
+        goldenSetId: *id022
+        goldenSetVersion: *id028
+        kind: *id029
+        versions: *id030
+        metrics: *id031
+        startedAt: *id032
+        finishedAt: *id033
+        trigger: *id034
+        commitSha: *id035
         gate:
           $ref: '#/components/schemas/GateResult'
         receivedAt:
           type: string
           format: date-time
+    CreateDatasetImportRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - manifestKey
+      properties:
+        manifestKey:
+          type: string
+          pattern: ^imports/[A-Za-z0-9._-]{1,100}/manifest[.]json$
+          description: 가져오기 버킷의 매니페스트 경로
+        evalRatio:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.2
+        splitSeed:
+          type: integer
+          minimum: 0
+          default: 0
+    DatasetImport:
+      type: object
+      additionalProperties: false
+      required:
+      - importId
+      - datasetName
+      - manifestKey
+      - evalRatio
+      - splitSeed
+      - status
+      - counts
+      - goldenSets
+      - errors
+      - requestedBy
+      - createdAt
+      - finishedAt
+      properties:
+        importId: *id023
+        datasetName:
+          type:
+          - string
+          - 'null'
+          description: 매니페스트를 읽기 전에는 null
+        manifestKey:
+          type: string
+        evalRatio:
+          type: number
+        splitSeed:
+          type: integer
+        status:
+          type: string
+          enum:
+          - PENDING
+          - VALIDATING
+          - REGISTERING
+          - COMPLETED
+          - FAILED
+          description: FAILED는 매니페스트 자체가 잘못됐거나 등록된 영상이 하나도 없을 때. 일부 영상 실패는 COMPLETED와 errors
+        counts:
+          type: object
+          additionalProperties: false
+          required:
+          - videos
+          - registered
+          - failed
+          - labels
+          - dev
+          - eval
+          properties:
+            videos:
+              type: integer
+              minimum: 0
+            registered:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            labels:
+              type: integer
+              minimum: 0
+            dev:
+              type: integer
+              minimum: 0
+            eval:
+              type: integer
+              minimum: 0
+        goldenSets:
+          type:
+          - object
+          - 'null'
+          additionalProperties: false
+          required:
+          - devSetId
+          - evalSetId
+          - devVersion
+          - evalVersion
+          properties:
+            devSetId: *id023
+            evalSetId: *id023
+            devVersion:
+              type:
+              - integer
+              - 'null'
+            evalVersion:
+              type:
+              - integer
+              - 'null'
+        errors:
+          type: array
+          maxItems: 100
+          description: 처음 100건
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - externalId
+            - code
+            - message
+            properties:
+              externalId:
+                type:
+                - string
+                - 'null'
+              code:
+                type: string
+              message:
+                type: string
+                maxLength: 500
+        requestedBy: *id023
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    CreateFeatureExportRequest:
+      type: object
+      additionalProperties: false
+      description: goldenSetId 또는 from·to 중 하나만
+      properties:
+        goldenSetId: *id023
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+    FeatureExport:
+      type: object
+      additionalProperties: false
+      required:
+      - exportId
+      - status
+      - goldenSetId
+      - from
+      - to
+      - fileKey
+      - rowCount
+      - sourceCount
+      - createdAt
+      - finishedAt
+      properties:
+        exportId: *id023
+        status:
+          type: string
+          enum:
+          - PENDING
+          - RUNNING
+          - COMPLETED
+          - FAILED
+        goldenSetId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        from:
+          type:
+          - string
+          - 'null'
+          format: date
+        to:
+          type:
+          - string
+          - 'null'
+          format: date
+        fileKey:
+          type:
+          - string
+          - 'null'
+          pattern: ^exports/[0-9a-f-]{36}/features[.]jsonl$
+          description: 한 줄이 `quality/v1/feature-row.schema.json`인 JSON Lines
+        rowCount:
+          type: integer
+          minimum: 0
+        sourceCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    StageGateRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - baselineSourceIds
+      - candidateSourceIds
+      properties:
+        baselineSourceIds:
+          type: array
+          minItems: 1
+          maxItems: 200
+          uniqueItems: true
+          items: *id023
+          description: 기준 벤치마크 실행으로 처리한 영상
+        candidateSourceIds:
+          type: array
+          minItems: 1
+          maxItems: 200
+          uniqueItems: true
+          items: *id023
+        stageIds:
+          type: array
+          maxItems: 200
+          items:
+            $ref: ../stages/v1/stages.schema.json#/$defs/stageId
+          description: 없으면 양쪽에 기록이 있는 모든 단계
+        maxRegressionRatio:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 10
+          default: 0.2
+          description: 후보 p95 / 기준 p95 − 1이 이 값을 넘으면 실패
+        minSamples:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 5
+    StageGateResult:
+      type: object
+      additionalProperties: false
+      required:
+      - passed
+      - maxRegressionRatio
+      - stages
+      properties:
+        passed:
+          type: boolean
+          description: failed인 단계가 없으면 true
+        maxRegressionRatio:
+          type: number
+        stages:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - stageId
+            - baselineP95Ms
+            - candidateP95Ms
+            - ratio
+            - baselineCount
+            - candidateCount
+            - status
+            properties:
+              stageId:
+                type: string
+              baselineP95Ms:
+                type:
+                - number
+                - 'null'
+              candidateP95Ms:
+                type:
+                - number
+                - 'null'
+              ratio:
+                type:
+                - number
+                - 'null'
+                description: 후보 p95 / 기준 p95
+              baselineCount:
+                type: integer
+                minimum: 0
+              candidateCount:
+                type: integer
+                minimum: 0
+              status:
+                type: string
+                enum:
+                - passed
+                - failed
+                - skipped
+                description: 'skipped: 어느 한쪽 기록 수가 minSamples보다 적음'
 security:
 - bearerAuth: []

@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: media-service API
-  version: 1.3.1
+  version: 1.4.0
   description: |
     영상 업로드 자리 발급, 업로드 완료 확인, 내 영상 목록·상세, 삭제 (SPEC-003), 원본 재생·내려받기 주소 발급 (SPEC-006),
-    작업 세션 (SPEC-017), 학습용 보존 동의·보존 중인 삭제 영상·철회 (SPEC-018).
+    작업 세션 (SPEC-017), 학습용 보존 동의·보존 중인 삭제 영상·철회 (SPEC-018), 외부 데이터셋 영상 등록(내부 전용, SPEC-030).
     외부 경로(`/api/v1/media/**`)는 api-gateway를 거쳐 호출한다.
     영상 파일 바이트는 media-service를 거치지 않고 응답으로 받은 주소로 저장소에 바로 올리고 바로 읽는다. (SPEC-003 NFR-1, SPEC-006 NFR-1)
     상태가 바뀔 때 발행하는 이벤트는 `../asyncapi/media-service.yaml`에 있다.
@@ -18,6 +18,8 @@ tags:
     description: 작업 세션. 영상 여러 개를 작업 하나(작업 전·중·후)로 묶는다. (SPEC-017)
   - name: retention
     description: 학습용 보존 동의, 보존 중인 삭제 영상과 철회 (SPEC-018, ADR-0011)
+  - name: internal
+    description: 클러스터 내부 전용. api-gateway가 라우팅하지 않는다
 paths:
   /api/v1/media/videos:
     post:
@@ -663,6 +665,91 @@ paths:
                 status: 404
                 detail: 보존 중인 영상을 찾을 수 없습니다.
                 code: MEDIA_RETAINED_VIDEO_NOT_FOUND
+  /internal/v1/media/dataset-videos:
+    post:
+      operationId: registerDatasetVideo
+      summary: 외부 데이터셋 영상 등록 (내부 전용)
+      description: |
+        quality-service가 가져오기 버킷의 영상을 media 저장소로 복사해 등록한다. 업로드 완료와 같이 `UPLOADED`로 만들고 같은 트랜잭션에서 `video.uploaded`를 Outbox에 넣어 일반 분석 흐름을 탄다.
+        영상 ID는 (importId, externalId)로 결정적이다. 같은 값으로 다시 부르면 처음 만든 영상을 200으로 돌려준다.
+        데이터셋 영상은 보존 등급 `dataset`이라 삭제 전파와 보존 기간 정리에서 빠진다(ADR-0011, overview 보존 표 외부 데이터셋 행). (SPEC-030 R-4~R-6)
+      tags: [internal]
+      security: []
+      parameters:
+        - name: X-Caller
+          in: header
+          required: true
+          description: 호출하는 서비스 이름. 허용 목록(설정, 기본 quality-service)에 있어야 한다
+          schema:
+            type: string
+            pattern: '^[a-z][a-z0-9-]{1,62}$'
+          example: quality-service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDatasetVideoRequest'
+            example:
+              importId: 0192fd00-0000-7000-8000-000000000001
+              externalId: clip-0001
+              ownerId: 0192f0c4-6d1e-7a3b-9c2d-1e2f3a4b5c6d
+              importKey: imports/physicalai-2026-11/videos/clip-0001.mp4
+              contentType: video/mp4
+      responses:
+        '201':
+          description: 등록함
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetVideo'
+              example:
+                videoId: 0192fd20-0000-5000-8000-000000000001
+                status: UPLOADED
+                sizeBytes: 31457280
+        '200':
+          description: 이미 등록한 영상
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetVideo'
+              example:
+                videoId: 0192fd20-0000-5000-8000-000000000001
+                status: READY
+                sizeBytes: 31457280
+        '400':
+          description: 요청 형식·영상 형식·크기 제한 위반 (`MEDIA_INVALID_REQUEST`, `MEDIA_UNSUPPORTED_TYPE`, `MEDIA_FILE_TOO_LARGE`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                code: MEDIA_UNSUPPORTED_TYPE
+        '403':
+          description: 허용 호출자가 아님 (`MEDIA_CALLER_NOT_ALLOWED`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Forbidden
+                status: 403
+                code: MEDIA_CALLER_NOT_ALLOWED
+        '404':
+          description: 가져오기 버킷에 그 파일이 없음 (`MEDIA_IMPORT_OBJECT_NOT_FOUND`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                code: MEDIA_IMPORT_OBJECT_NOT_FOUND
 components:
   securitySchemes:
     bearerAuth:
@@ -738,6 +825,42 @@ components:
             detail: 영상을 찾을 수 없습니다.
             code: MEDIA_VIDEO_NOT_FOUND
   schemas:
+    RegisterDatasetVideoRequest:
+      type: object
+      additionalProperties: false
+      required: [importId, externalId, ownerId, importKey, contentType]
+      properties:
+        importId:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+          pattern: '^[A-Za-z0-9._-]{1,128}$'
+        ownerId:
+          type: string
+          format: uuid
+          description: 가져오기를 요청한 운영자. 영상 소유자가 된다
+        importKey:
+          type: string
+          pattern: '^imports/[A-Za-z0-9._-]{1,100}/videos/(?!.*[.][.])[A-Za-z0-9._/-]{1,400}$'
+          description: 가져오기 버킷의 원본 경로. `..`를 쓸 수 없다
+        contentType:
+          type: string
+          enum: [video/mp4, video/quicktime, video/x-matroska, video/webm, video/x-msvideo]
+    DatasetVideo:
+      type: object
+      additionalProperties: false
+      required: [videoId, status, sizeBytes]
+      properties:
+        videoId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          description: 영상 상태(VideoResponse.status와 같은 값)
+        sizeBytes:
+          type: integer
+          minimum: 1
     VideoContentType:
       type: string
       description: |

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vlm.example/contracts/quality/v1/golden-manifest.schema.json",
   "title": "GoldenManifest",
-  "description": "Golden Set 확정 버전 하나. 경로: Golden Set 저장소의 golden/<setId>/v<version>/manifest.json. 쓴 뒤 바꾸지 않는다. 작성: quality-service. 읽기: 평가 잡 (SPEC-029)",
+  "description": "Golden Set 확정 버전 하나. 경로: Golden Set 저장소의 golden/<setId>/v<version>/manifest.json. 쓴 뒤 바꾸지 않는다. 작성: quality-service. 읽기: 평가 잡 (SPEC-029). 검토 라벨 Golden Set은 entries, 가져온 데이터셋 Golden Set은 datasetItems를 쓴다(SPEC-030)",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -42,7 +42,7 @@
     },
     "entries": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -175,6 +175,80 @@
           }
         }
       }
+    },
+    "origin": {
+      "type": "string",
+      "enum": [
+        "review",
+        "import"
+      ],
+      "description": "SPEC-030. 없으면 review"
+    },
+    "datasetItems": {
+      "type": "array",
+      "description": "SPEC-030: 가져온 데이터셋 영상과 라벨",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "itemId",
+          "externalId",
+          "sourceId",
+          "importId",
+          "labels"
+        ],
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "데이터셋 이름·externalId로 결정적"
+          },
+          "externalId": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "importId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/label"
+            }
+          }
+        }
+      }
+    },
+    "datasetOrigin": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "SPEC-030: 가져온 데이터셋의 출처·사용 조건",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "license",
+        "url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
     }
   },
   "examples": [
@@ -224,6 +298,234 @@
           "taxonomyVersion": "v2"
         }
       ]
+    },
+    {
+      "schemaVersion": 1,
+      "setId": "0192fb00-0000-7000-8000-000000000012",
+      "name": "physicalai-events-eval",
+      "split": "eval",
+      "version": 1,
+      "frozenAt": "2026-11-06T12:00:00Z",
+      "origin": "import",
+      "entries": [],
+      "datasetOrigin": {
+        "name": "PhysicalAI-Event-Videos",
+        "license": "CC BY 4.0",
+        "url": null
+      },
+      "datasetItems": [
+        {
+          "itemId": "0192fd10-0000-5000-8000-000000000001",
+          "externalId": "clip-0001",
+          "sourceId": "0192fd20-0000-5000-8000-000000000001",
+          "importId": "0192fd00-0000-7000-8000-000000000001",
+          "labels": [
+            {
+              "kind": "interval",
+              "eventType": "ppe_missing",
+              "startMs": 12000,
+              "endMs": 20000,
+              "severity": "medium"
+            },
+            {
+              "kind": "bbox",
+              "ptsMs": 15000,
+              "className": "no_helmet",
+              "box": {
+                "x": 0.4,
+                "y": 0.2,
+                "w": 0.06,
+                "h": 0.1
+              },
+              "trackExternalId": "p1"
+            },
+            {
+              "kind": "state_change",
+              "atMs": 30000,
+              "className": "safety_barrier",
+              "change": "removed",
+              "zoneName": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "bboxLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ptsMs",
+        "className",
+        "box"
+      ],
+      "properties": {
+        "kind": {
+          "const": "bbox"
+        },
+        "ptsMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "className": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+        },
+        "box": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "w",
+            "h"
+          ],
+          "description": "프레임 크기로 나눈 0~1 좌표, 왼쪽 위 기준",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "w": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "h": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "trackExternalId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "같은 객체를 프레임 사이에 잇는 원본 데이터셋의 ID"
+        }
+      }
+    },
+    "intervalLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "eventType",
+        "startMs",
+        "endMs"
+      ],
+      "properties": {
+        "kind": {
+          "const": "interval"
+        },
+        "eventType": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"
+        },
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "severity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            null
+          ]
+        }
+      }
+    },
+    "stateChangeLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "atMs",
+        "className",
+        "change"
+      ],
+      "properties": {
+        "kind": {
+          "const": "state_change"
+        },
+        "atMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "className": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+        },
+        "change": {
+          "type": "string",
+          "enum": [
+            "removed",
+            "moved",
+            "added",
+            "restored"
+          ]
+        },
+        "zoneName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        }
+      }
+    },
+    "label": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/bboxLabel"
+        },
+        {
+          "$ref": "#/$defs/intervalLabel"
+        },
+        {
+          "$ref": "#/$defs/stateChangeLabel"
+        }
+      ]
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "entries": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "datasetItems"
+      ],
+      "properties": {
+        "datasetItems": {
+          "minItems": 1
+        }
+      }
     }
   ]
 }
