@@ -176,12 +176,14 @@ cd repos/ai && uv sync --all-packages
 | SPEC-026 | grounding-worker(`grounding.requested`·`grounding.completed`, 결과 파일 `groundings/v1`) | Approved |
 | SPEC-027 | aggregator 핵심(`analysis.completed`·`source.completed`, analysis-api 내부 읽기 API, 결과 파일, `source_summary`) | Approved |
 | SPEC-028 | aggregator 정적 객체 재고 비교·장비 방치·예측(`chunk.manifest`, 청크 재고 파일, ai-gateway `state_compare`·`risk_forecast`) | Approved |
-| SPEC-029 | quality-service | 작성 예정 |
-| SPEC-030~ | frontend 나머지 화면 | 작성 예정 |
+| SPEC-029 | quality-service 핵심(검토 큐, Golden Set 버전, 평가 실행·CI Gate, 처리 단계 리포트, `openapi/quality-service.yaml`) | Approved |
+| SPEC-030 | quality-service 데이터셋 가져오기·라벨 3종·temporal IoU·특징 내보내기·성능 Gate | 작성 예정 |
+| SPEC-031~ | frontend 나머지 화면 | 작성 예정 |
 
 plan 단계에서 사용자에게 먼저 확인할 것(새 라이브러리 도입 규칙):
 
 - grounding-worker(SPEC-026)의 개방 어휘 탐지기 실행 라이브러리. YOLOE의 공식 구현인 `ultralytics`는 AGPL-3.0이라 배포 형태에 따라 소스 공개 의무가 생긴다. 대안(ONNX로 내보낸 가중치를 `onnxruntime`으로 실행)과 함께 물어본다.
+- quality-service(SPEC-029)는 backend의 새 서비스 모듈이다. catalog와 ADR-0008에 이미 있는 배포 단위라 새 서비스 결정은 아니다. 다만 모듈 뼈대(Flyway `quality_db`, 생성 코드 설정)는 기존 서비스와 같은 방식인지 plan에서 확인한다.
 - aggregator(SPEC-027)는 analysis-api가 아직 없어 로컬에서 계약 예시로 응답하는 자리 표시 서버가 필요하다. 도구(예: 계약 기반 mock 서버)를 새로 들일지 테스트용 작은 HTTP 서버를 직접 둘지 확인한다.
 - 영상 디코딩·인코딩. normalize는 FFmpeg·ffprobe 프로세스를 부르므로 같은 방식(새 라이브러리 없음)을 기본안으로 제안한다.
 
