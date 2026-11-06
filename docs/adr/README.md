@@ -17,3 +17,4 @@
 | [ADR-0011](0011-derived-data-retention.md) | 영상 삭제 시 비식별 파생 데이터는 동의를 받아 1년 동안 학습용으로 보존한다 | Accepted | 2026-11-04 |
 | [ADR-0012](0012-prompt-registry-source.md) | Prompt Registry 원본을 ai 레포에 두고 버전을 고정한 묶음으로 배포한다 | Accepted | 2026-11-04 |
 | [ADR-0013](0013-service-contracts-release.md) | 서비스 간 계약을 버전 릴리스로 배포하고 쓰는 쪽은 잠금 파일로 고정한다 | Accepted | 2026-11-04 |
+| [ADR-0014](0014-ai-gateway-extensible-task-type.md) | ai-gateway taskType을 늘어날 수 있는 열린 목록(x-extensible-enum)으로 둔다 | Accepted | 2026-11-06 |

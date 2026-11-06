@@ -1,0 +1,78 @@
+asyncapi: 3.0.0
+info:
+  title: event-analyzer events
+  version: 1.0.0
+  description: |
+    event-analyzer 워커가 이벤트 후보를 판정해 발행하는 이벤트 (SPEC-020).
+    최소 한 번 전달이다. 같은 후보(candidateId)를 다시 처리하면 같은 eventId를 쓴다.
+    메시지의 후보를 모두 판정한 뒤 후보마다 한 건씩 발행한다. 벡터 후보는 event.manifest 수에 넣지 않는다.
+    payload의 원본은 `../events/*.schema.json`이고 판정 결과 형식은 `../events/_vlm-analysis.schema.json`이다.
+defaultContentType: application/json
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: 로컬 compose의 Kafka
+channels:
+  eventCandidateVector:
+    address: event.candidate.vector
+    description: frame-encoder가 발행하는 입력(소비 그룹 event-analyzer). 메시지 키는 sourceId다.
+    messages:
+      eventCandidateVector:
+        $ref: '#/components/messages/EventCandidateVector'
+  eventAnalyzed:
+    address: event.analyzed
+    description: 후보 하나의 판정 결과. 메시지 키는 sourceId다.
+    messages:
+      eventAnalyzed:
+        $ref: '#/components/messages/EventAnalyzed'
+operations:
+  consumeEventCandidateVector:
+    action: receive
+    summary: 벡터 후보를 event_judge로 판정하고 조건에 맞으면 재판정한다 (SPEC-020 R-1, R-3)
+    channel:
+      $ref: '#/channels/eventCandidateVector'
+    messages:
+      - $ref: '#/channels/eventCandidateVector/messages/eventCandidateVector'
+  publishEventAnalyzed:
+    action: send
+    summary: 후보마다 한 번 발행 (SPEC-020 R-8)
+    channel:
+      $ref: '#/channels/eventAnalyzed'
+    messages:
+      - $ref: '#/channels/eventAnalyzed/messages/eventAnalyzed'
+components:
+  messages:
+    EventCandidateVector:
+      name: event.candidate.vector
+      title: 구간 벡터 프로토타입 후보
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.candidate.vector.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+    EventAnalyzed:
+      name: event.analyzed
+      title: 이벤트 후보 판정 결과
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '../events/event.analyzed.schema.json'
+      bindings:
+        kafka:
+          key:
+            type: string
+            format: uuid
+            description: sourceId
+  schemas:
+    KafkaHeaders:
+      type: object
+      properties:
+        traceparent:
+          type: string
+          description: W3C Trace Context. 후보 메시지를 처리한 trace를 이어 간다(원칙 VI).

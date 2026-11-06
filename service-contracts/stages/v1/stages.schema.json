@@ -70,6 +70,22 @@
         {
           "const": "encoder.prototype",
           "description": "구간 벡터와 유형별 텍스트 프로토타입 비교 (SPEC-019, ADR-0010 ③)"
+        },
+        {
+          "const": "event-analyzer.queue_wait",
+          "description": "event-analyzer 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "event-analyzer.handle",
+          "description": "event-analyzer 소비 그룹: event.candidate.vector 핸들러 전체"
+        },
+        {
+          "const": "analyzer.judge",
+          "description": "후보 1차 판정(event_judge 호출과 재시도). 후보 수를 count로 남긴다 (SPEC-020)"
+        },
+        {
+          "const": "analyzer.escalate",
+          "description": "후보 재판정(event_judge_escalate 호출과 재시도). 재판정 수를 count로 남긴다 (SPEC-020)"
         }
       ]
     }

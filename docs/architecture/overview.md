@@ -290,13 +290,13 @@ sequenceDiagram
 | 쓰러짐·화재·보호구·물건 제거·방호 미복구·활성 위험 중 접근 | `event_judge` 1회로 `VLMAnalysis` 생성 |
 | 점수가 애매하거나 severity high | `event_judge_escalate`로 재판정, 두 판정이 다르면 `reviewRequired` |
 | 같은 트랙의 같은 유형 반복 | 쿨다운(기본 10초) 안에서는 confidence 높은 후보 하나로 병합 |
-| 구간 벡터 프로토타입 후보(`event.candidate.vector`) | `event_judge`로 판정, 판정 방식 `vector+vlm` |
+| 구간 벡터 프로토타입 후보(`event.candidate.vector`) | `event_judge`로 판정, 판정 방식 `vector+vlm`. severity high이거나 판단 불가면 `event_judge_escalate`로 재판정하고 `vector+vlm+escalate`. 트랙이 없어 쿨다운 병합은 하지 않는다([SPEC-020](../specs/SPEC-020-event-analyzer-vector/spec.md)) |
 | 장비 방치 | aggregator 시간 규칙, 템플릿 설명. 통로·위험구역이면 `event_judge` |
 | 정적 객체 재고 변화(제거·등장·이동·미복구) | aggregator가 전후 구간 대표 프레임으로 `event_judge`·`state_compare` 호출 |
 
 ### `VLMAnalysis` 출력 스키마
 
-원본은 ai 레포 `services/ai-gateway/registry/prompts/event_judge/output.schema.json`이다([ADR-0012](../adr/0012-prompt-registry-source.md)). `event.analyzed` 계약을 쓸 때 docs `events/`로 옮기고 ai는 그 사본을 참조한다. 필드 이름은 계약 규칙에 따라 camelCase다.
+원본은 docs `service-contracts/events/_vlm-analysis.schema.json`이다. `event.analyzed` 계약을 만들며 ai-gateway 출력 스키마에서 옮겼고, ai-gateway `event_judge`·`event_judge_escalate`의 출력 스키마는 이 계약을 참조한다([ADR-0012](../adr/0012-prompt-registry-source.md), [SPEC-020](../specs/SPEC-020-event-analyzer-vector/spec.md)). 필드 이름은 계약 규칙에 따라 camelCase다.
 
 | 필드 | 타입 | 규칙 |
 | --- | --- | --- |
@@ -312,7 +312,7 @@ sequenceDiagram
 | `evidenceStart` · `evidenceEnd` | float · null | 정규화 사본 PTS |
 | `rawOutput`(응답에는 없음) | string | ai-gateway 호출 로그(ai_db)에 보관하고 결과에는 호출 ID로 참조한다. 영상 삭제 시 지운다 |
 
-이벤트(`analysis.track_event`)에는 유형·시각·점수, 썸네일·근거 프레임 경로, `VLMAnalysis` 전체, 판정 방식(`rule`·`rule+vlm`·`rule+vlm+escalate`·`vector+vlm`)과 탐지기 능력, 관련 트랙·구역, 버전(detector·pose·yoloe_classes·model·prompt·taxonomy·schema·preprocess·analysis), 확인 상태(미확인·확인·기각)를 저장한다.
+이벤트(`analysis.track_event`)에는 유형·시각·점수, 썸네일·근거 프레임 경로, `VLMAnalysis` 전체, 판정 방식(`rule`·`rule+vlm`·`rule+vlm+escalate`·`vector+vlm`·`vector+vlm+escalate`)과 탐지기 능력, 관련 트랙·구역, 버전(detector·pose·yoloe_classes·model·prompt·taxonomy·schema·preprocess·analysis), 확인 상태(미확인·확인·기각)를 저장한다.
 
 이벤트 재현율은 탐지기와 규칙이 후보를 냈는지에 묶인다. 후보 단계 재현율과 판정 단계 정밀도를 따로 재고, "없음"으로 판정된 구간을 무작위로 감사한다.
 
@@ -408,7 +408,7 @@ sequenceDiagram
 | `track.analyzed` | sourceId | track-analyzer → analysis-api · embedding-worker · notification-service |
 | `event.candidate` | sourceId | chunk-processor → event-analyzer (청크당 1건, 0건 포함, `unsupported_events`, 상한 초과 시 S3 경로) |
 | `event.candidate.vector` (v4) | sourceId | frame-encoder → event-analyzer (구간 벡터 프로토타입 후보, 후보가 있는 실행만 1건, 완료 판정 제외) |
-| `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`VLMAnalysis`, `reviewRequired`) |
+| `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`event.analyzed`는 후보마다 1건: `VLMAnalysis`, 판정 방식, 판정 호출 기록, `reviewRequired`. `event.manifest`는 탐지기 후보 spec에서 정한다) |
 | `grounding.requested` | sourceId | search-service → grounding-worker (segmentId 최대 3개, 대상어, 표준 질의) |
 | `grounding.completed` | sourceId | grounding-worker → search-service · notification-service (클립 경로, 프레임별 객체 수) |
 | `segment.annotated` | sourceId | search-service → embedding-worker (정밀 검색에서 확인된 구간 주석) |
