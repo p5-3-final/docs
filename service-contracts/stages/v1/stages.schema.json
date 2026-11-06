@@ -122,6 +122,22 @@
         {
           "const": "attribute.call",
           "description": "track_attribute·object_question 호출(재시도 포함). 보낸 이미지 수를 count로 남긴다 (SPEC-024)"
+        },
+        {
+          "const": "embedding-worker.queue_wait",
+          "description": "embedding-worker 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "embedding-worker.handle",
+          "description": "embedding-worker 소비 그룹: event.analyzed·track.analyzed·segment.annotated 핸들러 전체"
+        },
+        {
+          "const": "embedding.call",
+          "description": "ai-gateway embed_text 호출(재시도 포함). 문장 수를 count로 남긴다 (SPEC-025)"
+        },
+        {
+          "const": "embedding.store",
+          "description": "텍스트 벡터 파일 저장. 파일 수를 count로 남긴다 (SPEC-025)"
         }
       ]
     }

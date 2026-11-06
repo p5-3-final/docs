@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/vectors/v1/text-vector-file.schema.json",
+  "title": "Text vector file v1",
+  "description": "embedding-worker가 텍스트 항목 하나마다 S3에 저장하는 텍스트 벡터 파일(JSON 문서 하나, UTF-8). 경로는 embedding.ready의 vectorKey다. search-service가 읽어 텍스트 인덱스(벡터 + pg_trgm)에 적재한다 (SPEC-025)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "itemKind",
+    "itemId",
+    "text",
+    "textFormat",
+    "embeddingModel",
+    "dimension",
+    "vector",
+    "metadata"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "itemKind": {
+      "type": "string",
+      "enum": [
+        "event",
+        "track",
+        "segment_annotation"
+      ],
+      "description": "event: event.analyzed 설명문·위험 사유·조치 제안, track: 트랙 속성 설명, segment_annotation: 정밀 검색 구간 주석"
+    },
+    "itemId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "event: event.analyzed의 eventId, track: 최종 trackId, segment_annotation: annotationId"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "임베딩한 문장. 키워드 검색(pg_trgm)에도 쓴다"
+    },
+    "textFormat": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+-v[0-9]+$",
+      "description": "문장을 만든 규칙 버전(예: event-v1). 규칙이 바뀌면 재임베딩한다"
+    },
+    "embeddingModel": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "ai-gateway embed_text 응답의 modelId(프로필의 텍스트 임베딩 모델)"
+    },
+    "dimension": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+    },
+    "vector": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "type": "number"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startMs",
+        "endMs"
+      ],
+      "description": "검색 필터·이동 시각용 값. 해당 없는 항목은 없다",
+      "properties": {
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "eventType": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"
+        },
+        "severity": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/severity"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": [
+            "confirmed",
+            "rejected",
+            "unverified",
+            "unknown"
+          ]
+        },
+        "trackId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "className": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+        },
+        "helmet": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/ppeState"
+        },
+        "vest": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/ppeState"
+        },
+        "role": {
+          "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/workerRole"
+        },
+        "segmentId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f100-0000-7000-8000-000000000001",
+      "itemKind": "event",
+      "itemId": "0192f100-0000-5000-8000-0000000000f1",
+      "text": "적재 구역에서 작업자 한 명이 바닥에 넘어져 일어나지 못하고 있다.\n쓰러진 작업자가 지게차 통로에 있다.\n통로 운행을 멈추고 작업자 상태를 확인한다.",
+      "textFormat": "event-v1",
+      "embeddingModel": "text-embedding-3-small",
+      "dimension": 4,
+      "vector": [
+        0.1,
+        -0.2,
+        0.3,
+        0.9
+      ],
+      "metadata": {
+        "startMs": 0,
+        "endMs": 10000,
+        "eventType": "fall",
+        "severity": "high",
+        "verificationStatus": "confirmed"
+      }
+    }
+  ]
+}

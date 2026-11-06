@@ -412,8 +412,8 @@ sequenceDiagram
 | `event.analyzed` · `event.manifest` | sourceId | event-analyzer → analysis-api · embedding-worker · quality-service · pipeline-service (`event.analyzed`는 후보마다 1건: `VLMAnalysis`, 판정 방식, 판정 호출 기록, `reviewRequired`. `event.manifest`는 `event.candidate` 실행마다 1건: 받은·병합·발행 수, 발행한 eventId, `unsupportedEvents`, [SPEC-023](../specs/SPEC-023-event-analyzer-detector/spec.md)) |
 | `grounding.requested` | sourceId | search-service → grounding-worker (segmentId 최대 3개, 대상어, 표준 질의) |
 | `grounding.completed` | sourceId | grounding-worker → search-service · notification-service (클립 경로, 프레임별 객체 수) |
-| `segment.annotated` | sourceId | search-service → embedding-worker (정밀 검색에서 확인된 구간 주석) |
-| `embedding.ready` | sourceId | embedding-worker → search-service (텍스트 인덱스) |
+| `segment.annotated` | sourceId | search-service → embedding-worker (정밀 검색에서 확인된 구간 주석, 주석마다 1건, [SPEC-025](../specs/SPEC-025-embedding-worker/spec.md)) |
+| `embedding.ready` | sourceId | embedding-worker → search-service (텍스트 인덱스 항목마다 1건: itemKind `event`·`track`·`segment_annotation`, 텍스트 벡터 파일 `vectors/v1/text-vector-file` 경로, [SPEC-025](../specs/SPEC-025-embedding-worker/spec.md)) |
 | `version.activated` | sourceId | analysis-api → search-service (전환 순번 포함) |
 | `analysis.completed` · `job.status` | sourceId | pipeline-service → aggregator · notification-service (`job.status`는 상태 전체 + 순번) |
 | `source.completed` | sourceId | aggregator → analysis-api · notification-service (병합 목록, 시간 규칙 이벤트, 스냅샷, 위험 상태, 요약, v4 재고 변화 이벤트·노출 지표. 크면 S3 경로) |
