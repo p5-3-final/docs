@@ -1,7 +1,7 @@
 ---
 id: SPEC-016
 title: ai-gateway 결과 캐시·예산·호출 한도
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
