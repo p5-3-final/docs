@@ -39,5 +39,6 @@
 | [SPEC-032](SPEC-032-frontend-inspect-zones/spec.md) | 플레이어 오버레이·클릭 조회·객체 질문·위험구역 편집 화면 | Approved | frontend, docs | | 2026-11-06 |
 | [SPEC-033](SPEC-033-frontend-search/spec.md) | 검색 화면(문장·이미지 장면 찾기, 주석 클립)과 영상 질문(Video RAG) | Approved | frontend, docs | | 2026-11-06 |
 | [SPEC-034](SPEC-034-frontend-sessions-settings/spec.md) | 작업 세션·분석 이력 화면과 학습용 보존 설정 화면 | Approved | frontend, docs | | 2026-11-06 |
+| [SPEC-035](SPEC-035-frontend-quality/spec.md) | 품질 화면(검토 큐·Golden Set·평가 실행·처리 단계·데이터셋 가져오기) | Approved | frontend, backend, docs | | 2026-11-06 |
 
 상태: `Draft` → `Review` → `Approved` → `Implementing` → `Done` (대체되면 `Superseded`)
