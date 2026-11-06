@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-04
+updated: 2026-11-06
 ---
 
 # 아키텍처 개요
@@ -367,6 +367,7 @@ sequenceDiagram
 | 인증 | api-gateway가 JWKS로 JWT를 검증하고 사용자 ID와 역할을 헤더로 전달한다. 클라이언트가 보낸 같은 이름의 헤더는 지운다. 각 서비스는 인가만 한다. |
 | 서비스 ↔ 서비스 | 상태 변경은 Kafka 이벤트로만 전달한다([ADR-0002](../adr/0002-kafka-message-broker.md)). 내부 읽기 전용 API는 허용한다(aggregator → analysis-api, search-service → analysis-api(RAG 근거), api-gateway → auth-service JWKS). 읽기 API는 호출하는 쪽이 없어도 제공하는 쪽이 동작한다. |
 | 동기 예외 | 기존 search-service/워커 → ai-gateway는 유지한다. chunk-processor → 내부 추론 HTTP는 ADR-0009의 새 논리 경계이며 /v1/inferences facade와 별도 서버 adapter를 비교한다. 실제 서버 연결을 임의 교체하지 않는다. |
+| 내부 동기 호출 규약 | 내부 동기 호출(search-service·워커 → ai-gateway, aggregator·search-service → analysis-api 내부 읽기, chunk-processor → 추론 경계)은 HTTP/1.1 + JSON을 유지한다. gRPC 전환을 검토했으나 측정상 모델 시간을 포함하면 차이가 1% 미만이고 구조적 이점은 HTTP 위에서 얻을 수 있어 채택하지 않았다(2026-11-06, 설계 원본 "내부 통신 결정" 절). 계약은 `service-contracts/openapi/`에 두고 Java·Python 클라이언트는 빌드 때 생성한다(손으로 쓴 클라이언트는 두지 않는다). 호출자는 `X-Request-Deadline`(epoch ms)을 넣고 받는 쪽은 남은 시간을 자기 타임아웃과 하위 호출(ai-gateway → 외부 AI)에 넘기며, 남은 시간이 없으면 처리하지 않고 504로 답한다. 오류는 Problem Details(RFC 9457)다. 읽기 전용 호출(parse, embed, analysis-api 읽기)만 503·연결 실패에 지수 백오프로 2회 재시도하고, analyze(VLM)는 자동 재시도하지 않는다. gRPC는 Phase 2에서 추론을 Stream Ingestor 밖으로 떼어 프레임이 서비스 사이를 오갈 때 그 경계에서만 다시 검토한다. |
 | 시작 신호 | 같은 작업을 시작시키는 신호가 여러 개여도 하나의 조건부 상태 전이로 모은다. |
 | 파티션 키 | 공통 envelope의 sourceId를 사용한다. 이전 v3의 chunkId/trackId/groundingId 키 표기는 구현된 계약이 아니다. 같은 source의 병렬 처리는 제한된 비동기 실행과 연속 완료 offset 처리로 설계한다. |
 | 대량 데이터 | 구간 목록, 벡터, 검출 박스처럼 큰 데이터는 S3 파일로 두고 이벤트에는 경로와 개수만 싣는다. |
