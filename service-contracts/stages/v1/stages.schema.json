@@ -138,6 +138,30 @@
         {
           "const": "embedding.store",
           "description": "텍스트 벡터 파일 저장. 파일 수를 count로 남긴다 (SPEC-025)"
+        },
+        {
+          "const": "grounding-worker.queue_wait",
+          "description": "grounding-worker 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "grounding-worker.handle",
+          "description": "grounding-worker 소비 그룹: grounding.requested 핸들러 전체"
+        },
+        {
+          "const": "grounding.sample",
+          "description": "구간 샘플 프레임 추출. 프레임 수를 count로 남긴다 (SPEC-026)"
+        },
+        {
+          "const": "grounding.detect",
+          "description": "개방 어휘 탐지. 프레임 수를 count로 남긴다 (SPEC-026)"
+        },
+        {
+          "const": "grounding.render",
+          "description": "박스를 그린 주석 클립 인코딩. 클립 프레임 수를 count로 남긴다 (SPEC-026)"
+        },
+        {
+          "const": "grounding.store",
+          "description": "클립·결과 파일 저장. 파일 수를 count로 남긴다 (SPEC-026)"
         }
       ]
     }
