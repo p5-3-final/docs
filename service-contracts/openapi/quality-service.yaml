@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: quality-service API
-  version: 2.0.0
+  version: 3.0.0
   description: '검토 큐, Golden Set 버전, 평가 실행과 CI Gate, 처리 단계 리포트 (SPEC-029). 외부 데이터셋 가져오기, 특징 내보내기, 처리 단계 성능 Gate (SPEC-030).
 
     - `/api/v1/quality/**`는 api-gateway를 거치고 OPERATOR 역할만 쓴다. 역할 검사는 서비스가 `X-User-Roles`로 한다.
@@ -1857,10 +1857,14 @@ components:
           $ref: ../taxonomy/v2/taxonomy.schema.json#/$defs/eventType
         startMs:
           type: integer
+          format: int64
           minimum: 0
+          maximum: 9223372036854775807
         endMs:
           type: integer
+          format: int64
           minimum: 0
+          maximum: 9223372036854775807
         judgmentMethod:
           type: string
           maxLength: 50
@@ -1892,8 +1896,10 @@ components:
             format: uri
           description: evidenceFrameKeys와 같은 순서의 서명 주소(1시간). 화면 표시용이고 로그·저장소에 남기지 않는다 (SPEC-035 R-4)
         analysis:
-          type: object
-          description: 판정 결과 VLMAnalysis. 형식은 `events/_vlm-analysis.schema.json`이다
+          type:
+          - object
+          - 'null'
+          description: 판정 결과 VLMAnalysis. 형식은 `events/_vlm-analysis.schema.json`이다. 판정 결과가 없는 항목(사유 `alert_dismissed`의 미판정 알림 등)은 null이다
         status:
           type: string
           enum:
@@ -2230,7 +2236,10 @@ components:
               baseline:
                 type: number
               value:
-                type: number
+                type:
+                - number
+                - 'null'
+                description: 이번 실행의 값. 기준 실행에만 있는 지표(이번 실행에서 빠짐)면 null이다 (SPEC-029 R-18)
     StageStat:
       type: object
       additionalProperties: false
@@ -2328,7 +2337,7 @@ components:
                 type:
                 - number
                 - 'null'
-                description: alert.candidate occurredAt부터 pending alert.raised occurredAt까지
+                description: event-analyzer 단계 `analyzer.alert` 측정(긴급 후보를 받은 시각부터 pending alert.raised 발행까지)의 백분위. Kafka 대기 시간은 들어가지 않는다
               firstAlertP95Ms:
                 type:
                 - number
