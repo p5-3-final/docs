@@ -43,6 +43,21 @@
       ]
     },
     {
+      "name": "frame-encoder",
+      "credentials": [
+        {
+          "accessKey": "local-frame-encoder-key",
+          "secretKey": "local-frame-encoder-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media",
+        "Write:vlm-media",
+        "List:vlm-media",
+        "Read:vlm-models"
+      ]
+    },
+    {
       "name": "models-upload",
       "credentials": [
         {

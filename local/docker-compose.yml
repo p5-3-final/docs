@@ -202,7 +202,7 @@ services:
         limits:
           memory: 768M
 
-  # 워커가 구독·발행하는 토픽(SPEC-007 normalize, SPEC-009 ai-gateway). 미리 만들어야 재시도 토픽을 바로 구독한다.
+  # 워커가 구독·발행하는 토픽(SPEC-007 normalize, SPEC-009 ai-gateway, SPEC-019 frame-encoder). 미리 만들어야 재시도 토픽을 바로 구독한다.
   # stage.timing은 처리 단계 측정 묶음이다(SPEC-013). 보존 7일은 docs overview "처리 단계 측정"과 같다.
   kafka-init:
     image: apache/kafka:4.3.2@sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7
@@ -212,7 +212,9 @@ services:
       - >-
         for topic in video.uploaded video.deleted video.retention.revoked video.normalizing video.normalized
         video.uploaded.normalize.retry normalize.dlq
-        video.deleted.ai-gateway.retry ai-gateway.dlq; do
+        video.deleted.ai-gateway.retry ai-gateway.dlq
+        segment.ready segment.embedded event.candidate.vector
+        segment.ready.frame-encoder.retry frame-encoder.dlq; do
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
         --topic "$$topic" --partitions 3 --replication-factor 1 || exit 1; done &&
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
@@ -257,6 +259,48 @@ services:
       resources:
         limits:
           memory: 768M
+
+  # frame-encoder(SPEC-019). segment.ready를 받아 벡터 파일을 저장하고 segment.embedded를 발행한다.
+  # 기본은 모델 없이 흐름만 보는 mock 프로필이다. 실제 인코더는 가중치를 local/scripts/upload-models.sh로
+  # 올린 뒤 FRAME_ENCODER_PROFILE_PATH를 /app/profiles/local.toml로 바꾼다(ai-gateway도 같은 인코더로 맞춘다).
+  frame-encoder:
+    build:
+      context: ../repos/ai
+      dockerfile: services/frame-encoder/Dockerfile
+      target: runtime
+    image: vlm/frame-encoder:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-frame-encoder-key
+      AWS_SECRET_ACCESS_KEY: local-frame-encoder-secret
+      FRAME_ENCODER_PROFILE_PATH: ${FRAME_ENCODER_PROFILE_PATH:-/app/profiles/local-mock.toml}
+      # mock 인코더는 로컬·CI 전용이다.
+      FRAME_ENCODER_ALLOW_MOCK: "true"
+      FRAME_ENCODER_MODELS_BUCKET: vlm-models
+      # 처리 시간 측정 묶음을 stage.timing에 발행한다. 기본은 JSON 로그(SPEC-013 R-5).
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    # 받은 가중치를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
+    volumes:
+      - frame-encoder-models:/var/cache/vlm-models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          # docs overview "로컬 메모리" 표
+          memory: 1G
 
   # ai-gateway(SPEC-009). 마이그레이션을 먼저 한 번 실행하고 서버를 띄운다.
   # 기본은 모델 없이 흐름만 보는 mock 프로필이다. Ollama를 쓰려면 호스트에서 Ollama를 띄우고
@@ -357,3 +401,4 @@ volumes:
   postgres-data:
   seaweedfs-data:
   ai-gateway-models:
+  frame-encoder-models:
