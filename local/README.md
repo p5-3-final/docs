@@ -1,6 +1,6 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), frame-encoder(SPEC-019), ai-gateway(SPEC-009)가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), frame-encoder(SPEC-019), event-analyzer(SPEC-020), ai-gateway(SPEC-009)가 들어 있고, 서비스 구현이 시작되면 추가한다.
 
 | 컨테이너 | 호스트 포트 | 메모리 상한 |
 | --- | --- | --- |
@@ -10,6 +10,7 @@
 | media-service | 8082 | 768M |
 | normalize | — (health 8000, 내부) | 768M |
 | frame-encoder | — (health 8000, 내부) | 1G |
+| event-analyzer | — (health 8000, 내부) | 256M |
 | ai-gateway (내부 전용 API) | 8000 | 768M |
 | postgres (auth_db, media_db, ai_db) | 5432 | 512M |
 | redis | 6379 | 128M |
@@ -18,7 +19,7 @@
 
 `seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·frame-encoder·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
 
-`kafka-init`은 normalize·frame-encoder·ai-gateway가 쓰는 토픽(재시도·DLQ, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
+`kafka-init`은 normalize·frame-encoder·event-analyzer·ai-gateway가 쓰는 토픽(재시도·DLQ, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
 
 ## 준비
 
@@ -125,6 +126,18 @@ FRAME_ENCODER_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/dock
 - 받은 가중치는 `frame-encoder-models` 볼륨에 남는다. manifest·가중치 해시가 프로필과 다르면 뜨지 않는다.
 - `local.toml`의 프로토타입 문장·임계값은 흐름 확인용 예시다. 후보 품질을 로컬 결과로 판단하지 않는다.
 - 실행 폴더 `blurred/` 밖 경로를 가리키거나 이미지가 없는 메시지는 `frame-encoder.dlq`로 간다.
+
+### event-analyzer 벡터 후보 판정 (SPEC-020)
+
+event-analyzer는 `event.candidate.vector`를 받아 후보마다 ai-gateway `event_judge`로 판정하고, severity `high`이거나 판단 불가면 `event_judge_escalate`로 다시 판정한 뒤 후보마다 `event.analyzed`를 발행한다. 판정 모델은 ai-gateway 프로필이 정한다.
+
+```bash
+docker compose -f local/docker-compose.yml up -d frame-encoder event-analyzer
+```
+
+- 기본 mock 프로필은 출력 스키마의 첫 예시(severity `high`)를 돌려주므로 모든 후보가 재판정되어 `vector+vlm+escalate`로 기록된다.
+- 실제 판정은 ai-gateway를 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`(호스트 Ollama)로 띄운다. 로컬은 1차와 재판정이 같은 모델이다.
+- ai-gateway가 응답하지 않으면 재시도한 뒤 그 후보를 `unknown`과 실패 코드로 발행한다. 호출자 거절(403) 같은 설정 오류나 계약에 맞지 않는 메시지는 `event-analyzer.dlq`로 간다.
 
 ### ai-gateway 벡터 생성 (SPEC-011)
 
