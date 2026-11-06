@@ -67,7 +67,7 @@ api-gateway는 파일이 16개라 지금 구조를 유지한다.
 
 | ID | 작업 | v4 | 상태 | PR |
 | --- | --- | --- | --- | --- |
-| F-1 | media 작업 세션: `work_session` 테이블·API, `video.uploaded`에 `sessionId`·`role`([SPEC-017](../specs/SPEC-017-media-work-session/spec.md)) | ④ | 대기 | |
+| F-1 | media 작업 세션: `work_session` 테이블·API, `video.uploaded`에 `sessionId`·`role`([SPEC-017](../specs/SPEC-017-media-work-session/spec.md)) | ④ | 구현함, 배포 대기 | backend #50, docs #103 |
 | F-2 | media 보존 등급(ADR-0011): 영상별 동의·계정 기본값 저장, 삭제 영상 최소 기록(1년), 보존 키 계산, `video.deleted`에 등급·보존 키, 동의 철회 이벤트([SPEC-018](../specs/SPEC-018-media-retention-consent/spec.md)) | ⑧ | 대기 | |
 | F-3 | media 외부 데이터셋 가져오기: Quality의 매니페스트 대량 등록 경로, 데이터셋 영상은 삭제 전파 제외 | ⑨ | 대기 | |
 | F-4 | `common-messaging` 처리 시간 측정: 발행 시 `producedAt`, 공통 소비 래퍼로 큐 대기·처리 시간, `stage.timing` 발행. media `media.upload` 단계. 7절 결정 5 | ⑩ | 보류 | |

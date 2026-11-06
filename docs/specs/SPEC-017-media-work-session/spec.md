@@ -1,7 +1,7 @@
 ---
 id: SPEC-017
 title: 작업 세션
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend, docs]
 created: 2026-11-06
