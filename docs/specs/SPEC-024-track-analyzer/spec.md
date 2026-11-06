@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, SPEC-021, SPEC-022]
+related: [ADR-0008, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, SPEC-021, SPEC-022, ADR-0016]
 ---
 
 # SPEC-024 track-analyzer 트랙 속성 분석과 객체 자유 질문
@@ -26,6 +26,8 @@ analysis-api는 세 경우에 `attribute.requested`를 낸다. 이벤트 관련 
 클릭과 질문은 사용자가 화면에서 기다리는 요청이다. 그래서 실패해도 결과 없이 끝내지 않고 `FAILED`로 알려, 화면이 기다림을 멈추게 한다.
 
 입력 `attribute.requested`는 analysis-api(다른 담당자)가 낸다. 계약이 없어 이 spec이 아키텍처 문서대로 소비 쪽에서 정한다(2026-11-06 사용자 결정, [handoff](../../handoff.md) 2.1). 크롭 경로가 트랙 요약 파일에 있어야 analysis-api가 요청에 실을 수 있다. 그래서 트랙 요약 파일(SPEC-022)에 대표 크롭을 더한다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 17.2절): `ppe_missing` 확정 이벤트가 있는 트랙은 화면이 그 결과를 보호구 상태로 우선 표시한다(SPEC-032). 이 spec의 `track_attribute` 호출과 응답 형식은 바뀌지 않는다.
 
 ## 2. 범위
 

@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, ADR-0010, SPEC-009, SPEC-013, SPEC-020, SPEC-021, SPEC-022]
+related: [ADR-0008, ADR-0010, SPEC-009, SPEC-013, SPEC-020, SPEC-021, SPEC-022, ADR-0015, ADR-0016, SPEC-036, SPEC-037]
 ---
 
 # SPEC-023 event-analyzer 탐지기·규칙 후보 판정과 event.manifest
@@ -25,6 +25,8 @@ chunk-processor는 이벤트 정의 목록의 규칙에 맞고 탐지기가 지�
 벡터 후보 판정([SPEC-020](../SPEC-020-event-analyzer-vector/spec.md))과 같은 서비스, 같은 `event.analyzed` 형식을 쓴다. 다른 점은 판정 뒤 실행마다 `event.manifest`를 한 건 발행한다는 것이다. pipeline-service는 이를 완료 판정에 세고, analysis-api는 자기 저장 수와 맞춰 본다.
 
 입력 `event.candidate`는 chunk-processor(다른 담당자)가 만든다. 계약이 없어 이 spec이 아키텍처 문서대로 소비 쪽에서 정한다(2026-11-06 사용자 결정, [handoff](../../handoff.md) 2.1).
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6.3·8.4·17.2절, [ADR-0016](../../adr/0016-aggregator-fold-and-deterministic-caps.md)): 상태형 유형의 반복 후보를 메시지 안 구간 규칙으로 잇고(`rule+carry`), 실행당 호출 상한을 둬 공유 상태 없이 같은 입력에 같은 결과가 나오게 한다. 실시간의 긴급 후보(`alert.candidate`)는 알림만 만들고 이벤트는 창 후보가 캐시 적중으로 저장한다([ADR-0015](../../adr/0015-realtime-window-pipeline.md)).
 
 ## 2. 범위
 
@@ -107,6 +109,14 @@ pipeline-service 담당자로서 후보가 없는 청크도 완료 신호를 받
 | R-14 | IF `event.candidate`가 계약 스키마에 맞지 않으면, THEN THE event-analyzer SHALL 아무것도 발행하지 않고 재시도 없이 DLQ로 보낸다. | US-4 |
 | R-15 | IF Kafka에 일시적으로 발행할 수 없으면, THEN THE event-analyzer SHALL 메시지를 재시도 토픽으로 보내 다시 처리하고, 다시 처리할 때 같은 eventId로 발행한다. | US-4 |
 | R-16 | IF 프로필에 규칙 판정이 가능한 유형의 템플릿이나 기본 severity가 없거나, 쿨다운이 0 이하이거나, 애매 점수 구간이 0~1 밖이거나 시작이 끝보다 크면, THEN THE event-analyzer SHALL 기동에 실패한다. | US-2 |
+| R-17 | WHERE 후보의 유형이 이벤트 정의 목록에서 상태형(`rejudgeIntervalS`가 있음)이면, THE event-analyzer SHALL R-3 병합 뒤 같은 `trackLocalId`·유형의 남은 후보를 시작순으로 놓고, 첫 후보와 그 뒤 매 `rejudgeIntervalS`(기본 120초)가 지난 첫 후보만 판정하며, 그 사이 후보는 직전 판정 결과를 복사해 판정 방식 `rule+carry`, 호출 기록 빈 배열로 발행한다. 이 규칙은 메시지 안에서만 적용한다. | US-3 |
+| R-18 | WHERE 메시지의 `jobType`이 `STREAM`이면, THE event-analyzer SHALL R-17의 "직전 판정"을 Redis 키 `rejudge:<sourceId>:<trackId>:<eventType>`의 마지막 `confirmed` 시각·결과로 대신 찾아 창을 넘어 잇고, 판정할 때마다 그 키를 갱신(TTL `rejudgeIntervalS` × 2)한다. Redis가 없으면 판정한다. | US-3 |
+| R-19 | THE event-analyzer SHALL 한 메시지의 VLM 호출 수를 `max(프로필 바닥(기본 3), 분당 상한(기본 3) × 실행 길이(분))` 이하로 두고, 넘는 후보(시작순 뒤쪽)는 호출 없이 `verificationStatus: unverified`·`unverifiedReason: call_cap_reached`로 발행한다. | US-3 |
+| R-20 | THE event-analyzer SHALL `event.manifest`에 `rule+carry` 발행 수(`carriedCount`), 상한으로 `unverified`가 된 수(`capReachedCount`), 예산 초과로 `unverified`가 된 수(`budgetExceededCount`)와 메시지의 `jobType`을 싣는다. | US-1 |
+| R-21 | WHEN event-analyzer가 `alert.candidate`를 받으면, THE event-analyzer SHALL 먼저 `alert.raised(status: pending)`를 탐지기 근거(유형, 트랙, 구역, 근거 프레임, 사유)만으로 1건 발행한 뒤, 같은 후보를 R-5~R-7과 같이 `event_judge`로 판정해 `confirmed`(eventDetected true)면 `alert.raised(status: confirmed, analysis)`, 아니면 `alert.raised(status: dismissed)`를 1건 발행한다. `event.analyzed`는 발행하지 않는다. | US-1 |
+| R-22 | THE event-analyzer SHALL `alert.candidate` 판정의 ai-gateway 입력(이미지 순서, 변수)을 같은 candidateId의 `event.candidate` 후보와 같게 만들어 결과 캐시(SPEC-016 R-2)가 적중하게 한다. | US-1 |
+| R-23 | IF `alert.candidate` 판정이 예산 초과·호출 실패로 `unverified`·`unknown`이면, THEN THE event-analyzer SHALL `alert.raised(status: confirmed)`를 내지 않고 `pending`을 유지한 채 사유를 `alert.raised(status: dismissed, reason)`로 닫는다. | US-1 |
+| R-24 | THE event-analyzer SHALL `alert.candidate` 처리 시간을 단계 `analyzer.alert`(받은 후보부터 첫 `alert.raised` 발행까지)로 남긴다(SPEC-013). | US-1 |
 
 ### 비기능 요구사항
 
@@ -137,8 +147,16 @@ pipeline-service 담당자로서 후보가 없는 청크도 완료 신호를 받
 | `service-contracts/asyncapi/event-analyzer.yaml` | `event.candidate` 소비, `event.manifest` 발행(1.1.0) | 예(추가) |
 | `service-contracts/asyncapi/chunk-processor.yaml` | `event.candidate` 발행 채널(1.3.0) | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | `analyzer.merge` | 예(추가) |
+| `service-contracts/events/alert.candidate.schema.json` | v5.1 신규(생산자 stream-ingestor, SPEC-037) | 예(추가) |
+| `service-contracts/events/alert.raised.schema.json` | v5.1 신규. `status`(`pending`·`confirmed`·`dismissed`), candidateId, 근거, 확정이면 `VLMAnalysis` | 예(추가) |
+| `service-contracts/events/event.manifest.schema.json` | v5.1: 선택 필드 `carriedCount`·`capReachedCount`·`budgetExceededCount`·`jobType` | 예(선택 필드 추가) |
+| `service-contracts/events/event.analyzed.schema.json` | v5.1: 판정 방식 `rule+carry`, 선택 필드 `unverifiedReason`·`jobType` | 예(열거값·선택 필드 추가) |
+| `service-contracts/events/event.candidate.schema.json` | v5.1: 선택 필드 `jobType` | 예(선택 필드 추가) |
+| `service-contracts/asyncapi/event-analyzer.yaml` | v5.1: `alert.candidate` 소비, `alert.raised` 발행(1.2.0) | 예(추가) |
+| `service-contracts/taxonomy/v2/taxonomy.schema.json` | v5.1: 이벤트 정의 항목에 선택 필드 `alertImmediately`, `rejudgeIntervalS` | 예(선택 필드 추가) |
+| `service-contracts/stages/v1/stages.schema.json` | v5.1: `analyzer.alert` | 예(추가) |
 
-계약 묶음 3.2.0 → 3.3.0
+계약 묶음 3.2.0 → 3.3.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

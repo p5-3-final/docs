@@ -5,8 +5,8 @@ status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-04
-updated: 2026-11-05
-related: [ADR-0010, SPEC-007, SPEC-009]
+updated: 2026-11-06
+related: [ADR-0010, SPEC-007, SPEC-009, ADR-0015, ADR-0016]
 ---
 
 # SPEC-013 처리 단계 측정
@@ -20,6 +20,8 @@ related: [ADR-0010, SPEC-007, SPEC-009]
 [ADR-0010](../../adr/0010-v4-evaluation-readiness.md) ⑩은 처리 단계를 계약으로 고정해 재기로 했다. 단계 ID 목록과 측정 기록 형식(`StageTiming`)을 계약으로 두고, 공통 메시징 라이브러리가 소비마다 큐 대기·처리 시간을 자동으로 잰다. 핸들러 안의 세부 단계는 서비스가 단계 블록으로 잰다. 핸들러 하나가 끝나면 기록을 묶어 `stage.timing`으로 보내고, 이후 quality-service가 적재·리포트한다([아키텍처 v5](../../architecture/architecture.md) "처리 단계 측정").
 
 이 spec은 ai 레포의 공통 메시징 라이브러리와 첫 적용 서비스인 normalize를 다룬다. 비즈니스 이벤트의 payload와 처리 흐름은 바뀌지 않는다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 16절): 실시간 경로와 fold의 단계 ID를 목록에 더한다. 기록 형식은 바뀌지 않는다.
 
 ## 2. 범위
 
@@ -114,6 +116,7 @@ quality 담당자로서 재배치 등으로 같은 메시지를 다시 처리해
 | `service-contracts/events/stage.timing.schema.json` | `stage.timing` payload(`StageTimingBatch`) | 예(새 파일) |
 | `service-contracts/asyncapi/stage-timing.yaml` | `stage.timing` 채널. 라이브러리가 발행하므로 발행 서비스별 파일 규칙의 예외 | 예(새 파일) |
 | `service-contracts/events/_envelope.schema.json` | 선택 필드 `producedAt` 추가 | 예(선택 필드 추가) |
+| `service-contracts/stages/v1/stages.schema.json` | v5.1: `ingest.window`·`ingest.alert`(stream-ingestor), `stream.window-complete`·`stream.state-apply`(stream-service), `analyzer.alert`, `aggregate.fold` | 예(추가) |
 
 ## 7. 성공 지표
 

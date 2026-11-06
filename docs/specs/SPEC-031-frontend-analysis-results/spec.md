@@ -6,7 +6,7 @@ owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [SPEC-001, SPEC-002, SPEC-005, SPEC-006, SPEC-027, SPEC-028]
+related: [SPEC-001, SPEC-002, SPEC-005, SPEC-006, SPEC-027, SPEC-028, ADR-0015, ADR-0016, SPEC-036]
 ---
 
 # SPEC-031 분석 결과 화면(이벤트 타임라인·위험 상태·요약)과 실시간 알림
@@ -29,6 +29,8 @@ related: [SPEC-001, SPEC-002, SPEC-005, SPEC-006, SPEC-027, SPEC-028]
 - 앱 전체가 함께 쓰는 실시간 알림 연결
 
 화면이 쓰는 analysis-api 공개 API와 notification-service SSE는 다른 담당자 서비스다. 계약이 없어 이 spec이 아키텍처 문서 "외부 API" 표대로 먼저 정한다(생산자 확인 필요, [handoff](../../handoff.md) 2.1).
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6절, [ADR-0015](../../adr/0015-realtime-window-pipeline.md)): 실시간 세션 화면, 긴급 알림, "일부 누락"·"예산 초과" 표시를 더한다.
 
 ## 2. 범위
 
@@ -124,6 +126,11 @@ related: [SPEC-001, SPEC-002, SPEC-005, SPEC-006, SPEC-027, SPEC-028]
 | R-16 | WHEN 열린 영상의 `source.completed` 알림이 오면, THE frontend SHALL 요약·이벤트·위험·스냅샷을 다시 불러온다. | US-3 |
 | R-17 | IF 분석 API가 404를 돌려주면, THEN THE frontend SHALL 영상을 찾을 수 없다는 안내를 표시하고, 5xx·네트워크 오류면 다시 시도 버튼과 함께 오류 안내를 표시한다. | US-1 |
 | R-18 | THE frontend SHALL 이벤트 목록과 위험 패널을 키보드만으로 이동·선택할 수 있게 하고, severity를 색과 글자로 함께 표시한다. | US-1 |
+| R-19 | WHILE 영상이 실시간 세션(`kind: STREAM`)이고 세션이 `LIVE`이면, THE frontend SHALL 영상 상세의 상태·타임라인·알림을 stream-service 조회 API(`GET /api/v1/stream/sessions/{id}/state · events · alerts`)로 읽고, 세션이 닫히면 analysis-api 결과로 바꾼다. | US-1, US-2 |
+| R-20 | WHEN 알림 연결로 `alert.raised`를 받으면, THE frontend SHALL 2초 안에 화면 상단에 긴급 알림을 표시하고, `pending`은 "확인 중", `confirmed`는 severity와 설명, `dismissed`는 접힌 상태로 바꾼다. | US-3 |
+| R-21 | WHEN 알림 연결로 `state.updated`를 받으면, THE frontend SHALL 열려 있는 실시간 세션의 위험 패널을 sequence 순서대로 갱신하고, 작은 sequence는 버린다. | US-2 |
+| R-22 | WHILE 분석 결과의 `partial`이 true이면, THE frontend SHALL 요약 패널에 "일부 이벤트가 누락되었습니다(N건)"를 표시한다. | US-1 |
+| R-23 | WHILE 영상에 `unverifiedReason`이 `budget_exceeded`·`call_cap_reached`인 이벤트가 있으면, THE frontend SHALL 요약 패널에 "예산·상한 초과로 판정하지 않은 이벤트 N건"과 운영자용 재분석 안내를 표시한다. | US-1 |
 
 ### 비기능 요구사항
 
@@ -150,8 +157,11 @@ related: [SPEC-001, SPEC-002, SPEC-005, SPEC-006, SPEC-027, SPEC-028]
 | `service-contracts/openapi/analysis-service.yaml` | 공개 API 7개, bearer 보안 기본값(내부 API는 `security: []` 유지), 0.2.0 → 0.3.0(생산자 확인 필요) | 예(추가) |
 | `service-contracts/openapi/notification-service.yaml` | 새 파일: SSE 구독(0.1.0, 생산자 확인 필요) | 예(추가) |
 | `service-contracts/notifications/v1/notification-message.schema.json` | 새 메시지 형식 | 예(추가) |
+| `service-contracts/openapi/stream-service.yaml` | v5.1: 세션 조회 API(SPEC-036) | 예(추가) |
+| `service-contracts/notifications/v1/notification-message.schema.json` | v5.1: 메시지 종류 `alert.raised`·`state.updated`(생산자 확인 필요) | 예(열거값 추가) |
+| `service-contracts/events/source.completed.schema.json` | v5.1: `partial`·`missingCounts`·`revision`을 analysis-api 요약 응답이 그대로 노출(생산자 확인 필요) | 예(선택 필드 추가) |
 
-계약 묶음 3.10.0 → 3.11.0
+계약 묶음 3.10.0 → 3.11.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

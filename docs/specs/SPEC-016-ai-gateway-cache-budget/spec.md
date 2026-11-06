@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, ADR-0010, SPEC-009, SPEC-011, SPEC-012]
+related: [ADR-0008, ADR-0010, SPEC-009, SPEC-011, SPEC-012, ADR-0016]
 ---
 
 # SPEC-016 ai-gateway 결과 캐시·예산·호출 한도
@@ -30,6 +30,8 @@ ai-gateway는 모든 외부 모델 호출이 지나는 유일한 관문이다([�
 캐시는 외부 모델을 실제로 부르는 경로에만 둔다. 질의 사전 해석(SPEC-012)과 ai-gateway 안의 인코더(SPEC-011)는 수 ms라 캐시를 조회하는 시간과 비슷하고 비용이 없다. 검색 결과 재사용(정밀 검색·RAG 결과)은 search-service가 표준 질의로 따로 저장한다.
 
 예산을 넘으면 모델이 미설정일 때와 같은 결과를 돌려준다. 호출자는 이미 그 경로를 처리하므로 새로 처리할 것이 없다. Redis는 캐시 앞단·동시 호출 합치기·토큰 버킷에만 쓰고, Redis가 없어도 서비스는 계속 동작한다(overview "가용성").
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 10·17.3절): `unverified`의 사유를 응답에 실어 호출자가 큐와 지표를 나눌 수 있게 하고, 평가 호출자 예산을 운영과 분리한다.
 
 ## 2. 범위
 
@@ -145,6 +147,8 @@ event-analyzer로서 재배치나 재시도로 같은 후보를 다시 판정할
 | R-12 | WHEN 예약한 모델 호출이 끝나면, THE ai-gateway SHALL 공급자가 알려 준 입력·출력 토큰으로 실제 비용을 계산해 예약을 정산한다. 공급자가 토큰 수를 알려 주지 않으면 예상 비용으로 정산한다. | US-3 |
 | R-13 | IF 예약한 모델 호출을 공급자에 보내지 못했으면(연결 불가, R-16으로 차례를 얻지 못함), THEN THE ai-gateway SHALL 예약을 되돌린다. | US-3 |
 | R-22 | IF 예약한 모델 호출을 보낸 뒤 토큰 수 없이 실패하면(제한 시간 초과, 공급자 오류), THEN THE ai-gateway SHALL 이미 과금됐을 수 있으므로 예상 비용으로 정산한다. | US-3 |
+| R-23 | WHEN ai-gateway가 `/v1/analyze`를 모델 미설정이나 예산 초과로 `unverified`로 돌려주면, THE ai-gateway SHALL 응답에 `unverifiedReason`을 `model_unavailable` 또는 `budget_exceeded`로 싣는다. | US-3 |
+| R-24 | THE ai-gateway SHALL 호출 서비스 `quality-eval`·`shadow`의 하루 한도를 운영 호출 서비스와 분리된 예산 묶음에서 차감해, 평가 호출이 운영 예산을 줄이지 않게 한다. | US-3 |
 | R-14 | THE ai-gateway SHALL 캐시 적중, 단가가 없는 모델(프로필에 단가가 없는 로컬 모델·mock)의 호출은 비용 0으로 센다. | US-3 |
 | R-15 | WHERE 프로필에 Adapter·모델의 분당 요청 수 또는 분당 토큰 수 한도가 있으면, THE ai-gateway SHALL 모든 Pod의 그 모델 호출을 합쳐 그 한도 안에서만 공급자를 부른다. | US-4 |
 | R-16 | IF R-15의 한도 때문에 그 taskType의 제한 시간 안에 호출 차례를 얻지 못하면, THEN THE ai-gateway SHALL `/v1/analyze`·`embed_text`는 429와 오류 코드 `AI_RATE_LIMITED`로, `/v1/parse`는 공급자 일시 오류와 같은 200 `safe-fallback`(SPEC-012 R-13)으로 끝내고, 호출 로그에 상태 `unavailable`, 오류 코드 `AI_RATE_LIMITED`를 남긴다. | US-4 |
@@ -179,6 +183,7 @@ event-analyzer로서 재배치나 재시도로 같은 후보를 다시 판정할
 | --- | --- | --- |
 | `service-contracts/openapi/ai-gateway.yaml` | `/v1/embed` 503에 `AI_BUDGET_EXCEEDED` 추가. `/v1/analyze`·`/v1/parse` 설명에 예산 초과 시 미설정과 같은 200 결과, 세 경로에 캐시 적중 시 같은 결과·새 호출 ID를 적는다. 버전 0.3.0 → 0.4.0, 계약 묶음 2.7.0 → 2.8.0 | 예(오류 코드·설명 추가) |
 | `docs/architecture/architecture.md` | 처리 순서의 "예산·사용자별 상한"을 "예산(호출 서비스별·전체)"으로, "필요 시 단계 상향"을 호출자가 고른 taskType으로 처리한다는 설명으로, 호출 로그 상태에 `budget_exceeded` | 해당 없음 |
+| `service-contracts/openapi/ai-gateway.yaml` | v5.1: `/v1/analyze` 응답 선택 필드 `unverifiedReason`(1.5.0 → 1.6.0) | 예(응답 필드 추가) |
 
 ## 7. 성공 지표
 

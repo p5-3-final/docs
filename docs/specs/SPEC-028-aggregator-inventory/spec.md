@@ -6,7 +6,7 @@ owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027]
+related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027, ADR-0015, ADR-0016]
 ---
 
 # SPEC-028 aggregator 정적 객체 재고 비교·장비 방치·위험 노출 예측
@@ -25,6 +25,8 @@ related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027]
 - 영상 끝에 활성인 위험마다 `risk_forecast`로 다음 구간 노출 확률을 낸다(overview AI Gateway 표 `risk_forecast` 행, 1단계 규칙 점수).
 
 입력 `chunk.manifest`는 chunk-processor(다른 담당자)가 낸다. 계약이 없어 이 spec이 아키텍처 문서대로 소비 쪽에서 정한다(2026-11-06 사용자 결정, [handoff](../../handoff.md) 2.1). 재고 클래스·기준값·프롬프트·예측 모델은 AI 담당자 몫이고, 이 spec은 프로필 자리와 기본값만 둔다.
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 6.2절, [ADR-0015](../../adr/0015-realtime-window-pipeline.md)): 실시간 세션은 창마다가 아니라 주기마다 재고·방치·예측을 계산한다.
 
 ## 2. 범위
 
@@ -112,6 +114,7 @@ related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027]
 | R-16 | THE ai-gateway SHALL `risk_forecast`를 predictor Adapter로 처리하고, 1단계 규칙 점수는 활성 시간과 구역 분당 진입 수만으로 정해지는 결정적 값으로 낸다. | US-4 |
 | R-17 | THE aggregator SHALL 변화·재고 이벤트·예측 ID를 jobId와 객체·위험 ID로 결정적으로 만들고, 같은 입력·프로필이면 판정·예측 결과를 뺀 내용이 같게 만든다. | US-1 |
 | R-18 | THE aggregator SHALL 처리 시간을 단계 `aggregate.inventory_store`·`aggregate.inventory_compare`·`aggregate.judge`·`aggregate.forecast`로 남긴다(SPEC-013). | US-1 |
+| R-19 | WHERE job이 `STREAM`이면, THE aggregator SHALL 재고 비교(R-4~R-7)·장비 방치(R-11~R-12)·예측(R-15)을 창마다 하지 않고 프로필 주기(기본 10분)마다 그때까지의 `chunk.manifest` 재고와 세션 현재 상태로 계산해 결과를 다음 `state.updated`에 담는다. R-8 상한은 세션당으로 센다. | US-1 |
 
 ### 비기능 요구사항
 
@@ -146,8 +149,9 @@ related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027]
 | `service-contracts/asyncapi/aggregator.yaml` | `chunk.manifest` 소비 채널(1.0.0 → 1.1.0) | 예(추가) |
 | `service-contracts/asyncapi/chunk-processor.yaml` | `chunk.manifest` 발행 채널(1.3.0 → 1.4.0, 생산자 확인 필요) | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | `aggregate.inventory_store`·`aggregate.inventory_compare`·`aggregate.judge`·`aggregate.forecast` | 예(추가) |
+| `service-contracts/events/chunk.manifest.schema.json` | v5.1: 선택 필드 `jobType`·`trackIdEpoch`·`last`·`gapMs`(생산자 stream-ingestor 추가, SPEC-037) | 예(선택 필드 추가) |
 
-계약 묶음 3.7.0 → 3.8.0
+계약 묶음 3.7.0 → 3.8.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 

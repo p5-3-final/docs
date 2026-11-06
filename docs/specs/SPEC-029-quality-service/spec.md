@@ -6,7 +6,7 @@ owner: <이름>
 repos: [backend, docs]
 created: 2026-11-06
 updated: 2026-11-06
-related: [ADR-0007, ADR-0008, ADR-0010, ADR-0011, SPEC-001, SPEC-013, SPEC-020, SPEC-023]
+related: [ADR-0007, ADR-0008, ADR-0010, ADR-0011, SPEC-001, SPEC-013, SPEC-020, SPEC-023, ADR-0016, SPEC-036]
 ---
 
 # SPEC-029 quality-service 검토 큐·Golden Set·평가 실행·처리 단계 리포트
@@ -23,6 +23,8 @@ related: [ADR-0007, ADR-0008, ADR-0010, ADR-0011, SPEC-001, SPEC-013, SPEC-020, 
 4. 모든 소비자가 보내는 `stage.timing`(SPEC-013)의 적재와 영상별·일별 리포트
 
 catalog의 quality-service(backend, 포트 8088, `quality_db`)가 이 일을 맡는다. 할당은 조건부 갱신으로 한 검토자만 가져가고(overview 다중 Pod 표 quality-service 행), Golden Set 확정 버전은 영구 보존하며 삭제 전파에서 뺀다(ADR-0011, overview 보존 표). Golden Set에는 블러 사본만 넣는다(overview "개인정보").
+
+v5.1([아키텍처 v5.1](../../architecture/architecture.md) 16·17.3절, [ADR-0016](../../adr/0016-aggregator-fold-and-deterministic-caps.md)): 예산·상한 초과로 판정하지 않은 이벤트는 Job 상태가 아니라 `event.analyzed`의 `unverifiedReason`으로 식별해 운영자 재판정 큐를 만든다.
 
 ## 2. 범위
 
@@ -115,6 +117,8 @@ catalog의 quality-service(backend, 포트 8088, `quality_db`)가 이 일을 맡
 | R-24 | IF 추이 조회 기간이 90일을 넘거나 `from`이 `to`보다 늦거나 `versionValue`만 있으면, THEN THE quality-service SHALL 400 `QUALITY_INVALID_REQUEST`를 돌려준다. | US-4 |
 | R-25 | THE quality-service SHALL 90일이 지난 원본 측정 기록을 월 단위로 지운다. 일 단위 집계는 지우지 않는다. | US-4 |
 | R-26 | THE api-gateway SHALL `/api/v1/quality/**`를 quality-service로 라우팅하고 `/internal/**`은 라우팅하지 않는다. | US-1 |
+| R-27 | WHEN quality-service가 `verificationStatus: unverified`인 `event.analyzed`를 받으면, THE quality-service SHALL `unverifiedReason`(`budget_exceeded`·`call_cap_reached`·`model_unavailable`)을 사유로 한 검토 항목을 큐에 넣고, 목록 조회에 사유 필터를 둔다. | US-1 |
+| R-28 | WHEN quality-service가 `alert.raised`를 받으면, THE quality-service SHALL candidateId별로 `pending` 발행 시각과 `confirmed`·`dismissed` 시각을 기록하고, `dismissed` 항목을 검토 큐에 넣으며, 기간별 1차 알림 지연 p50·p95와 `dismissed` 비율을 리포트에 낸다. | US-4 |
 
 ### 비기능 요구사항
 
@@ -141,10 +145,11 @@ catalog의 quality-service(backend, 포트 8088, `quality_db`)가 이 일을 맡
 | --- | --- | --- |
 | `service-contracts/openapi/quality-service.yaml` | 새 파일(작업 19개, 1.0.0) | 예(추가) |
 | `service-contracts/quality/v1/golden-manifest.schema.json` | 새 파일 형식 | 예(추가) |
+| `service-contracts/openapi/quality-service.yaml` | v5.1: 검토 항목 `reason`을 `x-extensible-enum`으로 바꾸고 `budget_exceeded`·`call_cap_reached`·`model_unavailable`·`alert_dismissed` 추가, 목록 필터 `reason`, 알림 지표 리포트 `GET /api/v1/quality/alert-reports`(1.2.0 → 2.0.0) | 아니오(응답 enum 제약 제거 1회. 소비자 구현이 없는 개발 단계라 경로는 유지, ADR-0014 선례·ADR-0016) |
 
 quality-service는 이벤트를 발행하지 않아 AsyncAPI 파일이 없다. 소비하는 `event.analyzed`·`stage.timing`·`video.deleted`는 기존 계약 그대로다.
 
-계약 묶음 3.8.0 → 3.9.0
+계약 묶음 3.8.0 → 3.9.0. v5.1 변경은 3.15.0 → 4.0.0(quality-service 응답 enum을 열린 목록으로 바꾼 하위호환 파괴 1회, ADR-0016. 나머지는 선택 필드·값 추가)
 
 ## 7. 성공 지표
 
