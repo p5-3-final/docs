@@ -1,0 +1,704 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/aggregates/v1/source-result.schema.json",
+  "title": "SourceResultFile",
+  "description": "aggregator가 job마다 만드는 영상 단위 결과. 경로: sources/<sourceId>/jobs/<jobId>/aggregate/source-result.json. 작성: aggregator. 읽기: analysis-api(스냅샷·위험 상태·병합·규칙 이벤트·요약 저장) (SPEC-027)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "normalizationId",
+    "durationMs",
+    "aggregateProfile",
+    "session",
+    "initialState",
+    "mergeGroups",
+    "ruleEvents",
+    "snapshots",
+    "risks",
+    "timeline",
+    "summary"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "normalizationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "aggregateProfile": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$",
+      "description": "병합 간격·시간 규칙 기준값을 담은 aggregator 프로필 버전"
+    },
+    "session": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sessionId",
+            "role",
+            "previousSourceId"
+          ],
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "BEFORE",
+                "DURING",
+                "AFTER"
+              ]
+            },
+            "previousSourceId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "세션에서 이 영상 바로 앞 영상(역할 BEFORE→DURING→AFTER, 같은 역할이면 업로드 순). 없으면 null"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "작업 세션(SPEC-017). 세션에 속하지 않으면 null"
+    },
+    "initialState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fromSourceId",
+        "zoneStates",
+        "activeRisks"
+      ],
+      "description": "상태 계산의 시작 상태. 세션 직전 영상의 최종 상태이고, 없으면 빈 목록",
+      "properties": {
+        "fromSourceId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "zoneStates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "zoneId",
+              "state"
+            ],
+            "properties": {
+              "zoneId": {
+                "type": "string",
+                "pattern": "^(global|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+                "description": "구역 ID. 구역이 없는 영상·구역 밖 이벤트는 global"
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            }
+          }
+        },
+        "activeRisks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "riskId",
+              "zoneId",
+              "riskType",
+              "reason",
+              "firstSeenMs"
+            ],
+            "properties": {
+              "riskId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "zoneId": {
+                "type": "string",
+                "pattern": "^(global|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+                "description": "구역 ID. 구역이 없는 영상·구역 밖 이벤트는 global"
+              },
+              "riskType": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "firstSeenMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              }
+            }
+          }
+        }
+      }
+    },
+    "mergeGroups": {
+      "type": "array",
+      "description": "청크 경계를 넘어 같은 사건으로 합친 이벤트 묶음. 합치지 않은 이벤트는 나오지 않는다",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "groupId",
+          "keptEventId",
+          "mergedEventIds",
+          "eventType",
+          "startMs",
+          "endMs"
+        ],
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keptEventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "대표 이벤트(점수가 가장 높고, 같으면 이른 것)"
+          },
+          "mergedEventIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "대표에 합쳐진 이벤트. 상태 계산에서 빠진다"
+          },
+          "eventType": {
+            "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          }
+        }
+      }
+    },
+    "ruleEvents": {
+      "type": "array",
+      "description": "시간 기준 규칙이 만든 템플릿 이벤트(VLM 없음)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "eventType",
+          "rule",
+          "trackId",
+          "zoneId",
+          "startMs",
+          "endMs",
+          "description",
+          "severity",
+          "verificationStatus",
+          "judgmentMethod"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "jobId·rule·trackId·zoneId·startMs로 결정적"
+          },
+          "eventType": {
+            "const": "hazard_zone_access"
+          },
+          "rule": {
+            "type": "string",
+            "enum": [
+              "dwell",
+              "loiter"
+            ]
+          },
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "zoneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "endMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "템플릿 문장"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "medium",
+              "high"
+            ],
+            "description": "같은 구역에 활성 위험이 있던 동안이면 high"
+          },
+          "verificationStatus": {
+            "const": "confirmed"
+          },
+          "judgmentMethod": {
+            "const": "rule"
+          }
+        }
+      }
+    },
+    "snapshots": {
+      "type": "array",
+      "description": "확정 이벤트를 시간순으로 훑은 상태 스냅샷(불변 이력)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshotId",
+          "zoneId",
+          "timestampMs",
+          "previousState",
+          "currentState",
+          "relatedEventId"
+        ],
+        "properties": {
+          "snapshotId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "jobId·relatedEventId·zoneId로 결정적"
+          },
+          "zoneId": {
+            "type": "string",
+            "pattern": "^(global|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+            "description": "구역 ID. 구역이 없는 영상·구역 밖 이벤트는 global"
+          },
+          "timestampMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "previousState": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "currentState": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "relatedEventId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "위험 상태와 노출 지표",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "riskId",
+          "zoneId",
+          "riskType",
+          "status",
+          "reason",
+          "firstSeenMs",
+          "lastSeenMs",
+          "resolvedAtMs",
+          "relatedEventIds",
+          "carriedOver",
+          "exposure"
+        ],
+        "properties": {
+          "riskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "jobId·zoneId·riskType·활성으로 만든 첫 이벤트로 결정적. 세션에서 이어 온 위험은 원래 riskId"
+          },
+          "zoneId": {
+            "type": "string",
+            "pattern": "^(global|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+            "description": "구역 ID. 구역이 없는 영상·구역 밖 이벤트는 global"
+          },
+          "riskType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "resolved"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "firstSeenMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "lastSeenMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "resolvedAtMs": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "relatedEventIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "carriedOver": {
+            "type": "boolean",
+            "description": "세션 직전 영상에서 활성인 채로 이어 온 위험이면 true. firstSeenMs는 이 영상 기준 0"
+          },
+          "exposure": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "activeSeconds",
+              "exposureCount",
+              "exposureSeconds"
+            ],
+            "properties": {
+              "activeSeconds": {
+                "type": "number",
+                "minimum": 0,
+                "description": "활성 시작부터 해소(없으면 영상 끝)까지"
+              },
+              "exposureCount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "활성 중 같은 구역에 있었던 사람 트랙 수(global이면 영상 전체)"
+              },
+              "exposureSeconds": {
+                "type": "number",
+                "minimum": 0,
+                "description": "그 트랙들이 활성 구간과 겹쳐 머문 시간 합"
+              }
+            }
+          }
+        }
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "description": "시각 순 항목. 같은 시각이면 refId 순",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "atMs",
+          "kind",
+          "refId",
+          "eventType",
+          "zoneId",
+          "severity"
+        ],
+        "properties": {
+          "atMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "event",
+              "rule_event",
+              "risk_activated",
+              "risk_resolved"
+            ]
+          },
+          "refId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "eventId 또는 riskId"
+          },
+          "eventType": {
+            "anyOf": [
+              {
+                "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/eventType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "zoneId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(global|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+                "description": "구역 ID. 구역이 없는 영상·구역 밖 이벤트는 global"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              null
+            ]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "text",
+        "highlights",
+        "callId",
+        "modelId",
+        "promptVersion"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "generated",
+            "not_configured",
+            "failed",
+            "empty"
+          ],
+          "description": "generated: 모델이 씀, not_configured: 모델 미설정, failed: 호출 실패, empty: 확정 이벤트와 위험이 없어 부르지 않음"
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "highlights": {
+          "$ref": "../../events/_source-summary.schema.json#/properties/highlights"
+        },
+        "callId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "modelId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "promptVersion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z_]+@[0-9a-f]{12}$"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f0d5-0000-7000-8000-000000000001",
+      "normalizationId": "0192f0d4-0000-7000-8000-000000000001",
+      "durationMs": 125001,
+      "aggregateProfile": "aggregate-v1",
+      "session": {
+        "sessionId": "0192f0e0-5a6b-7c8d-9e0f-1a2b3c4d5e6f",
+        "role": "AFTER",
+        "previousSourceId": "0192f0d2-0000-7000-8000-0000000000aa"
+      },
+      "initialState": {
+        "fromSourceId": "0192f0d2-0000-7000-8000-0000000000aa",
+        "zoneStates": [
+          {
+            "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+            "state": "방호벽 설치됨"
+          }
+        ],
+        "activeRisks": []
+      },
+      "mergeGroups": [
+        {
+          "groupId": "0192f500-0000-5000-8000-000000000001",
+          "keptEventId": "0192f300-0000-5000-8000-000000000101",
+          "mergedEventIds": [
+            "0192f300-0000-5000-8000-000000000102"
+          ],
+          "eventType": "ppe_missing",
+          "startMs": 95000,
+          "endMs": 125000
+        }
+      ],
+      "ruleEvents": [
+        {
+          "eventId": "0192f500-0000-5000-8000-000000000002",
+          "eventType": "hazard_zone_access",
+          "rule": "dwell",
+          "trackId": "0192f200-0000-5000-8000-000000000001",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "startMs": 60000,
+          "endMs": 120000,
+          "description": "작업자가 'A동 크레인 하부'에 60초 이상 머물렀습니다.",
+          "severity": "high",
+          "verificationStatus": "confirmed",
+          "judgmentMethod": "rule"
+        }
+      ],
+      "snapshots": [
+        {
+          "snapshotId": "0192f500-0000-5000-8000-000000000003",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "timestampMs": 100000,
+          "previousState": "방호벽 설치됨",
+          "currentState": "안전모 미착용 작업자 작업 중",
+          "relatedEventId": "0192f300-0000-5000-8000-000000000101"
+        }
+      ],
+      "risks": [
+        {
+          "riskId": "0192f500-0000-5000-8000-000000000004",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "riskType": "ppe_missing",
+          "status": "active",
+          "reason": "안전모 미착용",
+          "firstSeenMs": 100000,
+          "lastSeenMs": 100000,
+          "resolvedAtMs": null,
+          "relatedEventIds": [
+            "0192f300-0000-5000-8000-000000000101"
+          ],
+          "carriedOver": false,
+          "exposure": {
+            "activeSeconds": 25.001,
+            "exposureCount": 1,
+            "exposureSeconds": 20.0
+          }
+        }
+      ],
+      "timeline": [
+        {
+          "atMs": 60000,
+          "kind": "rule_event",
+          "refId": "0192f500-0000-5000-8000-000000000002",
+          "eventType": "hazard_zone_access",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "severity": "high"
+        },
+        {
+          "atMs": 95000,
+          "kind": "event",
+          "refId": "0192f300-0000-5000-8000-000000000101",
+          "eventType": "ppe_missing",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "severity": "medium"
+        },
+        {
+          "atMs": 100000,
+          "kind": "risk_activated",
+          "refId": "0192f500-0000-5000-8000-000000000004",
+          "eventType": "ppe_missing",
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "severity": null
+        }
+      ],
+      "summary": {
+        "status": "generated",
+        "text": "A동 크레인 하부에서 안전모 미착용 작업자가 확인되었고 위험 상태가 끝까지 해소되지 않았습니다.",
+        "highlights": [
+          {
+            "atMs": 95000,
+            "text": "크레인 하부 안전모 미착용"
+          }
+        ],
+        "callId": "0192f600-0000-7000-8000-000000000001",
+        "modelId": "gpt-6-luna",
+        "promptVersion": "source_summary@0123456789ab"
+      }
+    }
+  ]
+}

@@ -162,6 +162,30 @@
         {
           "const": "grounding.store",
           "description": "클립·결과 파일 저장. 파일 수를 count로 남긴다 (SPEC-026)"
+        },
+        {
+          "const": "aggregator.queue_wait",
+          "description": "aggregator 소비 그룹: 발행부터 소비까지 기다린 시간"
+        },
+        {
+          "const": "aggregator.handle",
+          "description": "aggregator 소비 그룹: analysis.completed 핸들러 전체"
+        },
+        {
+          "const": "aggregate.read",
+          "description": "analysis-api 내부 읽기(재시도 포함). 읽은 항목 수를 count로 남긴다 (SPEC-027)"
+        },
+        {
+          "const": "aggregate.compute",
+          "description": "병합·시간 규칙·상태·위험·노출 계산. 입력 이벤트 수를 count로 남긴다 (SPEC-027)"
+        },
+        {
+          "const": "aggregate.summary",
+          "description": "source_summary 호출. 타임라인 항목 수를 count로 남긴다 (SPEC-027)"
+        },
+        {
+          "const": "aggregate.store",
+          "description": "결과 파일 저장. 파일 수를 count로 남긴다 (SPEC-027)"
         }
       ]
     }

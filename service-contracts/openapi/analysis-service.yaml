@@ -1,0 +1,494 @@
+openapi: 3.1.0
+info:
+  title: analysis-api internal API
+  version: 0.1.0
+  description: |
+    analysis-api의 내부 읽기 전용 API. aggregator가 job 하나의 적재 결과를 한 번 읽는 데 쓴다(SPEC-027).
+    다른 담당자 서비스이고, 이 파일은 소비 쪽 spec이 아키텍처 문서대로 먼저 정한 내부 경로만 담는다(생산자 담당자 확인 필요). 공개 API(`/api/v1/analysis/**`)는 이 파일에 아직 없다.
+    - api-gateway는 `/internal/**`을 라우팅하지 않는다. 클러스터 안에서 NetworkPolicy와 호출자 헤더 허용 목록으로 막는다.
+    - 내부 동기 호출 규약(overview "통신 규칙", SPEC-021): 호출자는 `X-Request-Deadline`을 넣고, 받는 쪽은 남은 시간이 없으면 504 `ANALYSIS_DEADLINE_EXCEEDED`로 답한다. 읽기 전용이라 호출자는 503·연결 실패에 2회 재시도할 수 있다.
+    - 목록은 커서 쪽 나누기(cursor pagination)이고 정렬은 고정이다. 같은 job에 같은 커서로 다시 부르면 같은 쪽을 돌려준다.
+servers:
+  - url: http://analysis-api:8085
+    description: 클러스터 내부 주소
+tags:
+  - name: internal
+    description: 클러스터 내부 전용
+paths:
+  /internal/v1/sources/{sourceId}/jobs/{jobId}/events:
+    get:
+      operationId: listJobEvents
+      summary: job의 판정 이벤트 목록 (내부 전용)
+      description: |
+        job에 적재된 이벤트 전체. 판정 상태와 상관없이 모두 돌려준다. trackId는 track.manifest 번역표로 바꾼 최종 ID다. 정렬은 startMs, eventId 순.
+      tags: [internal]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
+      responses:
+        '200':
+          description: 한 쪽(page). nextCursor가 null이면 마지막 쪽이다
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JobEvent'
+                  nextCursor:
+                    type: [string, 'null']
+                    maxLength: 512
+              example:
+                items:
+                  - eventId: 0192f300-0000-5000-8000-000000000101
+                    chunkId: 0192f0d6-0000-7000-8000-000000000001
+                    eventType: ppe_missing
+                    startMs: 95000
+                    endMs: 105000
+                    trackId: 0192f200-0000-5000-8000-000000000001
+                    zoneId: 0192f100-0000-7000-8000-0000000000f1
+                    zoneName: A동 크레인 하부
+                    judgmentMethod: rule+vlm
+                    score: 0.82
+                    reviewRequired: false
+                    analysis:
+                      eventType: ppe_missing
+                      eventDetected: true
+                      verificationStatus: confirmed
+                      description: 크레인 하부에서 작업자가 안전모 없이 자재를 옮깁니다.
+                      beforeState: null
+                      afterState: 안전모 미착용 작업자 작업 중
+                      riskDetected: true
+                      riskType: ppe_missing
+                      riskReason: 안전모 미착용
+                      solution: 안전관리자 확인 필요. 작업 중지 후 안전모 착용
+                      severity: medium
+                      evidenceStart: 95.0
+                      evidenceEnd: 100.0
+                nextCursor: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
+  /internal/v1/sources/{sourceId}/jobs/{jobId}/tracks:
+    get:
+      operationId: listJobTracks
+      summary: job의 최종 트랙 목록 (내부 전용)
+      description: |
+        track.manifest 번역표를 적용한 최종 트랙. 정렬은 startMs, trackId 순.
+      tags: [internal]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
+      responses:
+        '200':
+          description: 한 쪽(page). nextCursor가 null이면 마지막 쪽이다
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JobTrack'
+                  nextCursor:
+                    type: [string, 'null']
+                    maxLength: 512
+              example:
+                items:
+                  - trackId: 0192f200-0000-5000-8000-000000000001
+                    className: person
+                    startMs: 40000
+                    endMs: 125000
+                nextCursor: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
+  /internal/v1/sources/{sourceId}/jobs/{jobId}/zone-presences:
+    get:
+      operationId: listJobZonePresences
+      summary: job의 트랙별 구역 머문 구간 목록 (내부 전용)
+      description: |
+        최종 트랙이 구역 안에 있던 구간. 같은 트랙이 다시 들어오면 구간이 따로 나온다. 정렬은 enterMs, trackId, zoneId 순.
+      tags: [internal]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
+      responses:
+        '200':
+          description: 한 쪽(page). nextCursor가 null이면 마지막 쪽이다
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ZonePresence'
+                  nextCursor:
+                    type: [string, 'null']
+                    maxLength: 512
+              example:
+                items:
+                  - trackId: 0192f200-0000-5000-8000-000000000001
+                    zoneId: 0192f100-0000-7000-8000-0000000000f1
+                    enterMs: 60000
+                    exitMs: 125000
+                nextCursor: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
+  /internal/v1/sources/{sourceId}/zones:
+    get:
+      operationId: listSourceZones
+      summary: 영상의 구역 정의 (내부 전용)
+      description: |
+        운영자가 정의한 구역. 구역이 없으면 빈 목록이다.
+      tags: [internal]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
+      responses:
+        '200':
+          description: 구역 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 100
+                    items:
+                      $ref: '#/components/schemas/Zone'
+              example:
+                items:
+                  - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                    name: A동 크레인 하부
+                    kind: hazard
+        '404':
+          $ref: '#/components/responses/SourceNotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
+  /internal/v1/sources/{sourceId}/final-state:
+    get:
+      operationId: getSourceFinalState
+      summary: 영상 활성 분석 버전의 마지막 상태 (내부 전용)
+      description: |
+        활성 분석 버전의 구역별 마지막 상태와 끝까지 활성인 위험. 작업 세션 다음 영상의 초기 상태로 쓴다(overview "위험 상태와 상태 스냅샷" 작업 세션 행).
+        활성 분석 버전이 없으면 404 `ANALYSIS_NO_ACTIVE_VERSION`이다.
+      tags: [internal]
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/XCaller'
+        - $ref: '#/components/parameters/TraceParent'
+        - $ref: '#/components/parameters/XRequestDeadline'
+      responses:
+        '200':
+          description: 마지막 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinalState'
+              example:
+                sourceId: 0192f0d2-0000-7000-8000-0000000000aa
+                jobId: 0192f0d5-0000-7000-8000-0000000000aa
+                zoneStates:
+                  - zoneId: 0192f100-0000-7000-8000-0000000000f1
+                    state: 방호벽 설치됨
+                activeRisks: []
+        '404':
+          description: 영상이 없거나(`ANALYSIS_SOURCE_NOT_FOUND`) 활성 분석 버전이 없음(`ANALYSIS_NO_ACTIVE_VERSION`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: './_common.yaml#/components/schemas/ProblemDetail'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                code: ANALYSIS_NO_ACTIVE_VERSION
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '504':
+          $ref: '#/components/responses/DeadlineExceeded'
+components:
+  parameters:
+    SourceId:
+      name: sourceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 앞 쪽의 nextCursor. 없으면 첫 쪽
+      schema:
+        type: string
+        maxLength: 512
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 500
+    XCaller:
+      name: X-Caller
+      in: header
+      required: true
+      description: 호출하는 서비스 이름. 허용 호출자 목록(설정)에 있어야 한다
+      schema:
+        type: string
+        pattern: '^[a-z][a-z0-9-]{1,62}$'
+      example: aggregator
+    XRequestDeadline:
+      name: X-Request-Deadline
+      in: header
+      required: false
+      description: |
+        호출자가 결과를 기다리는 마감 시각(Unix epoch 밀리초). 남은 시간이 없으면 DB를 읽지 않고 504 `ANALYSIS_DEADLINE_EXCEEDED`다. 0 이상의 정수가 아니면 400 `ANALYSIS_INVALID_REQUEST`다.
+      schema:
+        type: string
+        pattern: '^[0-9]{1,16}$'
+      example: '1793947448160'
+    TraceParent:
+      name: traceparent
+      in: header
+      required: false
+      description: W3C Trace Context
+      schema:
+        type: string
+        pattern: '^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$'
+      example: 00-0123456789abcdef0123456789abcdef-0123456789abcdef-01
+  responses:
+    BadRequest:
+      description: 잘못된 커서·limit·헤더 (`ANALYSIS_INVALID_REQUEST`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: ANALYSIS_INVALID_REQUEST
+    JobNotFound:
+      description: 영상이나 job이 없음 (`ANALYSIS_JOB_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: ANALYSIS_JOB_NOT_FOUND
+    SourceNotFound:
+      description: 영상이 없음 (`ANALYSIS_SOURCE_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: ANALYSIS_SOURCE_NOT_FOUND
+    Unavailable:
+      description: DB를 일시적으로 쓸 수 없음 (`ANALYSIS_UNAVAILABLE`). 다시 시도할 수 있다
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            code: ANALYSIS_UNAVAILABLE
+    DeadlineExceeded:
+      description: '`X-Request-Deadline`까지 남은 시간이 없음 (`ANALYSIS_DEADLINE_EXCEEDED`)'
+      content:
+        application/problem+json:
+          schema:
+            $ref: './_common.yaml#/components/schemas/ProblemDetail'
+          example:
+            type: about:blank
+            title: Gateway Timeout
+            status: 504
+            code: ANALYSIS_DEADLINE_EXCEEDED
+  schemas:
+    JobEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, chunkId, eventType, startMs, endMs, trackId, zoneId, zoneName, judgmentMethod, score, reviewRequired, analysis]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        chunkId:
+          type: [string, 'null']
+          format: uuid
+          description: 이벤트를 낸 청크. 청크 밖에서 만든 이벤트면 null
+        eventType:
+          $ref: '../taxonomy/v2/taxonomy.schema.json#/$defs/eventType'
+        startMs:
+          type: integer
+          minimum: 0
+        endMs:
+          type: integer
+          minimum: 0
+        trackId:
+          type: [string, 'null']
+          format: uuid
+        zoneId:
+          type: [string, 'null']
+          format: uuid
+        zoneName:
+          type: [string, 'null']
+          maxLength: 100
+        judgmentMethod:
+          type: string
+          enum: [rule, rule+vlm, rule+vlm+escalate, vector+vlm, vector+vlm+escalate]
+        score:
+          type: [number, 'null']
+          minimum: -1
+          maximum: 1
+          description: 후보 점수(탐지기 후보는 detectorCandidate.score, 벡터 후보는 vectorCandidate.score)
+        reviewRequired:
+          type: boolean
+        analysis:
+          type: object
+          description: 판정 결과 VLMAnalysis. 형식은 `events/_vlm-analysis.schema.json`이다(이 파일에서 직접 참조하지 않는 이유는 검사 도구가 그 스키마의 `$id` 기준 상대 참조를 풀지 못해서다)
+    JobTrack:
+      type: object
+      additionalProperties: false
+      required: [trackId, className, startMs, endMs]
+      properties:
+        trackId:
+          type: string
+          format: uuid
+        className:
+          $ref: '../taxonomy/v2/taxonomy.schema.json#/$defs/className'
+        startMs:
+          type: integer
+          minimum: 0
+        endMs:
+          type: integer
+          minimum: 0
+    ZonePresence:
+      type: object
+      additionalProperties: false
+      required: [trackId, zoneId, enterMs, exitMs]
+      properties:
+        trackId:
+          type: string
+          format: uuid
+        zoneId:
+          type: string
+          format: uuid
+        enterMs:
+          type: integer
+          minimum: 0
+        exitMs:
+          type: integer
+          minimum: 0
+          description: 영상 끝까지 나가지 않았으면 마지막 관측 시각
+    Zone:
+      type: object
+      additionalProperties: false
+      required: [zoneId, name, kind]
+      properties:
+        zoneId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        kind:
+          type: string
+          enum: [hazard, aisle, general]
+          description: hazard는 위험구역(체류·배회 규칙 대상), aisle은 통로
+    FinalState:
+      type: object
+      additionalProperties: false
+      required: [sourceId, jobId, zoneStates, activeRisks]
+      properties:
+        sourceId:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+          description: 활성 분석 버전의 job
+        zoneStates:
+          type: array
+          items:
+            $ref: '../aggregates/v1/source-result.schema.json#/properties/initialState/properties/zoneStates/items'
+        activeRisks:
+          type: array
+          items:
+            $ref: '../aggregates/v1/source-result.schema.json#/properties/initialState/properties/activeRisks/items'

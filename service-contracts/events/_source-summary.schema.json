@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/_source-summary.schema.json",
+  "title": "SourceSummary",
+  "description": "ai-gateway source_summary 출력. 영상 하나의 타임라인·위험 상태를 근거로만 쓴 요약(SPEC-027). 모델 미설정이면 summary null",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "highlights"
+  ],
+  "properties": {
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1000,
+      "description": "한국어 요약 두세 문장. 근거에 없는 사실을 쓰지 않는다"
+    },
+    "highlights": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "atMs",
+          "text"
+        ],
+        "properties": {
+          "atMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "description": "중요 순간(타임라인 항목 시각과 한 줄 설명)"
+    }
+  },
+  "examples": [
+    {
+      "summary": "A동 크레인 하부에서 안전모 미착용 작업자가 두 차례 확인되었고, 1분 40초부터 위험 상태가 끝까지 해소되지 않았습니다.",
+      "highlights": [
+        {
+          "atMs": 100000,
+          "text": "크레인 하부 안전모 미착용 확인"
+        }
+      ]
+    },
+    {
+      "summary": null,
+      "highlights": []
+    }
+  ]
+}

@@ -415,8 +415,8 @@ sequenceDiagram
 | `segment.annotated` | sourceId | search-service → embedding-worker (정밀 검색에서 확인된 구간 주석, 주석마다 1건, [SPEC-025](../specs/SPEC-025-embedding-worker/spec.md)) |
 | `embedding.ready` | sourceId | embedding-worker → search-service (텍스트 인덱스 항목마다 1건: itemKind `event`·`track`·`segment_annotation`, 텍스트 벡터 파일 `vectors/v1/text-vector-file` 경로, [SPEC-025](../specs/SPEC-025-embedding-worker/spec.md)) |
 | `version.activated` | sourceId | analysis-api → search-service (전환 순번 포함) |
-| `analysis.completed` · `job.status` | sourceId | pipeline-service → aggregator · notification-service (`job.status`는 상태 전체 + 순번) |
-| `source.completed` | sourceId | aggregator → analysis-api · notification-service (병합 목록, 시간 규칙 이벤트, 스냅샷, 위험 상태, 요약, v4 재고 변화 이벤트·노출 지표. 크면 S3 경로) |
+| `analysis.completed` · `job.status` | sourceId | pipeline-service → aggregator · notification-service (`analysis.completed`는 job마다 1건: job 유형, 세션과 직전 영상, manifest 합계, [SPEC-027](../specs/SPEC-027-aggregator/spec.md). `job.status`는 상태 전체 + 순번) |
+| `source.completed` | sourceId | aggregator → analysis-api · notification-service (job마다 1건, 본문은 결과 파일 `aggregates/v1/source-result` 경로: 병합 묶음, 시간 규칙 이벤트, 스냅샷, 위험 상태와 노출 지표, 타임라인, 요약. v4 재고 변화 이벤트는 SPEC-028, [SPEC-027](../specs/SPEC-027-aggregator/spec.md)) |
 | `stage.timing` (v4) | sourceId | 모든 소비자(공통 메시징 라이브러리) → quality-service (핸들러당 1건, `StageTiming` 묶음. 보존 7일) |
 | `{토픽}.{그룹}.retry` · `{그룹}.dlq` | sourceId | 지터 재시도, 운영자 재처리 |
 
