@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/events/_state-compare.schema.json",
+  "title": "StateCompare",
+  "description": "ai-gateway state_compare 출력. 전후 프레임 2장과 기대 객체 목록으로 본 변화 판정(SPEC-028). 모델 미설정·파싱 실패면 analysis.verificationStatus가 unverified·unknown이고 changes는 빈 배열",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "analysis",
+    "changes"
+  ],
+  "properties": {
+    "analysis": {
+      "$ref": "_vlm-analysis.schema.json"
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "className",
+          "description"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "removed",
+              "moved",
+              "added",
+              "restored",
+              "unchanged"
+            ]
+          },
+          "className": {
+            "$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "analysis": {
+        "eventType": "object_moved",
+        "eventDetected": true,
+        "verificationStatus": "confirmed",
+        "description": "통로 입구의 방호벽이 왼쪽으로 3m 옮겨졌습니다.",
+        "beforeState": "방호벽이 통로 입구를 막고 있음",
+        "afterState": "방호벽이 통로 옆으로 옮겨짐",
+        "riskDetected": true,
+        "riskType": "barrier_not_restored",
+        "riskReason": "통로 입구 방호 해제",
+        "solution": "안전관리자 확인 필요. 방호벽 원위치",
+        "severity": "medium",
+        "evidenceStart": 40.0,
+        "evidenceEnd": 70.0
+      },
+      "changes": [
+        {
+          "kind": "moved",
+          "className": "safety_barrier",
+          "description": "통로 입구에서 왼쪽으로 이동"
+        }
+      ]
+    }
+  ]
+}

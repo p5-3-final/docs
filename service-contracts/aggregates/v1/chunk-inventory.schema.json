@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vlm.example/contracts/aggregates/v1/chunk-inventory.schema.json",
+  "title": "ChunkInventoryFile",
+  "description": "aggregator가 청크마다 처음 받은 chunk.manifest의 정적 객체 재고를 옮겨 둔 파일. 경로: sources/<sourceId>/jobs/<jobId>/aggregate/inventory/<chunkId>.json. 청크마다 처음 쓴 실행이 이긴다(SPEC-028)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "jobId",
+    "chunkId",
+    "executionId",
+    "ownedRange",
+    "detectorProfile",
+    "staticObjects",
+    "referenceFrames"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "jobId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "chunkId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "executionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ownedRange": {
+      "$ref": "../../events/chunk.requested.schema.json#/properties/ownedRange"
+    },
+    "detectorProfile": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,99}$"
+    },
+    "staticObjects": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "objectLocalId",
+          "className",
+          "box",
+          "zoneId",
+          "firstSeenMs",
+          "lastSeenMs",
+          "observationCount",
+          "frameKey"
+        ],
+        "properties": {
+          "objectLocalId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "청크 실행 안의 정적 객체 ID"
+          },
+          "className": {
+            "$ref": "../../taxonomy/v2/taxonomy.schema.json#/$defs/className"
+          },
+          "box": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y",
+              "w",
+              "h"
+            ],
+            "description": "프레임 크기로 나눈 0~1 좌표, 왼쪽 위 기준",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "w": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "h": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          },
+          "zoneId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "firstSeenMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "lastSeenMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "observationCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "frameKey": {
+            "$ref": "../../events/segment.ready.schema.json#/$defs/imageKey"
+          }
+        }
+      }
+    },
+    "referenceFrames": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "description": "재고 비교의 '이후' 장면으로 쓰는 기준 프레임. 소유 범위 시작·끝과 그 사이 균등 간격(최대 8장). 이 실행 폴더의 blurred/ 아래",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ptsMs",
+          "key"
+        ],
+        "properties": {
+          "ptsMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775807
+          },
+          "key": {
+            "$ref": "../../events/segment.ready.schema.json#/$defs/imageKey"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "jobId": "0192f0d5-0000-7000-8000-000000000001",
+      "chunkId": "0192f0d6-0000-7000-8000-000000000001",
+      "executionId": "0192f0d7-0000-7000-8000-000000000001",
+      "ownedRange": {
+        "startMs": 0,
+        "endMs": 60000
+      },
+      "detectorProfile": "detect-v1",
+      "staticObjects": [
+        {
+          "objectLocalId": "s1",
+          "className": "safety_barrier",
+          "box": {
+            "x": 0.1,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 0.15
+          },
+          "zoneId": "0192f100-0000-7000-8000-0000000000f1",
+          "firstSeenMs": 0,
+          "lastSeenMs": 41000,
+          "observationCount": 82,
+          "frameKey": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f0d5-0000-7000-8000-000000000001/chunks/0192f0d6-0000-7000-8000-000000000001/executions/0192f0d7-0000-7000-8000-000000000001/blurred/static-s1.jpg"
+        }
+      ],
+      "referenceFrames": [
+        {
+          "ptsMs": 0,
+          "key": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f0d5-0000-7000-8000-000000000001/chunks/0192f0d6-0000-7000-8000-000000000001/executions/0192f0d7-0000-7000-8000-000000000001/blurred/ref-0.jpg"
+        },
+        {
+          "ptsMs": 30000,
+          "key": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f0d5-0000-7000-8000-000000000001/chunks/0192f0d6-0000-7000-8000-000000000001/executions/0192f0d7-0000-7000-8000-000000000001/blurred/ref-30000.jpg"
+        },
+        {
+          "ptsMs": 59900,
+          "key": "sources/0192f0d2-1a2b-7c3d-8e4f-5a6b7c8d9e0f/jobs/0192f0d5-0000-7000-8000-000000000001/chunks/0192f0d6-0000-7000-8000-000000000001/executions/0192f0d7-0000-7000-8000-000000000001/blurred/ref-59900.jpg"
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ai-gateway API
-  version: 1.3.0
+  version: 1.4.0
   description: |
     외부 AI 호출 관문(내부 전용). 워커와 search-service가 클러스터 안에서 직접 부르고, api-gateway는 라우팅하지 않는다. (SPEC-009)
     taskType별 입력 변수·출력 형식의 원본은 ai 레포 `services/ai-gateway/registry/prompts/<taskType>/`의 `input.schema.json`, `output.schema.json`이다(docs ADR-0012).
@@ -416,7 +416,9 @@ components:
         - `track_attribute`: 트랙 대표 크롭 1~3장 → 보호구·역할·장비·외형 설명(`events/_track-attribute.schema.json`) (SPEC-024)
         - `object_question`: 트랙 크롭과 장면 프레임, 질문 → 답(`events/_object-answer.schema.json`) (SPEC-024)
         - `source_summary`: 영상 하나의 타임라인·위험 상태 JSON(이미지 없음) → 근거만으로 쓴 요약과 중요 순간(`events/_source-summary.schema.json`). 호출자는 aggregator다. (SPEC-027)
-      x-extensible-enum: [event_judge, event_judge_escalate, track_attribute, object_question, source_summary]
+        - `state_compare`: 같은 자리의 전후 프레임 2장, 기대 객체 목록 → VLMAnalysis와 변화 목록(`events/_state-compare.schema.json`). 호출자는 aggregator 재고 비교다. (SPEC-028)
+        - `risk_forecast`: 활성 위험의 특징 값(이미지 없음) → 다음 구간 노출 확률(`events/_risk-forecast.schema.json`). VLM이 아니라 predictor Adapter가 처리하고 1단계는 규칙 점수다. (SPEC-028)
+      x-extensible-enum: [event_judge, event_judge_escalate, track_attribute, object_question, source_summary, state_compare, risk_forecast]
     EmbedTaskType:
       type: string
       description: |

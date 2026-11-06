@@ -175,7 +175,7 @@ cd repos/ai && uv sync --all-packages
 | SPEC-025 | embedding-worker(`segment.annotated`·`embedding.ready`, 텍스트 벡터 파일) | Approved |
 | SPEC-026 | grounding-worker(`grounding.requested`·`grounding.completed`, 결과 파일 `groundings/v1`) | Approved |
 | SPEC-027 | aggregator 핵심(`analysis.completed`·`source.completed`, analysis-api 내부 읽기 API, 결과 파일, `source_summary`) | Approved |
-| SPEC-028 | aggregator 정적 객체 재고 비교·장비 방치·예측(`chunk.manifest` 재고, `state_compare`, `risk_forecast`) | 작성 예정 |
+| SPEC-028 | aggregator 정적 객체 재고 비교·장비 방치·예측(`chunk.manifest`, 청크 재고 파일, ai-gateway `state_compare`·`risk_forecast`) | Approved |
 | SPEC-029 | quality-service | 작성 예정 |
 | SPEC-030~ | frontend 나머지 화면 | 작성 예정 |
 
