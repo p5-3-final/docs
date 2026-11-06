@@ -15,7 +15,7 @@ related: [ADR-0008, ADR-0010, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, 
 
 ## 1. 배경과 목적
 
-frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷한 구간을 `event.candidate.vector`로 낸다([SPEC-019](../SPEC-019-frame-encoder/spec.md), ADR-0010 ③). 이 후보는 벡터 점수만으로 정한 것이라 실제로 일어났는지 확인해야 한다. event-analyzer가 후보마다 구간 프레임을 ai-gateway `/v1/analyze`(`event_judge`)로 판정해 `VLMAnalysis`를 만들고, 결과를 `event.analyzed`로 analysis-api·embedding-worker·quality-service에 보낸다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 8단계, "판정").
+frame-encoder는 구간 벡터가 유형별 텍스트 프로토타입과 비슷한 구간을 `event.candidate.vector`로 낸다([SPEC-019](../SPEC-019-frame-encoder/spec.md), ADR-0010 ③). 이 후보는 벡터 점수만으로 정한 것이라 실제로 일어났는지 확인해야 한다. event-analyzer가 후보마다 구간 프레임을 ai-gateway `/v1/analyze`(`event_judge`)로 판정해 `VLMAnalysis`를 만들고, 결과를 `event.analyzed`로 analysis-api·embedding-worker·quality-service에 보낸다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 8단계, "판정").
 
 - 단계 상향: 1차 판정이 severity `high`이거나 판단 불가(`eventDetected` null)이면 더 강한 모델(`event_judge_escalate`)로 다시 판정하고, 두 판정이 엇갈리면 `reviewRequired`를 붙인다. 높은 위험 후보만 비싼 모델을 쓰고, 모델이 엇갈린 후보를 사람이 검토하게 하려는 것이다. 벡터 후보도 탐지기 후보와 같은 방식으로 판정한다(overview 8단계).
 - 후보를 버리지 않는다: 모델 미설정·예산 초과면 `unverified`, ai-gateway가 끝까지 응답하지 않으면 `unknown`으로 기록해 발행한다.

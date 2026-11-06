@@ -68,11 +68,11 @@ Python 워커의 이미지는 [ADR-0001](0001-ai-uv-workspace.md)대로 워커�
 
 - 좋아지는 점: 분석 시점 AI 비용이 약 1/6로 준다. 외형 질의 정확도가 오른다. 재순위화 결과와 프레임 주석이 DB에 쌓여, 실제로 검색된 장면부터 검색 품질이 오른다.
 - 감수할 점:
-  - 검색 응답이 외부 VLM 지연에 묶인다. 타임아웃 후 인코더 순위로 응답하고, 서킷 브레이커와 사용자별 재순위화 상한을 둔다. 느리면 [아키텍처 개요](../architecture/overview.md)의 "검색 지연 개선 방안"을 검토한다.
+  - 검색 응답이 외부 VLM 지연에 묶인다. 타임아웃 후 인코더 순위로 응답하고, 서킷 브레이커와 사용자별 재순위화 상한을 둔다. 느리면 [아키텍처 v5](../architecture/architecture.md)의 "검색 지연 개선 방안"을 검토한다.
   - 이벤트 재현율이 탐지기에 묶인다. 후보 재현율과 판정 정밀도를 따로 재고, 정의 목록에 없는 사건은 검색 경로로 보완한다.
   - frame-encoder와 ai-gateway가 같은 SigLIP 2 버전을 써야 한다. 벡터마다 `embedding_model`을 기록하고 같은 모델 벡터만 검색한다.
 - 후속 작업:
-  - [서비스 카탈로그](../architecture/service-catalog.md)와 [아키텍처 개요](../architecture/overview.md)를 이 결정 기준으로 갱신(이 ADR과 같은 PR)
+  - [서비스 카탈로그](../architecture/service-catalog.md)와 [아키텍처 v5](../architecture/architecture.md)를 이 결정 기준으로 갱신(이 ADR과 같은 PR)
   - ai 레포 `AGENTS.md`의 서비스 목록에서 vlm-worker를 frame-encoder로 교체
   - 이벤트 계약(`docs/contracts/events/`)과 분류 체계(`docs/contracts/taxonomy/`)는 각 기능 spec에서 이 토픽 목록 기준으로 작성
   - PoC에서 검색 단계별 지연(p50·p95)과 이미지 토큰 비용 실측
@@ -80,5 +80,5 @@ Python 워커의 이미지는 [ADR-0001](0001-ai-uv-workspace.md)대로 워커�
 ## 참고
 
 - [ADR-0003 서비스를 17개 배포 단위로 나눈다](0003-service-composition.md) (이 ADR로 대체)
-- [아키텍처 개요](../architecture/overview.md)
+- [아키텍처 v5](../architecture/architecture.md)
 - [서비스 카탈로그](../architecture/service-catalog.md)

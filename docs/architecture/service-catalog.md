@@ -4,7 +4,7 @@ updated: 2026-11-04
 
 # 서비스 카탈로그
 
-> 서비스를 추가하거나 변경하면 이 표를 먼저 고친다(ADR이 필요할 수 있음). 담당은 정해지면 채운다. 배포 단위 구성의 근거는 [ADR-0008](../adr/0008-industrial-safety-v3.md)이고, v4 확장 자리는 [ADR-0010](../adr/0010-v4-evaluation-readiness.md)(배포 단위 수는 같음), 흐름은 [overview.md](overview.md)에 있다. 모든 소비자는 공통 메시징 라이브러리로 `stage.timing`을 발행한다(아래 표에서는 생략).
+> 서비스를 추가하거나 변경하면 이 표를 먼저 고친다(ADR이 필요할 수 있음). 담당은 정해지면 채운다. 배포 단위 구성의 근거는 [ADR-0008](../adr/0008-industrial-safety-v3.md)이고, v4 확장 자리는 [ADR-0010](../adr/0010-v4-evaluation-readiness.md)(배포 단위 수는 같음), 흐름은 [아키텍처 v5](architecture.md)에 있다. 모든 소비자는 공통 메시징 라이브러리로 `stage.timing`을 발행한다(아래 표에서는 생략).
 
 배포 단위는 19개다. Spring 9개(사용자 요청, 업무 상태, 저장과 조회, 품질 검토)와 Python 10개(영상 디코딩, 객체 탐지·추적, 이미지 벡터, bbox 주석, 외부 AI 호출)로 나눈다. 모델 ID·차원·탐지 프로필은 코드가 아니라 프로필 값이다(overview "모델과 플랫폼 교체").
 

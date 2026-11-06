@@ -53,4 +53,4 @@ related: [SPEC-003, ADR-0005]
 ## 참고
 
 - [SPEC-003 영상 업로드와 관리](../specs/SPEC-003-video-upload/spec.md)
-- [아키텍처 개요](../architecture/overview.md)의 "로컬 개발 환경"
+- [아키텍처 v5](../architecture/architecture.md)의 "로컬 개발 환경"

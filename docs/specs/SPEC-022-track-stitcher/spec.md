@@ -21,7 +21,7 @@ chunk-processor는 영상을 청크(기본 2분, 앞뒤 5초 겹침)로 나눠 �
 - 트랙 속성(보호구·역할)
 - aggregator의 시간 기준 규칙(체류·배회·장비 방치)
 
-track-stitcher는 두 단계로 트랙을 잇는다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 7단계).
+track-stitcher는 두 단계로 트랙을 잇는다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 7단계).
 
 - 경계 연결: 인접 청크의 겹치는 5초에서 같은 클래스 트랙을 박스 IoU로 잇는다. 크롭 벡터를 기다리지 않아 빨리 끝난다.
 - 재등장 연결(Re-ID): 영상의 모든 청크가 모이고 크롭 벡터(frame-encoder, [SPEC-019](../SPEC-019-frame-encoder/spec.md))도 모이면, 같은 클래스 트랙을 외형 유사도와 시간 간격으로 잇는다.

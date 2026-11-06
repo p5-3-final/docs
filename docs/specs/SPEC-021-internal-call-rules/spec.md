@@ -15,7 +15,7 @@ related: [ADR-0002, ADR-0014, SPEC-009, SPEC-011, SPEC-012, SPEC-016, SPEC-020]
 
 ## 1. 배경과 목적
 
-[아키텍처 개요](../../architecture/overview.md) "통신 규칙"의 내부 동기 호출 규약(2026-11-06, docs #112·#115)이 내부 호출 방식을 정했다.
+[아키텍처 v5](../../architecture/architecture.md) "통신 규칙"의 내부 동기 호출 규약(2026-11-06, docs #112·#115)이 내부 호출 방식을 정했다.
 
 - 호출 방식은 HTTP/1.1과 JSON이다.
 - 호출자는 `X-Request-Deadline`(epoch ms)을 넣는다. 받는 쪽은 남은 시간을 자기 제한 시간과 하위 호출에 넘기고, 남은 시간이 없으면 504로 답한다.

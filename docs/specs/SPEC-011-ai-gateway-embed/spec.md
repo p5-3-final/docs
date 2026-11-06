@@ -15,7 +15,7 @@ related: [ADR-0008, ADR-0010, SPEC-009]
 
 ## 1. 배경과 목적
 
-문장으로 장면 찾기와 이미지로 장면 찾기는 질의를 벡터로 바꿔 저장된 구간·크롭·텍스트 벡터와 비교한다([아키텍처 개요](../../architecture/overview.md) "검색 경로"). 질의 벡터는 저장된 벡터와 **같은 모델**로 만들어야 비교할 수 있으므로, 모델 선택과 모델 ID 기록을 한 곳에 모은다. 외부 AI 호출이 모이는 ai-gateway가 그 자리다([SPEC-009](../SPEC-009-ai-gateway-analyze/spec.md), [ADR-0008](../../adr/0008-industrial-safety-v3.md)).
+문장으로 장면 찾기와 이미지로 장면 찾기는 질의를 벡터로 바꿔 저장된 구간·크롭·텍스트 벡터와 비교한다([아키텍처 v5](../../architecture/architecture.md) "검색 경로"). 질의 벡터는 저장된 벡터와 **같은 모델**로 만들어야 비교할 수 있으므로, 모델 선택과 모델 ID 기록을 한 곳에 모은다. 외부 AI 호출이 모이는 ai-gateway가 그 자리다([SPEC-009](../SPEC-009-ai-gateway-analyze/spec.md), [ADR-0008](../../adr/0008-industrial-safety-v3.md)).
 
 이 spec은 ai-gateway에 `/v1/embed`를 더한다. 벡터는 세 종류다.
 
@@ -164,7 +164,7 @@ embedding-worker와 search-service로서 이벤트 설명문이나 검색 문장
 | --- | --- | --- |
 | `service-contracts/openapi/ai-gateway.yaml` | `POST /v1/embed` 추가(요청: taskType, 문장 목록 또는 이미지 경로 목록 / 응답: 호출 ID, 모델 ID, 차원, 벡터 목록). 오류 코드 추가: 입력 개수 초과, 이미지 해석 불가, 모델 미설정. 버전 0.1.0 → 0.2.0 | 예(경로·코드 추가) |
 | `service-contracts/models/manifest.schema.json` | 모델 산출물 manifest 형식 추가(ADR-0010 ②, v4 전환 D-5). 인코더 가중치는 이 manifest로 받는다(R-15~R-18). 계약 묶음 2.1.0 | 예(파일 추가) |
-| `docs/architecture/overview.md` | 변경 없음. "AI Gateway"·"모델과 플랫폼 교체"에 적힌 내용을 따른다. | 해당 없음 |
+| `docs/architecture/architecture.md` | 변경 없음. "AI Gateway"·"모델과 플랫폼 교체"에 적힌 내용을 따른다. | 해당 없음 |
 
 ## 7. 성공 지표
 

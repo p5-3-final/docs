@@ -15,7 +15,7 @@ related: [SPEC-006, SPEC-022, SPEC-024, SPEC-027, SPEC-031]
 
 ## 1. 배경과 목적
 
-[아키텍처 개요](../../architecture/overview.md) 처리 흐름 12단계는 화면 동작을 이렇게 정한다.
+[아키텍처 v5](../../architecture/architecture.md) 처리 흐름 12단계는 화면 동작을 이렇게 정한다.
 
 - 화면을 클릭하면 analysis-api가 (t, x, y)로 트랙을 찾는다.
 - 속성이 있으면 바로 돌려준다. 없으면 클래스와 박스를 먼저 돌려주고 속성 분석을 요청한 뒤 SSE로 채운다.

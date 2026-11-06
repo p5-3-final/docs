@@ -21,7 +21,7 @@ related: [ADR-0008, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, SPEC-021, 
 - 화면을 클릭했을 때 그 사람이 누구인지(역할·보호구) 보여 주기
 - 이벤트 상세에 관련자의 보호구 상태를 함께 보여 주기
 
-analysis-api는 세 경우에 `attribute.requested`를 낸다. 이벤트 관련 트랙(event), 화면 클릭(click), 객체 자유 질문(question)이다. track-analyzer는 트랙 대표 크롭으로 ai-gateway를 부른다. 속성은 `track_attribute`, 질문은 `object_question`이다. 결과는 `track.analyzed`로 analysis-api(저장), embedding-worker(텍스트 인덱스), notification-service(화면 알림)에 보낸다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 9·12단계, "AI Gateway" taskType 표).
+analysis-api는 세 경우에 `attribute.requested`를 낸다. 이벤트 관련 트랙(event), 화면 클릭(click), 객체 자유 질문(question)이다. track-analyzer는 트랙 대표 크롭으로 ai-gateway를 부른다. 속성은 `track_attribute`, 질문은 `object_question`이다. 결과는 `track.analyzed`로 analysis-api(저장), embedding-worker(텍스트 인덱스), notification-service(화면 알림)에 보낸다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 9·12단계, "AI Gateway" taskType 표).
 
 클릭과 질문은 사용자가 화면에서 기다리는 요청이다. 그래서 실패해도 결과 없이 끝내지 않고 `FAILED`로 알려, 화면이 기다림을 멈추게 한다.
 

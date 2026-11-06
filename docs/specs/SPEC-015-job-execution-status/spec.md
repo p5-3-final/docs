@@ -13,7 +13,7 @@ related: [ADR-0009, SPEC-004, SPEC-008, SPEC-010, SPEC-014]
 
 ## 1. 배경과 목적
 
-청크 실행 종료와 슬롯 반환(SPEC-014)을 전체 Job 실행 관점으로 집계한다. [아키텍처](../../architecture/overview.md)의 ANALYZED·analysis.completed는 segment.indexed·event.manifest·track.manifest 적재 확인이 필요하다. 실행이 끝나도 분석 완료나 검색 준비를 선언하지 않는다.
+청크 실행 종료와 슬롯 반환(SPEC-014)을 전체 Job 실행 관점으로 집계한다. [아키텍처](../../architecture/architecture.md)의 ANALYZED·analysis.completed는 segment.indexed·event.manifest·track.manifest 적재 확인이 필요하다. 실행이 끝나도 분석 완료나 검색 준비를 선언하지 않는다.
 
 ## 2. 범위
 

@@ -15,7 +15,7 @@ related: [ADR-0008, ADR-0010, SPEC-009, SPEC-011, SPEC-012]
 
 ## 1. 배경과 목적
 
-ai-gateway는 모든 외부 모델 호출이 지나는 유일한 관문이다([아키텍처 개요](../../architecture/overview.md) "AI Gateway"). 유료 모델(VLM, 텍스트 임베딩)은 호출마다 비용이 들고, 공급자는 분당 요청·토큰 수를 제한한다. 지금은 같은 입력을 다시 보내도 매번 모델을 부르고, 비용과 호출 속도에 아무 제한이 없다.
+ai-gateway는 모든 외부 모델 호출이 지나는 유일한 관문이다([아키텍처 v5](../../architecture/architecture.md) "AI Gateway"). 유료 모델(VLM, 텍스트 임베딩)은 호출마다 비용이 들고, 공급자는 분당 요청·토큰 수를 제한한다. 지금은 같은 입력을 다시 보내도 매번 모델을 부르고, 비용과 호출 속도에 아무 제한이 없다.
 
 이 spec은 처리 순서 "결과 캐시 → 예산 → 토큰 버킷 → Adapter"의 앞 세 단계를 더한다.
 
@@ -178,7 +178,7 @@ event-analyzer로서 재배치나 재시도로 같은 후보를 다시 판정할
 | 계약 파일 | 변경 | 하위호환 |
 | --- | --- | --- |
 | `service-contracts/openapi/ai-gateway.yaml` | `/v1/embed` 503에 `AI_BUDGET_EXCEEDED` 추가. `/v1/analyze`·`/v1/parse` 설명에 예산 초과 시 미설정과 같은 200 결과, 세 경로에 캐시 적중 시 같은 결과·새 호출 ID를 적는다. 버전 0.3.0 → 0.4.0, 계약 묶음 2.7.0 → 2.8.0 | 예(오류 코드·설명 추가) |
-| `docs/architecture/overview.md` | 처리 순서의 "예산·사용자별 상한"을 "예산(호출 서비스별·전체)"으로, "필요 시 단계 상향"을 호출자가 고른 taskType으로 처리한다는 설명으로, 호출 로그 상태에 `budget_exceeded` | 해당 없음 |
+| `docs/architecture/architecture.md` | 처리 순서의 "예산·사용자별 상한"을 "예산(호출 서비스별·전체)"으로, "필요 시 단계 상향"을 호출자가 고른 taskType으로 처리한다는 설명으로, 호출 로그 상태에 `budget_exceeded` | 해당 없음 |
 
 ## 7. 성공 지표
 

@@ -92,7 +92,7 @@ related: [ADR-0010, SPEC-003, SPEC-009]
   - media-service가 지운 영상의 최소 기록을 1년 동안 남긴다.
   - 비밀 키를 잃으면 철회 때 보존 키를 다시 계산할 수 없다. 키 교체는 별도 절차가 필요하다.
   - 운영 비밀값을 Secrets Manager가 아니라 Kubernetes Secret으로 둘 수 있다(루트 `AGENTS.md` 보안 규칙의 예외). Secret은 gitops에 평문으로 커밋하지 않는다.
-- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/v4-transition.md) D-7, F-2
+- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/legacy/v4-transition.md) D-7, F-2
   - 계약: `video.deleted`에 등급과 보존 키, 동의 철회 이벤트, Media API의 영상별 동의·계정 기본값
   - media-service: 동의 저장, 삭제 기록, 철회 이벤트, 보존 키 계산
   - 각 서비스: 자기 데이터의 등급 표시와 삭제·만료·철회 처리. 다른 담당자 서비스는 계약만 정하고 구현은 각 담당이 한다.

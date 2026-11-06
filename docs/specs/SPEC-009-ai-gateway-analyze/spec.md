@@ -15,7 +15,7 @@ related: [ADR-0003, ADR-0008, ADR-0009, ADR-0010, ADR-0012, SPEC-003]
 
 ## 1. 배경과 목적
 
-이벤트 판정, 트랙 속성, 재순위화, Video RAG처럼 VLM을 부르는 기능이 여러 워커와 search-service에 흩어져 있다. 각자 공급자 SDK를 부르면 모델 교체, 프롬프트 버전 기록, 개인정보 보호(블러 사본만 외부로 전송), 출력 검증을 서비스마다 따로 맞춰야 한다. 그래서 외부 AI 호출을 내부 전용 서버 ai-gateway 한 곳으로 모은다([아키텍처 개요](../../architecture/overview.md) "AI Gateway", [ADR-0003](../../adr/0003-service-composition.md), [ADR-0008](../../adr/0008-industrial-safety-v3.md)).
+이벤트 판정, 트랙 속성, 재순위화, Video RAG처럼 VLM을 부르는 기능이 여러 워커와 search-service에 흩어져 있다. 각자 공급자 SDK를 부르면 모델 교체, 프롬프트 버전 기록, 개인정보 보호(블러 사본만 외부로 전송), 출력 검증을 서비스마다 따로 맞춰야 한다. 그래서 외부 AI 호출을 내부 전용 서버 ai-gateway 한 곳으로 모은다([아키텍처 v5](../../architecture/architecture.md) "AI Gateway", [ADR-0003](../../adr/0003-service-composition.md), [ADR-0008](../../adr/0008-industrial-safety-v3.md)).
 
 이 spec은 ai-gateway의 첫 단계로 `/v1/analyze` 호출의 뼈대를 만든다. 첫 작업 유형(taskType)은 이벤트 판정(`event_judge`) 하나로 요청 → 프롬프트 → 모델 → 출력 검증 → 호출 기록 흐름을 끝까지 완성한다. 나머지 taskType은 그 기능의 spec에서 같은 흐름에 추가한다. PRD의 에픽은 아직 정의되지 않았다.
 
@@ -171,7 +171,7 @@ event-analyzer 같은 호출자로서 이벤트 후보와 근거 프레임을 �
 | ai 레포 `services/ai-gateway/registry/prompts/<taskType>/fallback.json` | 대체 결과 정의 추가(R-25). event_judge의 기존 대체 결과와 같은 값 | 예(파일 추가, 프롬프트 버전 ID는 바뀐다) |
 | `service-contracts/openapi/ai-gateway.yaml` | `AnalyzeResponse`에 `taxonomyVersion`(문자열 또는 null) 추가(R-29) | 예(응답 필드 추가) |
 | `service-contracts/events/video.deleted.schema.json` | 변경 없음. ai-gateway가 소비자로 추가된다. | 예 |
-| `docs/architecture/overview.md` | 호출 로그의 "원문 S3 경로"를 "원문(ai_db, 영상 삭제 시 삭제)"으로 고친다. | 해당 없음 |
+| `docs/architecture/architecture.md` | 호출 로그의 "원문 S3 경로"를 "원문(ai_db, 영상 삭제 시 삭제)"으로 고친다. | 해당 없음 |
 
 ## 7. 성공 지표
 

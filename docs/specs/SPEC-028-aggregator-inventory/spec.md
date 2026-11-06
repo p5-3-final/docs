@@ -15,7 +15,7 @@ related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027]
 
 ## 1. 배경과 목적
 
-방호벽 제거·이동, 작업 후 방호 미복구, 통로에 방치된 장비처럼 청크 하나만 봐서는 알 수 없는 변화가 있다. [아키텍처 개요](../../architecture/overview.md) "이벤트 정의 목록"은 v2 유형 `object_moved`·`equipment_abandoned`를 aggregator가 만든다고 정한다. 처리 흐름 11단계 (e)도 청크별 정적 객체 재고(`chunk.manifest`)를 시간순으로 비교해 제거·등장·이동·미복구 후보를 `state_compare`로 판정하게 한다.
+방호벽 제거·이동, 작업 후 방호 미복구, 통로에 방치된 장비처럼 청크 하나만 봐서는 알 수 없는 변화가 있다. [아키텍처 v5](../../architecture/architecture.md) "이벤트 정의 목록"은 v2 유형 `object_moved`·`equipment_abandoned`를 aggregator가 만든다고 정한다. 처리 흐름 11단계 (e)도 청크별 정적 객체 재고(`chunk.manifest`)를 시간순으로 비교해 제거·등장·이동·미복구 후보를 `state_compare`로 판정하게 한다.
 
 이 spec은 SPEC-027(aggregator 핵심)에 다음을 더한다.
 

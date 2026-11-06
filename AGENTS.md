@@ -35,6 +35,7 @@ oasdiff breaking <main의 계약> <바뀐 계약> --fail-on ERR  # 계약을 바
 shellcheck scripts/*.sh                                # 스크립트를 바꿨을 때
 scripts/check-service-contracts-version.sh origin/main # 계약을 바꿨을 때(VERSION을 올렸는지)
 ./scripts/sync-agent-config.sh --check                 # .claude/rules·skills를 바꿨을 때
+./scripts/render-architecture-html.sh                  # docs/architecture/architecture.md를 바꿨을 때(html을 같이 갱신). --check는 최신 여부만 확인
 ```
 
 ## 아키텍처 요약
@@ -45,7 +46,7 @@ scripts/check-service-contracts-version.sh origin/main # 계약을 바꿨을 때
 - 서비스마다 자기 DB를 소유한다. 다른 서비스의 DB에 직접 접근하지 않고 API나 이벤트로만 통신한다.
 - 로컬은 루트 `local/`의 docker-compose, 운영은 AWS EKS 클러스터 하나에 환경을 namespace로 나눠 운영한다.
 - 운영 변경은 모두 git을 거친다. AWS 리소스는 infra 레포(Terraform, PR에서 plan, 승인 후 CI가 apply), 클러스터 리소스는 gitops 레포(Argo CD가 sync)다. 두 레포를 같이 바꿀 때는 infra를 먼저 반영한다.
-- 상세 문서: `docs/architecture/overview.md`, 서비스 목록: `docs/architecture/service-catalog.md`
+- 상세 문서: `docs/architecture/architecture.md`, 서비스 목록: `docs/architecture/service-catalog.md`
 - 프로젝트 원칙: `docs/principles.md`. 모든 plan은 이 원칙을 지켜야 한다.
 
 ## SDD 워크플로 (필수)

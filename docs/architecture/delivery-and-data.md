@@ -4,7 +4,7 @@ updated: 2026-11-04
 
 # 배포와 데이터 관리
 
-무엇을 어디서 만들어 어디에 올리고, 어떤 방식으로 버전을 관리하고 지우는지 정리한다. 흐름의 근거는 [overview](overview.md) "환경"·"서비스 배포 흐름"·"데이터 저장", [ADR-0010](../adr/0010-v4-evaluation-readiness.md) ②⑦, [ADR-0011](../adr/0011-derived-data-retention.md), [ADR-0012](../adr/0012-prompt-registry-source.md)다.
+무엇을 어디서 만들어 어디에 올리고, 어떤 방식으로 버전을 관리하고 지우는지 정리한다. 흐름의 근거는 [아키텍처 v5](architecture.md) "환경"·"서비스 배포 흐름"·"데이터 저장", [ADR-0010](../adr/0010-v4-evaluation-readiness.md) ②⑦, [ADR-0011](../adr/0011-derived-data-retention.md), [ADR-0012](../adr/0012-prompt-registry-source.md)다.
 
 상태 표시: `구현` 지금 동작한다 · `로컬` 로컬 compose에서만 동작한다 · `예정` 설계만 있다
 

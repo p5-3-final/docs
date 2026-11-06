@@ -54,6 +54,6 @@ ADR-0008은 산업안전 v3·19개 배포 단위·모델 교체 원칙을 채택
 
 ## 참고
 
-- [아키텍처](../architecture/overview.md)
+- [아키텍처](../architecture/architecture.md)
 - [SPEC-008](../specs/SPEC-008-normalized-intake/spec.md)
 - backend specs/SPEC-008-normalized-intake/plan.md

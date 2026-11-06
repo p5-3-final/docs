@@ -97,8 +97,8 @@ related: [ADR-0008, ADR-0006, SPEC-009, SPEC-011]
   - ai-gateway 기동이 저장소(프롬프트·프로필·가중치)에 기댄다. 저장소를 읽지 못하면 `/ready`가 열리지 않는다.
   - 공통 메시징 라이브러리에 측정 코드가 들어가 모든 소비자가 영향을 받는다. 핸들러당 메시지 1건으로 묶어 부하를 줄인다.
   - `chunk.manifest` 재고 필드는 Chunk Processor 담당자가 채워야 ⑤가 동작한다.
-- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/v4-transition.md)에서 관리한다.
-  - [아키텍처 개요](../architecture/overview.md)·[서비스 카탈로그](../architecture/service-catalog.md) 갱신
+- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/legacy/v4-transition.md)에서 관리한다.
+  - [아키텍처 v5](../architecture/architecture.md)·[서비스 카탈로그](../architecture/service-catalog.md) 갱신
   - 계약: 분류 체계 v2, manifest 스키마, 단계 ID 목록·`StageTiming`·봉투 `producedAt`, Media 세션 필드
   - ai: manifest 로더(SPEC-011 R-15·R-16·R-18 갱신), taskType 등록 방식과 프롬프트·프로필 받기, 결과의 `taxonomy_version`, `libs/messaging` 측정
   - backend: media 작업 세션·데이터셋 가져오기, `common-messaging` 측정

@@ -15,7 +15,7 @@ related: [ADR-0008, ADR-0010, SPEC-009, SPEC-013, SPEC-020, SPEC-021, SPEC-022]
 
 ## 1. 배경과 목적
 
-chunk-processor는 이벤트 정의 목록의 규칙에 맞고 탐지기가 지원을 선언한 순간만 후보로 모아, 청크 실행마다 `event.candidate` 한 건으로 보낸다([아키텍처 개요](../../architecture/overview.md) 분석 처리 흐름 5·8단계, "이벤트 경로"). event-analyzer가 이 후보를 판정한다. 판정 방식은 두 가지다.
+chunk-processor는 이벤트 정의 목록의 규칙에 맞고 탐지기가 지원을 선언한 순간만 후보로 모아, 청크 실행마다 `event.candidate` 한 건으로 보낸다([아키텍처 v5](../../architecture/architecture.md) 분석 처리 흐름 5·8단계, "이벤트 경로"). event-analyzer가 이 후보를 판정한다. 판정 방식은 두 가지다.
 
 - 규칙으로 확정하는 후보(구역 진입 등)는 VLM 없이 템플릿 결과를 만든다. 판정 방식은 `rule`이다.
 - 그 밖의 후보는 `event_judge`로 판정한다. 위험이 높거나 애매하면 `event_judge_escalate`로 다시 판정한다. 판정 방식은 `rule+vlm`·`rule+vlm+escalate`다.

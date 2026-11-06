@@ -86,7 +86,7 @@ related: [ADR-0012, ADR-0010]
   - 계약을 바꾼 PR은 `VERSION`도 올려야 한다.
   - 레포마다 받기 스크립트와 잠금 파일이 생긴다.
   - 로컬(작업 공간 원본)과 CI(잠금 파일 버전)가 다른 계약을 볼 수 있다. 로컬에서 통과해도 CI에서 실패할 수 있고, 그때는 잠금 파일을 올린다.
-- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/v4-transition.md)
+- 후속 작업: [아키텍처 v4 전환 작업 목록](../architecture/legacy/v4-transition.md)
   - docs: `VERSION`, 묶음 스크립트, 버전 검사·릴리스 워크플로, 첫 릴리스
   - ai·frontend·backend: 잠금 파일과 받기 스크립트, CI 전환. ai는 Prompt Registry 이전(ADR-0012)을 함께 한다.
   - docs: `docs/contracts/` → `service-contracts/` 이동과 링크·규칙 파일·각 레포 로컬 기본 경로 갱신

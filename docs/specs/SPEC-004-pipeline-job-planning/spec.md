@@ -13,7 +13,7 @@ related: [ADR-0002, ADR-0005]
 
 ## 1. 배경과 목적
 
-Pipeline은 정규화한 영상의 처리 구간을 계획한다. AI팀과 이벤트 계약을 확정하기 전에, 영상 길이와 처리 프로필을 이용한 계산 및 계획의 영속성을 독립적으로 검증한다. 근거는 [아키텍처 개요](../../architecture/overview.md)의 청크 계획과 [ADR-0005](../../adr/0005-search-and-event-paths.md)다. PRD의 에픽은 아직 정의되지 않았다.
+Pipeline은 정규화한 영상의 처리 구간을 계획한다. AI팀과 이벤트 계약을 확정하기 전에, 영상 길이와 처리 프로필을 이용한 계산 및 계획의 영속성을 독립적으로 검증한다. 근거는 [아키텍처 v5](../../architecture/architecture.md)의 청크 계획과 [ADR-0005](../../adr/0005-search-and-event-paths.md)다. PRD의 에픽은 아직 정의되지 않았다.
 
 ## 2. 범위
 

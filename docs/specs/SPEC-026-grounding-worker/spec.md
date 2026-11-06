@@ -15,7 +15,7 @@ related: [ADR-0008, SPEC-013, SPEC-025]
 
 ## 1. 배경과 목적
 
-문장 검색은 이동 시각만 돌려준다. 그래서 사용자가 10초 구간 안에서 "안전모 안 쓴 사람"이 어디 있는지 다시 찾아야 한다. [아키텍처 개요](../../architecture/overview.md) "검색 경로" 7단계에서는 search-service가 상위 3개 구간과 대상어로 `grounding.requested`를 보낸다. grounding-worker는 개방 어휘 탐지기로 대상어를 찾고, 박스를 그린 주석 클립을 만들어 `grounding.completed`로 알린다. 클립 경로는 notification-service가 SSE로 화면에 보낸다.
+문장 검색은 이동 시각만 돌려준다. 그래서 사용자가 10초 구간 안에서 "안전모 안 쓴 사람"이 어디 있는지 다시 찾아야 한다. [아키텍처 v5](../../architecture/architecture.md) "검색 경로" 7단계에서는 search-service가 상위 3개 구간과 대상어로 `grounding.requested`를 보낸다. grounding-worker는 개방 어휘 탐지기로 대상어를 찾고, 박스를 그린 주석 클립을 만들어 `grounding.completed`로 알린다. 클립 경로는 notification-service가 SSE로 화면에 보낸다.
 
 - 영상을 다시 분석하지 않는다. 구간 하나에서 1fps로 최대 12장만 탐지한다(overview 메모리 표: 1.5GB, 동시 1).
 - 같은 대상어·구간·탐지기 버전의 클립은 한 번만 만든다(overview "검색 결과 재사용" 주석 클립 행, 다중 Pod 표 grounding-worker 행).

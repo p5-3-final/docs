@@ -15,7 +15,7 @@ related: [ADR-0007, ADR-0008, ADR-0010, ADR-0011, SPEC-001, SPEC-013, SPEC-020, 
 
 ## 1. 배경과 목적
 
-판정 품질은 로컬 결과로 판단하지 않고 Golden Set 평가로만 판단한다([아키텍처 개요](../../architecture/overview.md) "로컬 개발"). 그러려면 다음이 필요하다.
+판정 품질은 로컬 결과로 판단하지 않고 Golden Set 평가로만 판단한다([아키텍처 v5](../../architecture/architecture.md) "로컬 개발"). 그러려면 다음이 필요하다.
 
 1. 판정이 애매한 이벤트(`reviewRequired`)와 무작위 표본을 사람이 검토하는 큐
 2. 검토 라벨을 모아 버전으로 고정하는 Golden Set. 평가 실행마다 같은 데이터를 쓴다.
