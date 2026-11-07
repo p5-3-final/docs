@@ -185,7 +185,9 @@ def flow_grounding() -> None:
     if not record("4. 실제 영상 정규화 사본 찾기", len(keys) == 1, keys):
         return
     normalized_key = keys[0]
-    message = gw_support.grounding_request([gw_support.segment(0, 40_000, 50_000)])
+    # OWL 계열 탐지기는 "person without a hard hat" 같은 부정·속성 문구에 점수를 거의 주지 않는다(0.006). 흐름 확인에는
+    # 영상에 실제로 있는 사물 이름을 쓴다.
+    message = gw_support.grounding_request([gw_support.segment(0, 40_000, 50_000)], targets=["person"])
     body = json.loads(
         retarget(message.model_dump_json(by_alias=True)).replace(str(gw_support.NORMALIZATION), normalized_key.split("/")[3])
     )
@@ -201,7 +203,7 @@ def flow_grounding() -> None:
         if ok:
             clip = storage.get_bytes(c["clipKey"])
             record("4. 클립 mp4 저장", clip[4:8] == b"ftyp", f"{c['clipKey']} {len(clip)}바이트, 프레임 {len(c['frames'])}개")
-            ARTIFACTS["grounding"] = {"clipKey": c["clipKey"], "targets": body["segments"][0].get("targets")}
+            ARTIFACTS["grounding"] = {"clipKey": c["clipKey"], "targets": body.get("targets")}
 
 
 def flow_aggregator() -> None:
