@@ -35,11 +35,15 @@
       "minimum": 1
     },
     "classes": {
-      "description": "탐지기가 내는 클래스. detector는 필수다.",
+      "description": "탐지기가 내는 클래스. 고정 클래스 탐지기(openVocabulary가 없거나 false)는 필수다.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
       "items": {"$ref": "../taxonomy/v2/taxonomy.schema.json#/$defs/className"}
+    },
+    "openVocabulary": {
+      "description": "detector 전용. true면 실행할 때 받은 대상어(문장)를 클래스로 쓰는 개방 어휘 탐지기라 고정 클래스가 없다(예: grounding-worker의 OWLv2, SPEC-026). 이때 classes를 생략한다.",
+      "type": "boolean"
     },
     "source": {"$ref": "#/$defs/source"},
     "license": {
@@ -55,8 +59,22 @@
       "then": {"required": ["dimension"]}
     },
     {
-      "if": {"properties": {"kind": {"const": "detector"}}},
+      "if": {
+        "properties": {"kind": {"const": "detector"}, "openVocabulary": {"const": true}},
+        "required": ["openVocabulary"]
+      },
+      "then": {"not": {"required": ["classes"]}}
+    },
+    {
+      "if": {
+        "properties": {"kind": {"const": "detector"}},
+        "not": {"properties": {"openVocabulary": {"const": true}}, "required": ["openVocabulary"]}
+      },
       "then": {"required": ["classes"]}
+    },
+    {
+      "if": {"not": {"properties": {"kind": {"const": "detector"}}}},
+      "then": {"not": {"required": ["openVocabulary"]}}
     }
   ],
   "$defs": {

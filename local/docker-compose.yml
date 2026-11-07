@@ -563,8 +563,8 @@ services:
 
   # grounding-worker(SPEC-026). grounding.requested의 구간마다 정규화 영상에서 프레임을 뽑아 대상어 박스를 그린
   # 클립과 결과 파일을 저장하고 grounding.completed를 낸다. grounding.requested를 내는 search-service는 아직 compose에 없다.
-  # 기본은 mock 탐지기라 박스에 의미가 없다. 실제 탐지기 프로필(local.toml)은 ai 레포 SPEC-026 tasks T026~T028에서
-  # 더한 뒤 GROUNDING_WORKER_PROFILE_PATH를 바꾸고 GROUNDING_WORKER_ALLOW_MOCK을 지운다.
+  # 기본은 mock 탐지기라 박스에 의미가 없다. 실제 탐지기(OWLv2)는 local/scripts/upload-models.sh로 가중치를 올린 뒤
+  # GROUNDING_WORKER_PROFILE_PATH=/app/profiles/local.toml로 띄운다(local/README.md).
   grounding-worker:
     profiles: [grounding]
     build:
@@ -581,9 +581,13 @@ services:
       AWS_ACCESS_KEY_ID: local-grounding-worker-key
       AWS_SECRET_ACCESS_KEY: local-grounding-worker-secret
       GROUNDING_WORKER_PROFILE_PATH: ${GROUNDING_WORKER_PROFILE_PATH:-/app/profiles/local-mock.toml}
-      # mock 탐지기는 로컬·CI 전용이다.
+      # mock 탐지기는 로컬·CI 전용이다. 실제 탐지기 프로필에서는 쓰이지 않는다.
       GROUNDING_WORKER_ALLOW_MOCK: "true"
+      GROUNDING_WORKER_MODELS_BUCKET: vlm-models
       STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    # 받은 가중치(약 620MB)를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
+    volumes:
+      - grounding-worker-models:/var/cache/vlm-models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 10s
@@ -597,8 +601,9 @@ services:
     deploy:
       resources:
         limits:
-          # SPEC-026 NFR-2, docs 아키텍처 18.1절 표. ffmpeg 인코딩이 이 안에서 돈다.
-          memory: 1536M
+          # SPEC-026 NFR-2, docs 아키텍처 18.1절 표. OWLv2 base CPU 추론 최대 1703MB(실제 1080p 프레임으로 측정)에
+          # ffmpeg 인코딩 여유를 더했다.
+          memory: 2048M
 
   # ai-gateway(SPEC-009). 마이그레이션을 먼저 한 번 실행하고 서버를 띄운다.
   # 기본은 모델 없이 흐름만 보는 mock 프로필이다. Ollama를 쓰려면 호스트에서 Ollama를 띄우고
@@ -700,3 +705,4 @@ volumes:
   seaweedfs-data:
   ai-gateway-models:
   frame-encoder-models:
+  grounding-worker-models:
