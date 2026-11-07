@@ -45,6 +45,8 @@ def main() -> None:
     status, body = call("POST", "/api/v1/auth/login", {"email": email, "password": password})
     step("로그인", status == 200 and "accessToken" in body, status)
     token = body["accessToken"]
+    status, me = call("GET", "/api/v1/auth/me", token=token)
+    step("계정 확인", status == 200 and "id" in me, (status, me.get("roles")))
 
     size = VIDEO.stat().st_size
     status, body = call(
@@ -88,7 +90,8 @@ def main() -> None:
 
     status, body = call("GET", f"/api/v1/media/videos/{video_id}/playback", token=token)
     step("재생 주소 발급", status == 200 and bool(body.get("url")), status)
-    OUT.write_text(json.dumps({"email": email, "password": password, "videoId": video_id}))
+    # 워커 흐름이 같은 계정·영상으로 결과를 만들도록 소유자 ID를 함께 남긴다. 비밀번호는 남기지 않는다.
+    OUT.write_text(json.dumps({"email": email, "ownerId": me["id"], "videoId": video_id}))
 
 
 if __name__ == "__main__":

@@ -16,8 +16,28 @@ usage() {
 }
 
 # local/.env를 읽도록 --env-file 없이 띄우고, E2E 전용 덮어쓰기만 더한다.
+# E2E_REAL_MODELS=1이면 frame-encoder·ai-gateway를 실제 모델 프로필로 띄운다(호스트 Ollama, 가중치 업로드 필요).
 up() {
-  docker compose -f "$ROOT/local/docker-compose.yml" -f "$E2E_DIR/compose.e2e.yml" --profile '*' up -d
+  local files=(-f "$ROOT/local/docker-compose.yml" -f "$E2E_DIR/compose.e2e.yml")
+  if [[ "${E2E_REAL_MODELS:-}" == "1" ]]; then
+    export AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml FRAME_ENCODER_PROFILE_PATH=/app/profiles/local.toml
+  fi
+  # E2E_VLM_MODEL을 주면 이미지의 local.toml에서 VLM 모델 이름만 바꾼 사본을 마운트한다.
+  # ai 레포 프로필은 평가를 거쳐 바꾸므로 E2E에서는 고치지 않는다.
+  if [[ -n "${E2E_VLM_MODEL:-}" ]]; then
+    docker run --rm --entrypoint cat vlm/ai-gateway:local /app/profiles/local.toml \
+      | sed "s/qwen3-vl:4b-instruct/${E2E_VLM_MODEL}/g" > "$E2E_OUT/ai-gateway-profile.toml"
+    cat > "$E2E_OUT/compose.model.yml" <<YML
+services:
+  ai-gateway:
+    environment:
+      AI_GATEWAY_PROFILE_PATH: /app/profiles/e2e.toml
+    volumes:
+      - $E2E_OUT/ai-gateway-profile.toml:/app/profiles/e2e.toml:ro
+YML
+    files+=(-f "$E2E_OUT/compose.model.yml")
+  fi
+  docker compose "${files[@]}" --profile '*' up -d
 }
 
 ai_python() {
