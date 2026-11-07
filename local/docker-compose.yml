@@ -95,7 +95,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          # 231MB 영상 업로드·정규화 사본 저장에서 최대 1021MiB를 썼다(2026-11-07 E2E, 384M에서 OOM으로 종료).
+          memory: 1536M
 
   # 영상 버킷, 모델 버킷(SPEC-011 인코더 가중치), Golden Set 버킷(SPEC-029 R-14)을 만들고 끝나는 일회성 컨테이너.
   # 운영 Golden Set 버킷은 Versioning·Object Lock을 켜지만(ADR-0011) 로컬은 흐름 확인용이라 켜지 않는다.
@@ -322,7 +323,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          # 1080p 13분(231MB) 영상 정규화에서 최대 752MiB를 썼다(2026-11-07 E2E).
+          memory: 1G
 
   # frame-encoder(SPEC-019). segment.ready를 받아 벡터 파일을 저장하고 segment.embedded를 발행한다.
   # 기본은 모델 없이 흐름만 보는 mock 프로필이다. 실제 인코더는 가중치를 local/scripts/upload-models.sh로
