@@ -165,7 +165,7 @@ flowchart TB
 | stream-ingestor | 카메라 1대의 프레임을 받아 추적 상태를 끊지 않고 탐지·추적, 창마다 chunk-processor와 같은 산출물(`jobType: STREAM`), 녹화 조각·HLS, 긴급 후보(severity high 유형, 활성 위험 구역 진입) | RTSP 프레임, `stream.command`(start), Redis 세션 키(stop·reload·활성 위험 구역) | chunk-processor와 같은 5개 + `alert.candidate` | S3, Redis(임대) | 같음(안) |
 | frame-encoder | 구간 벡터(4장 정규화 평균)·크롭 벡터, 벡터 파일, 프로토타입 비교 후보(연속 구간 병합) | `segment.ready` | `segment.embedded`, `event.candidate.vector` | S3 | MobileCLIP2-S0(안) |
 | track-stitcher | 인접 청크 경계 IoU 연결, 모든 청크·크롭 벡터가 모이면 Re-ID, 번역표. 업로드 Job만 | `chunk.boundary`, `segment.embedded`, `video.deleted` | `track.detected`(origin stitcher), `track.manifest` | Redis | 없음 |
-| grounding-worker | 검색 상위 구간에 대상어 bbox·마스크 주석 클립 | `grounding.requested` | `grounding.completed` | S3 | OWLv2 개방 어휘 탐지기(워커 안) |
+| grounding-worker | 검색 상위 구간에 대상어 bbox·마스크 주석 클립 | `grounding.requested` | `grounding.completed` | S3 | OWL-ViT 개방 어휘 탐지기(워커 안) |
 | event-analyzer | 쿨다운 병합, 규칙 후보 템플릿 확정, VLM 판정·상향, 구간 규칙(업로드)·재판정 간격(실시간)·실행당 호출 상한, 긴급 후보 즉시 판정 | `event.candidate`, `event.candidate.vector`, `alert.candidate` | `event.analyzed`, `event.manifest`, `alert.raised` | Redis(실시간 재판정 간격 상태만) | `event_judge`, `event_judge_escalate` |
 | track-analyzer | 이벤트 관련·클릭 트랙 속성(역할·장비), 객체 자유 질문 | `attribute.requested` | `track.analyzed` | 없음 | `track_attribute`, `object_question` |
 | embedding-worker | 이벤트 설명문·트랙 설명·구간 주석 텍스트 벡터 | `event.analyzed`, `track.analyzed`, `segment.annotated` | `embedding.ready` | S3 | `embed_text` |
@@ -445,7 +445,7 @@ sequenceDiagram
 | 4 | 텍스트 검색 | 질의 텍스트 벡터와 pg_trgm 키워드 검색을 RRF로 합친다. 이벤트 유형·속성·시간 조건은 필터다 | `embed_text` |
 | 5 | 정밀 검색(선택) | `precise=true`일 때만 상위 10구간 대표 프레임을 `segment_rerank`로 한 번에 보낸다. 기준 점수 미만이면 "찾지 못함" | `segment_rerank`(terra, luna 옵션) |
 | 6 | 결합·이동 | 시각·텍스트 결과를 RRF로 합치고 결과마다 이동 시각(시작 2초 전)·유사도·인코더·해석 방법을 돌려준다. 점수는 "유사도"로만 표시한다 | 없음 |
-| 7 | bbox 주석 | 상위 3구간과 대상어로 `grounding.requested`. 같은 groundingId 클립이 있으면 발행하지 않는다([SPEC-026](../specs/SPEC-026-grounding-worker/spec.md)) | 없음(OWLv2 워커 안) |
+| 7 | bbox 주석 | 상위 3구간과 대상어로 `grounding.requested`. 같은 groundingId 클립이 있으면 발행하지 않는다([SPEC-026](../specs/SPEC-026-grounding-worker/spec.md)) | 없음(OWL-ViT 워커 안) |
 | 8 | 저장 | 결과·판정·클립 경로를 저장하고, 신뢰도 높은 판정은 구간 주석으로 `segment.annotated` | 없음 |
 
 이미지로 장면 찾기는 `/v1/embed`(이미지 모드)로 벡터를 만들어 구간 벡터와 크롭 벡터 양쪽에서 찾는다. 질의 이미지는 `queries/<queryId>/` 경로만 ai-gateway가 받는다.
@@ -892,7 +892,7 @@ flowchart LR
 | VLM | Adapter `openai`·`openai_compatible`·`mock`(ai-gateway) | taskType별 Adapter·모델·출력 상한 | `gpt-6.1-terra`, `gpt-6.1-sol`, `gpt-6-luna` |
 | 텍스트 임베딩 | Adapter(ai-gateway) | 모델 이름, 차원 | `text-embedding-3-small` |
 | 이미지·질의 인코더 | `ImageTextEncoder`(frame-encoder, ai-gateway가 `libs/`에서 공유) | 모델 ID `<라이브러리>:<아키텍처>:<가중치>:<집계>` | `open_clip:MobileCLIP2-S0:dfndr2b:mean-4`(512차원) |
-| 탐지기 | `Detector`(chunk-processor, stream-ingestor, grounding-worker) | 가중치 manifest 경로·버전·학습 출처·클래스(개방 어휘는 `openVocabulary`)·`supportedEvents` | YOLO26n, YOLO-pose, YOLOE(chunk-processor·stream-ingestor), OWLv2(grounding-worker) |
+| 탐지기 | `Detector`(chunk-processor, stream-ingestor, grounding-worker) | 가중치 manifest 경로·버전·학습 출처·클래스(개방 어휘는 `openVocabulary`)·`supportedEvents` | YOLO26n, YOLO-pose, YOLOE(chunk-processor·stream-ingestor), OWL-ViT(grounding-worker) |
 | 예측 모델 | `predictor` Adapter(ai-gateway) | 모델 manifest 경로, 입력·출력 스키마 | 없음. 1단계는 규칙 점수 |
 | 객체 저장소 | S3 API(`libs/` 저장소 클라이언트) | 주소, path-style, 버킷 | 로컬 SeaweedFS, 운영 S3 |
 | 메시징 | `libs/messaging`(ai), `libs/common-messaging`(backend) | 부트스트랩 주소, 그룹 | Kafka |
@@ -902,7 +902,7 @@ flowchart LR
 - 결과마다 쓴 버전(`embeddingModel`, `modelId`, `promptVersion`, `detectorProfile`, `taxonomyVersion`, `prototypeVersion`)을 기록한다.
 - 모델 산출물은 모델 버킷 `models/<종류>/<버전>/` + `manifest.json`(체크섬·클래스·차원·학습 출처·라이선스)이다. 서비스는 받아서 체크섬을 확인한 뒤에만 `/ready`를 연다. AI 담당자는 이 접두사에만 쓰기 권한을 갖는다.
 - 교체 절차는 새 프로필 → evals 비교 → Shadow(결과만 기록, 호출자 `shadow` 예산) → `REANALYZE`·`REEMBED`로 새 분석 버전 → Canary → 활성 버전 전환이다. 코드·스키마 변경 없이 한다. 실시간은 다음 세션부터 새 프로필이 적용되고, `reload_profile` 명령으로 진행 중 세션의 다음 창부터 바꿀 수 있다.
-- 기본 탐지기(Ultralytics, AGPL-3.0)와 기본 인코더(Apple AMLR)는 비상용 시연·학습 목적으로만 쓴다. grounding-worker의 OWLv2는 Apache-2.0이다. 가중치는 이미지에 넣지 않는다.
+- 기본 탐지기(Ultralytics, AGPL-3.0)와 기본 인코더(Apple AMLR)는 비상용 시연·학습 목적으로만 쓴다. grounding-worker의 OWL-ViT는 Apache-2.0이다. 가중치는 이미지에 넣지 않는다.
 
 ### 15.1 AI 담당자가 바꾸는 자리
 

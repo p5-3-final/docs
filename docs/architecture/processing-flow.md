@@ -115,7 +115,7 @@ ai-gateway는 모든 호출을 같은 순서로 처리한다: Prompt Registry �
 | `segment_rerank` | search-service | `precise=true` 정밀 검색일 때만, 상위 10구간 프레임 | `gpt-6.1-terra` |
 | `video_rag` | search-service | 질문 답변 요청마다, 근거 구간 프레임 + 이벤트·상태 JSON | `gpt-6-luna` |
 | `object_question` | track-analyzer | 화면 클릭 뒤 자유 질문마다 | `gpt-6-luna` |
-| bbox 주석 클립 | grounding-worker | 검색 상위 3구간, OWLv2 개방 어휘 탐지기(워커 안, 외부 비용 없음) | 탐지 프로필 |
+| bbox 주석 클립 | grounding-worker | 검색 상위 3구간, OWL-ViT 개방 어휘 탐지기(워커 안, 외부 비용 없음) | 탐지 프로필 |
 
 ## 5. AI 담당자가 바꾸는 자리
 
