@@ -7,19 +7,11 @@
 
 import json
 import os
-import re
 import subprocess
 import sys
-import time
 import urllib.request
 import uuid
-from collections.abc import Callable
 from pathlib import Path
-
-from confluent_kafka import Consumer
-from pydantic import BaseModel
-from vlm_messaging.publisher import KafkaPublisher
-from vlm_storage.s3 import S3Storage, StorageSettings
 
 import agg_support
 import ew_support
@@ -27,14 +19,26 @@ import fe_support
 import gw_support
 import stitcher_support
 import ta_support
+from e2e_common import (
+    AI_GATEWAY,
+    OUT,
+    RESULTS,
+    Target,
+    anything,
+    collect,
+    now_ms,
+    put_fake_images,
+    record,
+    retarget,
+    rstore,
+    send,
+    storage,
+)
 
-BOOTSTRAP = "localhost:9092"
-AI_GATEWAY = "http://localhost:8000"
 # 실제 모델 모드(run.sh가 E2E_REAL_MODELS=1로 부른다): 테스트 도우미의 가짜 이미지 바이트 대신
 # 업로드한 영상에서 뽑은 실제 프레임을 넣는다. 영상에서 프레임을 뽑는 chunk-processor가 아직 없어서다.
 REAL = os.environ.get("E2E_REAL_MODELS") == "1"
 VIDEO = os.environ.get("E2E_VIDEO", "")
-OUT = Path(os.environ.get("E2E_OUT", "."))
 # 벡터 흐름 구간 수와 간격: 13분 영상 전체에서 장면이 다른 구간을 고른다.
 REAL_SEGMENTS = 8
 REAL_STRIDE_MS = 90_000
@@ -47,84 +51,7 @@ SEARCH_QUERIES = [
     "fire and smoke",
     "a person lying on the floor",
 ]
-HELPER_SOURCES = {
-    str(m.SOURCE) for m in (fe_support, stitcher_support, agg_support, ta_support, gw_support, ew_support)
-}
-HELPER_OWNERS = {str(m.OWNER) for m in (fe_support, stitcher_support, agg_support, ta_support, gw_support, ew_support)}
-
-RESULTS: list[tuple[str, bool, str]] = []
 ARTIFACTS: dict[str, object] = {}
-storage = S3Storage(StorageSettings())
-publisher = KafkaPublisher(bootstrap=BOOTSTRAP, client_id="e2e")
-
-
-class Target:
-    """도우미 ID 대신 쓸 관리자 계정 영상·소유자 ID."""
-
-    video = ""
-    owner = ""
-
-
-def retarget(text: str) -> str:
-    for helper in HELPER_SOURCES:
-        text = text.replace(helper, Target.video)
-    for helper in HELPER_OWNERS:
-        text = text.replace(helper, Target.owner)
-    return text
-
-
-class RetargetStorage:
-    """도우미가 쓰는 파일의 경로와 JSON 안의 도우미 ID를 관리자 영상·계정 ID로 바꿔 저장한다."""
-
-    def put_bytes(self, key: str, data: bytes, content_type: str) -> None:
-        if data[:1] in (b"{", b"["):
-            data = retarget(data.decode()).encode()
-        storage.put_bytes(retarget(key), data, content_type)
-
-
-rstore = RetargetStorage()
-
-
-def send(topic: str, message: BaseModel | dict) -> dict:
-    text = message.model_dump_json(by_alias=True) if isinstance(message, BaseModel) else json.dumps(message)
-    body = json.loads(retarget(text))
-    publisher.send_raw(topic, Target.video, json.dumps(body).encode(), [])
-    return body
-
-
-def record(name: str, ok: bool, detail: object = "") -> bool:
-    RESULTS.append((name, ok, str(detail)))
-    print(f"[{'PASS' if ok else 'FAIL'}] {name} {detail}", flush=True)
-    return ok
-
-
-def collect(topic: str, match: Callable[[dict], bool], count: int, timeout_s: float, since_ms: int) -> list[dict]:
-    """since_ms 뒤에 들어온 메시지만 본다. 같은 영상으로 여러 번 돌려도 이전 실행 결과를 잡지 않게 한다."""
-    consumer = Consumer(
-        {"bootstrap.servers": BOOTSTRAP, "group.id": f"e2e-{uuid.uuid4().hex}", "auto.offset.reset": "earliest"}
-    )
-    consumer.subscribe([topic])
-    found: list[dict] = []
-    deadline = time.monotonic() + timeout_s
-    try:
-        while time.monotonic() < deadline and len(found) < count:
-            msg = consumer.poll(1.0)
-            if msg is None or msg.error() or msg.timestamp()[1] < since_ms:
-                continue
-            body = json.loads(msg.value())
-            if body.get("sourceId") == Target.video and match(body):
-                found.append(body)
-    finally:
-        consumer.close()
-    return found
-
-
-def now_ms() -> int:
-    return int(time.time() * 1000)
-
-
-def anything(_: dict) -> bool:
-    return True
 
 
 def video_jpeg(at_ms: int, box: tuple[int, int, int, int] | None = None) -> bytes:
@@ -135,14 +62,6 @@ def video_jpeg(at_ms: int, box: tuple[int, int, int, int] | None = None) -> byte
          "-vf", vf, "-f", "image2", "-c:v", "mjpeg", "-"],
         check=True, capture_output=True,
     ).stdout
-
-
-def put_jpegs(body: dict) -> int:
-    """메시지 안의 이미지 경로마다 테스트 이미지를 올린다(다른 담당자 서비스가 만들 파일 자리)."""
-    keys = set(re.findall(r'"(sources/[^"]+\.jpg)"', json.dumps(body)))
-    for key in keys:
-        storage.put_bytes(key, fe_support.image_bytes(key), "image/jpeg")
-    return len(keys)
 
 
 def segment_ready_body() -> dict:
@@ -212,7 +131,8 @@ def search_check(vector_file: dict) -> None:
 def flow_stitcher() -> None:
     """2. chunk.boundary + segment.embedded(청크 5개) → track-stitcher → track.detected 4건 + track.manifest."""
     since = now_ms()
-    for f in stitcher_support.crossing_chunks(source=uuid.UUID(Target.video)):
+    # 확정한 job은 다시 발행하지 않으므로(SPEC-022 R-17) 실행마다 새 job을 쓴다.
+    for f in stitcher_support.crossing_chunks(source=uuid.UUID(Target.video), job=uuid.uuid4()):
         vf = stitcher_support.vector_file(f)
         stitcher_support.store_chunk(rstore, f)
         stitcher_support.store_vectors(rstore, vf)
@@ -238,7 +158,7 @@ def flow_track_attributes() -> None:
             (OUT / f"crop-{i}.jpg").write_bytes(image)
         images = len(body["crops"])
     else:
-        images = put_jpegs(body)
+        images = put_fake_images(body)
     # embedding-worker가 트랙 시각·클래스를 읽는 번역표(track-stitcher가 만드는 파일 자리)
     mapping = ew_support.track_mapping(uuid.UUID(body["trackId"])).replace(
         str(ew_support.JOB).encode(), body["jobId"].encode()
@@ -304,9 +224,8 @@ def flow_aggregator() -> None:
 
 
 def main() -> None:
-    upload = json.loads(Path(sys.argv[1]).read_text())
-    Target.video, Target.owner = upload["videoId"], upload["ownerId"]
-    ARTIFACTS["target"] = {"videoId": Target.video, "ownerId": Target.owner, "email": upload["email"]}
+    Target.load(Path(sys.argv[1]))
+    ARTIFACTS["target"] = {"videoId": Target.video, "ownerId": Target.owner, "email": Target.email}
     for flow in (flow_vectors, flow_stitcher, flow_track_attributes, flow_grounding, flow_aggregator):
         try:
             flow()
