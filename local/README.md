@@ -1,30 +1,60 @@
 # 로컬 compose
 
-로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 지금은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), frame-encoder(SPEC-019), event-analyzer(SPEC-020), ai-gateway(SPEC-009)가 들어 있고, 서비스 구현이 시작되면 추가한다.
+로컬 개발 머신에서 서비스를 한 번에 띄우는 구성이다. 기본 구성은 PostgreSQL, Redis, Kafka, SeaweedFS(S3 대체, ADR-0006), auth-service, media-service, api-gateway, frontend, normalize(SPEC-007), frame-encoder(SPEC-019), event-analyzer(SPEC-020·023), ai-gateway(SPEC-009)다. v5.1 워커와 quality-service는 compose 프로필로 골라 띄운다(아래 "프로필"). 서비스 구현이 시작되면 추가한다.
 
-| 컨테이너 | 호스트 포트 | 메모리 상한 |
-| --- | --- | --- |
-| frontend (nginx) | 3000 | 64M |
-| api-gateway | 8080 | 512M |
-| auth-service | 8081 | 768M |
-| media-service | 8082 | 768M |
-| normalize | — (health 8000, 내부) | 768M |
-| frame-encoder | — (health 8000, 내부) | 1G |
-| event-analyzer | — (health 8000, 내부) | 256M |
-| ai-gateway (내부 전용 API) | 8000 | 768M |
-| postgres (auth_db, media_db, ai_db) | 5432 | 512M |
-| redis | 6379 | 128M |
-| kafka (KRaft 단일 노드) | 9092 | 512M |
-| seaweedfs (S3 API, 버킷 `vlm-media`) | 8333 | 384M |
+| 컨테이너 | 프로필 | 호스트 포트 | 메모리 상한 |
+| --- | --- | --- | --- |
+| frontend (nginx) | 기본 | 3000 | 64M |
+| api-gateway | 기본 | 8080 | 512M |
+| auth-service | 기본 | 8081 | 768M |
+| media-service | 기본 | 8082 | 768M |
+| normalize | 기본 | — (health 8000, 내부) | 768M |
+| frame-encoder | 기본 | — (health 8000, 내부) | 1G |
+| event-analyzer | 기본 | — (health 8000, 내부) | 256M |
+| ai-gateway (내부 전용 API) | 기본 | 8000 | 768M |
+| postgres (auth_db, media_db, ai_db, quality_db) | 기본 | 5432 | 512M |
+| redis | 기본 | 6379 | 128M |
+| kafka (KRaft 단일 노드) | 기본 | 9092 | 512M |
+| seaweedfs (S3 API, 버킷 `vlm-media`) | 기본 | 8333 | 384M |
+| track-stitcher (SPEC-022) | `analysis` | — (health 8000, 내부) | 256M |
+| track-analyzer (SPEC-024) | `analysis` | — (health 8000, 내부) | 256M |
+| embedding-worker (SPEC-025) | `analysis` | — (health 8000, 내부) | 256M |
+| aggregator (SPEC-027·028) | `analysis` | — (health 8000, 내부) | 256M |
+| grounding-worker (SPEC-026) | `grounding` | — (health 8000, 내부) | 1536M |
+| quality-service (SPEC-029) | `quality` | 8088 | 768M |
 
-`seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 media-service·normalize·frame-encoder·ai-gateway 설정과 같다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
+`seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`, Golden Set `vlm-golden`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 각 서비스 `AWS_ACCESS_KEY_ID`·`AWS_SECRET_ACCESS_KEY`와 같다. 키는 서비스마다 하나이고 쓰는 버킷과 동작만 허용한다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
 
-`kafka-init`은 normalize·frame-encoder·event-analyzer·ai-gateway가 쓰는 토픽(재시도·DLQ, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
+`kafka-init`은 compose의 워커가 받고 내는 토픽(재시도 `<토픽>.<소비 그룹>.retry`·DLQ `<소비 그룹>.dlq`, 처리 단계 측정 `stage.timing` 포함)을 미리 만들고 끝나는 일회성 컨테이너다. 아직 compose에 없는 서비스가 내는 토픽(`chunk.boundary`, `attribute.requested`, `grounding.requested` 등)도 받는 쪽이 구독하므로 함께 만든다. 컨슈머는 없는 토픽을 구독하면 메타데이터를 다시 읽을 때까지(기본 5분) 알아채지 못한다.
+
+## 프로필
+
+기본 구성의 메모리 상한 합은 6464M(약 6.3GB)이다. 프로필을 모두 켜면 9792M(약 9.6GB)로 Docker 할당 8GB를 넘으므로 작업에 필요한 묶음만 켠다. 상한은 최대값이고 실제 사용량은 더 작지만, Docker VM 자체도 메모리를 쓰므로 합이 8GB에 가까우면 다른 컨테이너를 내린다.
+
+| 프로필 | 서비스 | 더하는 상한 | 기본 구성과 합계 |
+| --- | --- | --- | --- |
+| (없음) | 위 표의 "기본" 12개 | — | 6464M |
+| `analysis` | track-stitcher, track-analyzer, embedding-worker, aggregator | 1024M | 7488M |
+| `grounding` | grounding-worker | 1536M | 8000M |
+| `quality` | quality-service | 768M | 7232M |
+| `analysis` + `quality` | | 1792M | 8256M(8GB 초과, 기본 구성의 frame-encoder·normalize를 내리고 쓴다) |
+
+```bash
+docker compose -f local/docker-compose.yml --profile analysis up -d --build   # 기본 구성 + analysis
+docker compose -f local/docker-compose.yml --profile quality up -d quality-service
+COMPOSE_PROFILES=grounding docker compose -f local/docker-compose.yml up -d grounding-worker
+docker compose -f local/docker-compose.yml --profile '*' config --services   # 모든 프로필의 서비스 목록
+```
+
+- 모든 프로필의 컨테이너를 함께 내리려면 `docker compose -f local/docker-compose.yml --profile '*' down`을 쓴다.
+- 아직 compose에 없는 다른 담당자 서비스(chunk-processor, pipeline-service, analysis-api, analysis-loader, search-service, notification-service)가 입력을 내거나 결과를 받으므로, 프로필 워커는 메시지를 직접 넣어 확인한다. 끊기는 지점은 아래 "v5.1 워커" 절에 적었다.
 
 ## 준비
 
 - Docker Desktop 또는 OrbStack
 - `./scripts/clone-repos.sh`로 `repos/backend`, `repos/frontend`, `repos/ai`를 클론해 둔다. 이미지는 각 레포의 `Dockerfile`로 빌드한다.
+- backend 이미지는 빌드 컨텍스트 안의 계약 사본(`repos/backend/.service-contracts/`)으로 코드를 만든다. 처음 빌드하기 전과 backend의 `service-contracts.lock`이 바뀐 뒤에 `repos/backend/scripts/fetch-service-contracts.sh`를 실행한다.
+- `QUALITY_DB_PASSWORD`는 `local/.env.example`에 아직 없다. compose가 로컬 전용 샘플값(`local-quality-pw`)을 기본으로 쓰고, 바꾸려면 `local/.env`에 `QUALITY_DB_PASSWORD=<값>`을 넣는다. 기존 DB 볼륨에 quality_db를 더하는 방법은 아래 "자주 쓰는 명령"에 있다.
 
 ## 실행
 
@@ -138,6 +168,7 @@ docker compose -f local/docker-compose.yml up -d frame-encoder event-analyzer
 - 기본 mock 프로필은 출력 스키마의 첫 예시(severity `high`)를 돌려주므로 모든 후보가 재판정되어 `vector+vlm+escalate`로 기록된다.
 - 실제 판정은 ai-gateway를 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`(호스트 Ollama)로 띄운다. 로컬은 1차와 재판정이 같은 모델이다.
 - ai-gateway가 응답하지 않으면 재시도한 뒤 그 후보를 `unknown`과 실패 코드로 발행한다. 호출자 거절(403) 같은 설정 오류나 계약에 맞지 않는 메시지는 `event-analyzer.dlq`로 간다.
+- 탐지기·규칙 후보(`event.candidate`, SPEC-023)는 후보 파일을 `vlm-media`에서 읽고 이미지의 판정 규칙 프로필(`/app/profiles/local.toml`)로 템플릿·재판정 간격·실행당 상한을 정한 뒤 `event.analyzed`와 `event.manifest`를 낸다. 긴급 후보(`alert.candidate`)는 `alert.raised`를 낸다. 실시간 재판정 간격 상태는 Redis DB 1에 둔다.
 
 ### ai-gateway 벡터 생성 (SPEC-011)
 
@@ -162,6 +193,41 @@ curl -s -X POST localhost:8000/v1/embed -H 'Content-Type: application/json' -H '
 
 - Ollama를 멈춰도 `embed_visual_text`·`embed_image`는 동작한다. `embed_text`는 503 `AI_PROVIDER_UNAVAILABLE`이다.
 
+### v5.1 워커 (SPEC-022~028)
+
+`analysis`·`grounding` 프로필의 워커는 모델 없이 뜬다. ai-gateway를 부르는 워커(track-analyzer, embedding-worker, aggregator)는 ai-gateway 프로필이 정한 모델을 쓴다. 기본 mock 프로필에는 `track_attribute`·`object_question`·`source_summary`·`embed_text`가 모두 있고, 실제 모델은 위 "ai-gateway 분석 호출"처럼 `AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml`(호스트 Ollama)로 바꾼다.
+
+| 워커 | 받는 토픽 | 내는 토픽 | 입력을 내는 서비스가 compose에 없는 지점 |
+| --- | --- | --- | --- |
+| event-analyzer | `event.candidate.vector`, `event.candidate`, `alert.candidate` | `event.analyzed`, `event.manifest`, `alert.raised` | `event.candidate`·`alert.candidate`(chunk-processor, stream-ingestor) |
+| track-stitcher | `chunk.boundary`, `segment.embedded`, `video.deleted` | `track.detected`, `track.manifest` | `chunk.boundary`(chunk-processor). `segment.embedded`는 frame-encoder가 내지만 frame-encoder 입력 `segment.ready`도 chunk-processor가 낸다 |
+| track-analyzer | `attribute.requested` | `track.analyzed` | `attribute.requested`(analysis-api) |
+| embedding-worker | `event.analyzed`, `track.analyzed`, `segment.annotated` | `embedding.ready` | `segment.annotated`(search-service). `embedding.ready`를 받는 search-service도 없다 |
+| aggregator | `analysis.completed`, `event.analyzed`, `track.detected`, `chunk.manifest` | `source.completed`, `state.updated` | `analysis.completed`(analysis-loader), `chunk.manifest`(chunk-processor). 내부 읽기 원본 analysis-api·stream-service가 없어 읽기가 실패하면 재시도 뒤 `aggregator.dlq`로 간다 |
+| grounding-worker | `grounding.requested` | `grounding.completed` | `grounding.requested`(search-service). 결과를 받는 search-service·notification-service도 없다 |
+
+- Redis는 서비스마다 DB 번호를 나눈다(ai-gateway 0, event-analyzer 1, track-stitcher 2, aggregator 3).
+- grounding-worker는 mock 탐지기(`GROUNDING_WORKER_ALLOW_MOCK=true`, `/app/profiles/local-mock.toml`)로 뜨고 박스에 의미가 없다. 실제 탐지기 프로필은 ai 레포 SPEC-026 tasks T026~T028에서 더한 뒤 `GROUNDING_WORKER_PROFILE_PATH`를 그 경로로 바꾸고 `GROUNDING_WORKER_ALLOW_MOCK`을 지운다.
+- 메시지를 직접 넣을 때는 Kafka 콘솔 도구를 쓴다. 메시지 모양은 docs `service-contracts/events/<토픽>.schema.json`의 예시를 따른다.
+
+```bash
+docker compose -f local/docker-compose.yml exec -T kafka /opt/kafka/bin/kafka-console-producer.sh \
+  --bootstrap-server localhost:9092 --topic attribute.requested < attribute-requested.json   # 한 줄에 메시지 하나
+docker compose -f local/docker-compose.yml exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 --topic track.analyzed --from-beginning
+```
+
+### quality-service (SPEC-029)
+
+`quality` 프로필로 띄운다. `event.analyzed`·`video.deleted`·`stage.timing`·`alert.raised`를 소비하고 발행은 없다. DB는 `quality_db`(계정 `quality`, `postgres/init/40-quality-db.sh`)이고 Golden Set 확정본은 `vlm-golden` 버킷에 둔다. 로컬 버킷은 Versioning·Object Lock을 켜지 않는다(운영은 켠다, ADR-0011).
+
+```bash
+docker compose -f local/docker-compose.yml --profile quality up -d --build quality-service
+```
+
+- 운영자 API(`/api/v1/quality/**`)는 게이트웨이(8080)로 부르고 `OPERATOR` 역할이 있어야 한다. 게이트웨이는 `QUALITY_SERVICE_URI`(`http://quality-service:8080`)로 전달한다. quality-service를 띄우지 않으면 그 경로는 게이트웨이 오류를 돌려준다.
+- 평가 잡 API(`/internal/v1/quality/**`)는 게이트웨이를 거치지 않는다. 로컬은 8088로 직접 부르고 `X-Caller`가 허용 목록(기본 `quality-evals`)에 있어야 한다.
+
 ## 자주 쓰는 명령
 
 ```bash
@@ -177,5 +243,5 @@ docker compose -f local/docker-compose.yml down -v                  # 중지하�
     ```bash
     docker compose -f local/docker-compose.yml up -d postgres
     docker compose -f local/docker-compose.yml exec -e POSTGRES_USER=postgres postgres \
-      sh /docker-entrypoint-initdb.d/20-media-db.sh   # ai_db는 30-ai-db.sh
+      sh /docker-entrypoint-initdb.d/20-media-db.sh   # ai_db는 30-ai-db.sh, quality_db는 40-quality-db.sh
     ```

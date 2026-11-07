@@ -58,6 +58,90 @@
       ]
     },
     {
+      "name": "event-analyzer",
+      "credentials": [
+        {
+          "accessKey": "local-event-analyzer-key",
+          "secretKey": "local-event-analyzer-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media"
+      ]
+    },
+    {
+      "name": "track-stitcher",
+      "credentials": [
+        {
+          "accessKey": "local-track-stitcher-key",
+          "secretKey": "local-track-stitcher-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media",
+        "Write:vlm-media",
+        "List:vlm-media"
+      ]
+    },
+    {
+      "name": "embedding-worker",
+      "credentials": [
+        {
+          "accessKey": "local-embedding-worker-key",
+          "secretKey": "local-embedding-worker-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media",
+        "Write:vlm-media",
+        "List:vlm-media"
+      ]
+    },
+    {
+      "name": "grounding-worker",
+      "credentials": [
+        {
+          "accessKey": "local-grounding-worker-key",
+          "secretKey": "local-grounding-worker-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media",
+        "Write:vlm-media",
+        "List:vlm-media"
+      ]
+    },
+    {
+      "name": "aggregator",
+      "credentials": [
+        {
+          "accessKey": "local-aggregator-key",
+          "secretKey": "local-aggregator-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media",
+        "Write:vlm-media",
+        "List:vlm-media"
+      ]
+    },
+    {
+      "name": "quality-service",
+      "credentials": [
+        {
+          "accessKey": "local-quality-key",
+          "secretKey": "local-quality-secret"
+        }
+      ],
+      "actions": [
+        "Read:vlm-media",
+        "List:vlm-media",
+        "Read:vlm-golden",
+        "Write:vlm-golden",
+        "List:vlm-golden"
+      ]
+    },
+    {
       "name": "models-upload",
       "credentials": [
         {
