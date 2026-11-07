@@ -68,8 +68,13 @@ def grounding_section(a: dict) -> str:
     g = a.get("grounding")
     if not g:
         return ""
-    return f"""<section><h2>3. 주석 클립 (grounding-worker, mock 탐지기)</h2>
-<p class="note">관리자 영상 40~50초 정규화 사본에 박스를 그린 클립. 실제 탐지기가 아직 없어 박스 위치에는 의미가 없다.</p>
+    # 클립 경로의 groundingModel 단계(sources/<영상>/groundings/<id>/<모델>/clip.mp4)가 쓴 탐지기다.
+    model = g["clipKey"].split("/")[-2]
+    note = ("mock 탐지기라 박스 위치에는 의미가 없다." if model.startswith("mock")
+            else "개방 어휘 탐지기가 대상어마다 찾은 박스다.")
+    targets = ", ".join(g.get("targets") or [])
+    return f"""<section><h2>3. 주석 클립 (grounding-worker, {e(model)})</h2>
+<p class="note">관리자 영상 40~50초 정규화 사본에 대상어({e(targets)}) 박스를 그린 클립. {note}</p>
 <video id="clip" src="{FILER}{e(g['clipKey'])}" controls muted></video></section>"""
 
 
