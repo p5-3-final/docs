@@ -11,7 +11,7 @@ export E2E_VIDEO="${E2E_VIDEO:-$ROOT/video.mp4}"
 mkdir -p "$E2E_OUT"
 
 usage() {
-  echo "사용법: $0 {up|upload|workers|measure|quality|ui|record|all}" >&2
+  echo "사용법: $0 {up|upload|workers|measure|quality|ui|record|full|record-full|all}" >&2
   exit 2
 }
 
@@ -88,6 +88,11 @@ workers() {
   run_with_helpers workers.py 2 | tee "$E2E_OUT/workers-result.txt"
 }
 
+# 영상 전체를 구간 벡터로 만들고 한국어 검색어마다 상위 3구간에 박스 클립을 만든다(실제 모델 스택).
+full() {
+  run_with_helpers fullvideo.py 2 | tee "$E2E_OUT/fullvideo-result.txt"
+}
+
 # 성공 지표·비기능 요구사항 측정(mock 프로필). 인자로 측정 함수 이름을 주면 그것만 돈다.
 measure() {
   run_with_helpers measure.py "${E2E_MEASURE_EVENTS:-2000}" "$@" | tee "$E2E_OUT/measure-result.txt"
@@ -120,6 +125,15 @@ record() {
   echo "녹화: $E2E_OUT/flow-recording.mp4"
 }
 
+record_full() {
+  python3 "$E2E_DIR/fullvideo_page.py" "$E2E_OUT"
+  playwright --config fullvideo.config.mjs
+  local webm
+  webm="$(find "$E2E_OUT/recording-full" -name video.webm | head -1)"
+  ffmpeg -y -loglevel error -i "$webm" -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$E2E_OUT/fullvideo-recording.mp4"
+  echo "녹화: $E2E_OUT/fullvideo-recording.mp4"
+}
+
 case "${1:-}" in
   up) up ;;
   upload) upload ;;
@@ -128,6 +142,8 @@ case "${1:-}" in
   quality) quality ;;
   ui) ui ;;
   record) record ;;
+  full) full ;;
+  record-full) record_full ;;
   all) upload && workers && quality && ui && record ;;
   *) usage ;;
 esac
