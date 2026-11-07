@@ -12,6 +12,8 @@ services:
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?local/.env에 AUTH_DB_PASSWORD를 넣는다}
       MEDIA_DB_PASSWORD: ${MEDIA_DB_PASSWORD:?local/.env에 MEDIA_DB_PASSWORD를 넣는다}
       AI_DB_PASSWORD: ${AI_DB_PASSWORD:?local/.env에 AI_DB_PASSWORD를 넣는다}
+      # local/.env.example에 아직 없어 기존 .env로도 뜨도록 로컬 전용 샘플값을 기본으로 둔다. 바꾸려면 local/.env에 넣는다.
+      QUALITY_DB_PASSWORD: ${QUALITY_DB_PASSWORD:-local-quality-pw}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -95,7 +97,8 @@ services:
         limits:
           memory: 384M
 
-  # 영상 버킷과 모델 버킷(SPEC-011 인코더 가중치)을 만들고 끝나는 일회성 컨테이너.
+  # 영상 버킷, 모델 버킷(SPEC-011 인코더 가중치), Golden Set 버킷(SPEC-029 R-14)을 만들고 끝나는 일회성 컨테이너.
+  # 운영 Golden Set 버킷은 Versioning·Object Lock을 켜지만(ADR-0011) 로컬은 흐름 확인용이라 켜지 않는다.
   # weed shell은 이미 있는 버킷을 만들면 실패하므로 목록에 없을 때만 만든다.
   seaweedfs-init:
     image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
@@ -103,7 +106,7 @@ services:
       - sh
       - -c
       - >-
-        for b in vlm-media vlm-models; do
+        for b in vlm-media vlm-models vlm-golden; do
         echo 's3.bucket.list' | weed shell -master=seaweedfs:9333 | grep -qw "$$b"
         || echo "s3.bucket.create -name $$b" | weed shell -master=seaweedfs:9333;
         done
@@ -152,6 +155,8 @@ services:
       GATEWAY_REDIS_PORT: "6379"
       AUTH_SERVICE_URI: http://auth-service:8080
       MEDIA_SERVICE_URI: http://media-service:8080
+      # quality 프로필로 띄울 때만 응답한다. 없으면 /api/v1/quality/**가 게이트웨이 오류를 돌려준다.
+      QUALITY_SERVICE_URI: http://quality-service:8080
     ports:
       - "8080:8080"
     # 공개키 목록은 첫 토큰 검증 때 읽으므로 auth-service가 준비될 때까지 기다리지 않는다.
@@ -202,7 +207,50 @@ services:
         limits:
           memory: 768M
 
-  # 워커가 구독·발행하는 토픽(SPEC-007 normalize, SPEC-009 ai-gateway, SPEC-019 frame-encoder, SPEC-020 event-analyzer). 미리 만들어야 재시도 토픽을 바로 구독한다.
+  # quality-service(SPEC-029). 검토 큐·Golden Set·평가 기록·처리 단계 측정·긴급 알림 지표. 소비만 하고 발행은 없다.
+  # 운영자 API는 게이트웨이(/api/v1/quality/**)로 부른다. quality 프로필로 띄운다.
+  quality-service:
+    profiles: [quality]
+    build:
+      context: ../repos/backend
+      args:
+        SERVICE: quality-service
+    image: vlm/quality-service:local
+    environment:
+      QUALITY_DB_URL: jdbc:postgresql://postgres:5432/quality_db
+      QUALITY_DB_USERNAME: quality
+      QUALITY_DB_PASSWORD: ${QUALITY_DB_PASSWORD:-local-quality-pw}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      QUALITY_S3_REGION: us-east-1
+      QUALITY_S3_ENDPOINT: http://seaweedfs:8333
+      # 근거 프레임 주소는 브라우저가 부르므로 호스트에서 보이는 주소로 서명한다.
+      QUALITY_S3_PUBLIC_ENDPOINT: http://localhost:8333
+      QUALITY_S3_PATH_STYLE: "true"
+      QUALITY_SOURCE_BUCKET: vlm-media
+      QUALITY_GOLDEN_BUCKET: vlm-golden
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키(영상 버킷 읽기, Golden Set 버킷 쓰기). 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-quality-key
+      AWS_SECRET_ACCESS_KEY: local-quality-secret
+    ports:
+      - "8088:8080"
+    # 토픽 자동 생성을 끈 소비자라 kafka-init이 끝난 뒤에 뜬다.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          # auth-service·media-service와 같은 값. 힙은 이미지의 MaxRAMPercentage=75로 잡힌다.
+          memory: 768M
+
+  # 워커가 구독·발행하는 토픽. 미리 만들어야 재시도 토픽을 바로 구독한다. 이름 원본은 service-contracts/asyncapi다.
+  # 재시도는 `<받는 토픽>.<소비 그룹>.retry`, DLQ는 `<소비 그룹>.dlq`다(ai 레포 vlm_messaging.topics).
+  # 아직 compose에 없는 서비스(chunk-processor, search-service, analysis-api 등)가 내는 토픽도 받는 쪽이 구독하므로 만든다.
+  # 서비스별로 받는·내는 토픽, 재시도·DLQ 순서로 묶는다. 앞 묶음에 이미 있는 토픽은 다시 적지 않는다.
   # stage.timing은 처리 단계 측정 묶음이다(SPEC-013). 보존 7일은 docs overview "처리 단계 측정"과 같다.
   kafka-init:
     image: apache/kafka:4.3.2@sha256:852a0d49fc4e656b022e7f23785411802c9a088c78a7c5e39f33969de9c227a7
@@ -215,7 +263,22 @@ services:
         video.deleted.ai-gateway.retry ai-gateway.dlq
         segment.ready segment.embedded event.candidate.vector
         segment.ready.frame-encoder.retry frame-encoder.dlq
-        event.analyzed event.candidate.vector.event-analyzer.retry event-analyzer.dlq; do
+        event.candidate alert.candidate event.analyzed event.manifest alert.raised
+        event.candidate.vector.event-analyzer.retry event.candidate.event-analyzer.retry
+        alert.candidate.event-analyzer.retry event-analyzer.dlq
+        chunk.boundary track.detected track.manifest
+        chunk.boundary.track-stitcher.retry segment.embedded.track-stitcher.retry
+        video.deleted.track-stitcher.retry track-stitcher.dlq
+        attribute.requested track.analyzed
+        attribute.requested.track-analyzer.retry track-analyzer.dlq
+        segment.annotated embedding.ready
+        event.analyzed.embedding-worker.retry track.analyzed.embedding-worker.retry
+        segment.annotated.embedding-worker.retry embedding-worker.dlq
+        grounding.requested grounding.completed
+        grounding.requested.grounding-worker.retry grounding-worker.dlq
+        analysis.completed chunk.manifest source.completed state.updated
+        analysis.completed.aggregator.retry event.analyzed.aggregator.retry
+        track.detected.aggregator.retry chunk.manifest.aggregator.retry aggregator.dlq; do
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
         --topic "$$topic" --partitions 3 --replication-factor 1 || exit 1; done &&
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists
@@ -303,7 +366,8 @@ services:
           # docs overview "로컬 메모리" 표
           memory: 1G
 
-  # event-analyzer(SPEC-020). event.candidate.vector를 ai-gateway로 판정해 event.analyzed를 발행한다.
+  # event-analyzer(SPEC-020·023). 벡터 후보(event.candidate.vector), 탐지기·규칙 후보(event.candidate),
+  # 긴급 후보(alert.candidate)를 ai-gateway로 판정해 event.analyzed·event.manifest·alert.raised를 발행한다.
   # 판정 모델은 ai-gateway 프로필이 정한다(기본 mock, Ollama는 AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml).
   event-analyzer:
     build:
@@ -314,7 +378,88 @@ services:
     environment:
       KAFKA_BOOTSTRAP: kafka:19092
       EVENT_ANALYZER_AI_GATEWAY_URL: http://ai-gateway:8000
+      # 후보 파일(candidatesKey)을 읽는 영상 버킷(SPEC-023). 이미지의 판정 규칙 프로필(/app/profiles/local.toml)을 쓴다.
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키(읽기 전용). 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-event-analyzer-key
+      AWS_SECRET_ACCESS_KEY: local-event-analyzer-secret
+      # 실시간 재판정 간격 상태(SPEC-023 R-18). 끊겨도 창마다 판정하므로 depends_on에 넣지 않는다.
+      # 서비스마다 Redis DB 번호를 나눠 키가 섞이지 않게 한다(ai-gateway 0).
+      EVENT_ANALYZER_REDIS_URL: redis://redis:6379/1
       # 처리 시간 측정 묶음을 stage.timing에 발행한다. 기본은 JSON 로그(SPEC-013 R-5).
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+      ai-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          # docs 아키텍처 18.1절 "로컬 개발 환경" 표의 나머지 워커
+          memory: 256M
+
+  # 아래 워커와 quality-service는 compose 프로필로 묶었다. 모두 띄우면 메모리 상한 합이 Docker 8GB를 넘으므로
+  # 필요한 묶음만 --profile로 고른다(local/README.md "프로필"). 기본 구성에 들어 있는 서비스에는 의존만 한다.
+
+  # track-stitcher(SPEC-022). chunk.boundary·segment.embedded로 청크 사이 트랙을 잇고 번역표와
+  # track.detected·track.manifest를 낸다. chunk.boundary를 내는 chunk-processor는 아직 compose에 없다.
+  track-stitcher:
+    profiles: [analysis]
+    build:
+      context: ../repos/ai
+      dockerfile: services/track-stitcher/Dockerfile
+      target: runtime
+    image: vlm/track-stitcher:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      # Job 대기 상태(키 접두사 ts:). 필수라 depends_on에 넣는다.
+      TRACK_STITCHER_REDIS_URL: redis://redis:6379/2
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-track-stitcher-key
+      AWS_SECRET_ACCESS_KEY: local-track-stitcher-secret
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # track-analyzer(SPEC-024). attribute.requested마다 ai-gateway track_attribute·object_question을 한 번 부르고
+  # track.analyzed를 낸다. 저장소는 쓰지 않는다. attribute.requested를 내는 analysis-api는 아직 compose에 없다.
+  track-analyzer:
+    profiles: [analysis]
+    build:
+      context: ../repos/ai
+      dockerfile: services/track-analyzer/Dockerfile
+      target: runtime
+    image: vlm/track-analyzer:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      TRACK_ANALYZER_AI_GATEWAY_URL: http://ai-gateway:8000
       STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
@@ -329,8 +474,129 @@ services:
     deploy:
       resources:
         limits:
-          # docs overview "로컬 메모리" 표의 나머지 워커
           memory: 256M
+
+  # embedding-worker(SPEC-025). event.analyzed·track.analyzed·segment.annotated의 문장을 ai-gateway embed_text로
+  # 벡터 파일에 저장하고 embedding.ready를 낸다. mock 프로필은 의미 없는 결정적 벡터를 돌려준다.
+  # 실제 텍스트 임베딩은 ai-gateway를 local.toml(호스트 Ollama bge-m3)로 띄운다.
+  embedding-worker:
+    profiles: [analysis]
+    build:
+      context: ../repos/ai
+      dockerfile: services/embedding-worker/Dockerfile
+      target: runtime
+    image: vlm/embedding-worker:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      EMBEDDING_WORKER_AI_GATEWAY_URL: http://ai-gateway:8000
+      # 번역표를 읽고 텍스트 벡터 파일을 쓰는 영상 버킷. 변수 이름은 vlm_storage.s3.StorageSettings(S3_ 접두사)가 원본이다.
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-embedding-worker-key
+      AWS_SECRET_ACCESS_KEY: local-embedding-worker-secret
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+      ai-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # aggregator(SPEC-027·028). job 단위 병합·위험 상태·요약 결과 파일과 source.completed, 실시간 창 fold의
+  # state.updated를 낸다. 읽기 원본인 analysis-api와 stream-service는 아직 compose에 없어 내부 읽기가 실패하면
+  # 재시도 뒤 DLQ로 간다. 주소는 compose 규칙(컨테이너 포트 8080)으로 미리 적어 둔다.
+  aggregator:
+    profiles: [analysis]
+    build:
+      context: ../repos/ai
+      dockerfile: services/aggregator/Dockerfile
+      target: runtime
+    image: vlm/aggregator:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      AGGREGATOR_AI_GATEWAY_URL: http://ai-gateway:8000
+      AGGREGATOR_ANALYSIS_API_URL: http://analysis-api:8080
+      # 비우면 STREAM 메시지는 재시도 뒤 DLQ로 간다. stream-service를 compose에 더하면 주소를 넣는다.
+      AGGREGATOR_STREAM_SERVICE_URL: ""
+      # 대기 집합·세션 상태·재판정 계수. 운영 필수라 로컬도 붙인다.
+      AGGREGATOR_REDIS_URL: redis://redis:6379/3
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-aggregator-key
+      AWS_SECRET_ACCESS_KEY: local-aggregator-secret
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+      ai-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          # SPEC-027 NFR-2
+          memory: 256M
+
+  # grounding-worker(SPEC-026). grounding.requested의 구간마다 정규화 영상에서 프레임을 뽑아 대상어 박스를 그린
+  # 클립과 결과 파일을 저장하고 grounding.completed를 낸다. grounding.requested를 내는 search-service는 아직 compose에 없다.
+  # 기본은 mock 탐지기라 박스에 의미가 없다. 실제 탐지기 프로필(local.toml)은 ai 레포 SPEC-026 tasks T026~T028에서
+  # 더한 뒤 GROUNDING_WORKER_PROFILE_PATH를 바꾸고 GROUNDING_WORKER_ALLOW_MOCK을 지운다.
+  grounding-worker:
+    profiles: [grounding]
+    build:
+      context: ../repos/ai
+      dockerfile: services/grounding-worker/Dockerfile
+      target: runtime
+    image: vlm/grounding-worker:local
+    environment:
+      KAFKA_BOOTSTRAP: kafka:19092
+      S3_BUCKET: vlm-media
+      S3_ENDPOINT_URL: http://seaweedfs:8333
+      S3_PATH_STYLE: "true"
+      # seaweedfs/s3.json과 같은 로컬 전용 샘플 키. 운영은 IRSA로 받는다.
+      AWS_ACCESS_KEY_ID: local-grounding-worker-key
+      AWS_SECRET_ACCESS_KEY: local-grounding-worker-secret
+      GROUNDING_WORKER_PROFILE_PATH: ${GROUNDING_WORKER_PROFILE_PATH:-/app/profiles/local-mock.toml}
+      # mock 탐지기는 로컬·CI 전용이다.
+      GROUNDING_WORKER_ALLOW_MOCK: "true"
+      STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      seaweedfs-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          # SPEC-026 NFR-2, docs 아키텍처 18.1절 표. ffmpeg 인코딩이 이 안에서 돈다.
+          memory: 1536M
 
   # ai-gateway(SPEC-009). 마이그레이션을 먼저 한 번 실행하고 서버를 띄운다.
   # 기본은 모델 없이 흐름만 보는 mock 프로필이다. Ollama를 쓰려면 호스트에서 Ollama를 띄우고
