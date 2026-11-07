@@ -25,6 +25,8 @@ scripts/e2e/run.sh measure  # 성공 지표·비기능 요구사항 측정(uploa
 | `ui` | 화면에서 업로드 → 변환 → 상세 재생, OPERATOR 품질 검토 화면, 세션 만들기 → 작업 전·후 영상 → 역할별 표시와 보존 설정(SPEC-034) |
 | `measure` | v5.1 spec(SPEC-021~025, 027, 028)의 성공 지표와 비기능 요구사항. 결과는 `out/measure-result.txt`·`measure-result.json` |
 | `record` | 화면 흐름과 워커 산출물을 녹화해 `out/flow-recording.mp4`로 저장 |
+| `full` | 실제 모델 스택(`E2E_REAL_MODELS=1`)에서 영상 전체를 10초 창·5초 간격 구간 벡터로 만들고, 한국어 검색어 4개마다 질의 해석 → 상위 3구간 → 주석 클립. 결과는 `out/fullvideo.json` |
+| `record-full` | `full` 결과(검색어별 유사도 곡선, 상위 3구간 주석 클립)를 녹화해 `out/fullvideo-recording.mp4`로 저장 |
 
 결과는 `scripts/e2e/out/`(git 제외)에 남는다. `workers.py`·`measure.py`는 메시지 보내기·모으기와 ID 바꾸기를 `e2e_common.py`에서, 계약 검증을 ai 레포 `vlm_testing.contracts`에서 가져다 쓴다. 다른 위치를 쓰려면 `E2E_OUT`을 지정한다.
 
