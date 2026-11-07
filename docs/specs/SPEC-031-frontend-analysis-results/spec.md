@@ -1,11 +1,11 @@
 ---
 id: SPEC-031
 title: 분석 결과 화면(이벤트 타임라인·위험 상태·요약)과 실시간 알림
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [SPEC-001, SPEC-002, SPEC-005, SPEC-006, SPEC-027, SPEC-028, ADR-0015, ADR-0016, SPEC-036]
 ---
 

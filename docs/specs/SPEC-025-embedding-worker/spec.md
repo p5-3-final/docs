@@ -1,11 +1,11 @@
 ---
 id: SPEC-025
 title: embedding-worker 이벤트·트랙·구간 주석 텍스트 벡터
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, SPEC-011, SPEC-013, SPEC-016, SPEC-020, SPEC-021, SPEC-023, SPEC-024]
 ---
 
@@ -42,7 +42,7 @@ embedding-worker는 항목마다 문장을 만들고, ai-gateway `/v1/embed`(`em
 
 - 텍스트 인덱스 적재, 하이브리드 검색: search-service(다른 담당자) 몫이다.
 - 여러 항목을 한 번에 임베딩하는 묶음 처리: 이후 성능 spec(지금은 메시지 하나에 문장 하나)
-- 임베딩 모델 교체 시 재임베딩(`REEMBED` job): pipeline-service 몫이다. 이 spec은 같은 항목·다른 모델이면 다른 파일·eventId가 되게만 한다.
+- 임베딩 모델 교체 시 재임베딩(`REEMBED` job): pipeline-service 몫이다. 이 spec은 같은 항목·다른 모델이면 eventId가 달라지게만 한다. 벡터 파일 경로(`vectorKey`)에는 모델이 없어 같은 경로를 마지막 결과로 덮어쓴다.
 - 텍스트 임베딩 모델 선택: AI 담당자 몫이다(ai-gateway 프로필).
 
 ## 3. 사용자 시나리오

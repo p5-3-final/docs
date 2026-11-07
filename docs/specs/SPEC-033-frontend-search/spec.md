@@ -1,11 +1,11 @@
 ---
 id: SPEC-033
 title: 검색 화면(문장·이미지 장면 찾기, 주석 클립)과 영상 질문(Video RAG)
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [SPEC-011, SPEC-012, SPEC-025, SPEC-026, SPEC-031]
 ---
 

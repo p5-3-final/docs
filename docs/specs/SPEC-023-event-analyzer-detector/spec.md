@@ -1,11 +1,11 @@
 ---
 id: SPEC-023
 title: event-analyzer 탐지기·규칙 후보 판정과 event.manifest
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, ADR-0010, SPEC-009, SPEC-013, SPEC-020, SPEC-021, SPEC-022, ADR-0015, ADR-0016, SPEC-036, SPEC-037]
 ---
 
