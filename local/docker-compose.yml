@@ -563,7 +563,7 @@ services:
 
   # grounding-worker(SPEC-026). grounding.requested의 구간마다 정규화 영상에서 프레임을 뽑아 대상어 박스를 그린
   # 클립과 결과 파일을 저장하고 grounding.completed를 낸다. grounding.requested를 내는 search-service는 아직 compose에 없다.
-  # 기본은 mock 탐지기라 박스에 의미가 없다. 실제 탐지기(OWLv2)는 local/scripts/upload-models.sh로 가중치를 올린 뒤
+  # 기본은 mock 탐지기라 박스에 의미가 없다. 실제 탐지기(OWL-ViT)는 local/scripts/upload-models.sh로 가중치를 올린 뒤
   # GROUNDING_WORKER_PROFILE_PATH=/app/profiles/local.toml로 띄운다(local/README.md).
   grounding-worker:
     profiles: [grounding]
@@ -585,7 +585,7 @@ services:
       GROUNDING_WORKER_ALLOW_MOCK: "true"
       GROUNDING_WORKER_MODELS_BUCKET: vlm-models
       STAGE_TIMING_PUBLISH: ${STAGE_TIMING_PUBLISH:-false}
-    # 받은 가중치(약 620MB)를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
+    # 받은 가중치(약 615MB)를 남겨 재시작 때 다시 받지 않는다(운영은 Pod의 emptyDir).
     volumes:
       - grounding-worker-models:/var/cache/vlm-models
     healthcheck:

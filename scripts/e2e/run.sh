@@ -20,7 +20,8 @@ usage() {
 up() {
   local files=(-f "$ROOT/local/docker-compose.yml" -f "$E2E_DIR/compose.e2e.yml")
   if [[ "${E2E_REAL_MODELS:-}" == "1" ]]; then
-    export AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml FRAME_ENCODER_PROFILE_PATH=/app/profiles/local.toml
+    export AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml FRAME_ENCODER_PROFILE_PATH=/app/profiles/local.toml \
+      GROUNDING_WORKER_PROFILE_PATH=/app/profiles/local.toml
   fi
   # E2E_VLM_MODEL을 주면 이미지의 local.toml에서 VLM 모델 이름만 바꾼 사본을 마운트한다.
   # ai 레포 프로필은 평가를 거쳐 바꾸므로 E2E에서는 고치지 않는다.

@@ -175,7 +175,7 @@ docker compose -f local/docker-compose.yml up -d frame-encoder event-analyzer
 `/v1/embed`는 문장·검색용 이미지·텍스트를 벡터로 바꾼다. mock 프로필은 의미 없는 결정적 벡터를 돌려준다. 실제 인코더(MobileCLIP2-S0)와 텍스트 임베딩(Ollama `bge-m3`)을 쓰려면 아래를 한 번 한다.
 
 ```bash
-local/scripts/upload-models.sh   # Hugging Face에서 인코더(약 300MB)·grounding 탐지기(약 620MB) 가중치를 받아 sha256 확인 후 manifest와 함께 vlm-models 버킷에 올린다
+local/scripts/upload-models.sh   # Hugging Face에서 인코더(약 300MB)·grounding 탐지기(약 615MB) 가중치를 받아 sha256 확인 후 manifest와 함께 vlm-models 버킷에 올린다
 ollama pull bge-m3               # 텍스트 임베딩(한국어 포함, 1024차원)
 AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
 ```
@@ -207,7 +207,7 @@ curl -s -X POST localhost:8000/v1/embed -H 'Content-Type: application/json' -H '
 | grounding-worker | `grounding.requested` | `grounding.completed` | `grounding.requested`(search-service). 결과를 받는 search-service·notification-service도 없다 |
 
 - Redis는 서비스마다 DB 번호를 나눈다(ai-gateway 0, event-analyzer 1, track-stitcher 2, aggregator 3).
-- grounding-worker는 기본으로 mock 탐지기(`/app/profiles/local-mock.toml`)로 뜨고 박스에 의미가 없다. 실제 탐지기(OWLv2 base, Apache-2.0)는 `local/scripts/upload-models.sh`로 가중치(약 620MB)를 올린 뒤 `GROUNDING_WORKER_PROFILE_PATH=/app/profiles/local.toml`로 띄운다. CPU에서 1080p 프레임당 약 2초가 걸리고(Mac 4스레드 측정) 최대 메모리는 약 1.7GB다.
+- grounding-worker는 기본으로 mock 탐지기(`/app/profiles/local-mock.toml`)로 뜨고 박스에 의미가 없다. 실제 탐지기(OWL-ViT base patch32, Apache-2.0)는 `local/scripts/upload-models.sh`로 가중치(약 615MB)를 올린 뒤 `GROUNDING_WORKER_PROFILE_PATH=/app/profiles/local.toml`로 띄운다. 컨테이너 CPU에서 1080p 프레임당 약 0.45초다. OWLv2 base는 같은 환경에서 프레임당 약 6초라 SPEC-026 NFR-1(10초 구간 30초)을 넘어 쓰지 않는다.
 - 메시지를 직접 넣을 때는 Kafka 콘솔 도구를 쓴다. 메시지 모양은 docs `service-contracts/events/<토픽>.schema.json`의 예시를 따른다.
 
 ```bash

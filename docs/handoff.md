@@ -168,7 +168,6 @@ plan을 쓰며 나온 결정 사항과 spec·계약 불일치다.
 
 | # | spec | 항목 | 기본안 | 결정 |
 | --- | --- | --- | --- | --- |
-| D-1 | SPEC-026 | grounding 탐지기 실행 라이브러리 | 추천 `onnxruntime`(ultralytics는 AGPL-3.0 서버 배포 위험, OWLv2는 CPU에서 느림). ONNX 가중치 내보내기는 AI 담당자 몫. 원래 후보: `ultralytics`(AGPL-3.0, 구현 가장 짧음), `onnxruntime`(ONNX 내보내기·가중치 라이선스 확인 필요, AI 담당자 작업), `transformers` OWLv2(CPU에서 느림) 중 선택. `MockDetector`로 R-1~R-18 구현 완료(ai #48). 실제 탐지기 태스크(T026~T028, T033)는 새 패키지·가중치 결정 대기 | |
 | D-29 | SPEC-030 | media 보존 등급 `DATASET`의 삭제 동작 | 등급만 저장했다(backend #55). 운영자가 삭제할 때 `video.deleted`를 낼지 막을지는 미정 | |
 
 ### 6.2 spec·계약 수정이 필요한 항목

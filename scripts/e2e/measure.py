@@ -1,4 +1,7 @@
-"""로컬 compose에서 v5.1 spec의 성공 지표와 비기능 요구사항을 잰다(mock 프로필).
+"""로컬 compose에서 v5.1 spec의 성공 지표와 비기능 요구사항을 잰다.
+
+spec026_grounding은 실제 탐지기(run.sh up을 E2E_REAL_MODELS=1로 띄운 OWL-ViT)가 있어야 의미가 있다. 나머지는
+mock 프로필로 잰다.
 
 결과는 PASS/FAIL 줄과 measure-result.json(spec별 수치)으로 남긴다. tasks.md "측정 기록"의 근거다.
 실행: run.sh measure (upload를 먼저 해서 관리자 계정 영상·계정 ID가 있어야 한다)
@@ -21,6 +24,7 @@ from pathlib import Path
 import agg_support
 import ea_support
 import ew_support
+import gw_support
 import inv_support
 import stitcher_support
 import ta_support
@@ -341,10 +345,54 @@ def spec028_inventory() -> None:
     metric("SPEC-028", object_moved=len(moved), handle_p95_ms=p95(handle) if handle else None)
 
 
+GROUNDING_ROUNDS = 5
+# 업로드 영상의 10초 구간 시작 시각. 사람이 여러 명 지나가는 구간을 고르게 나눠 고른다.
+GROUNDING_STARTS_MS = [20_000, 45_000, 70_000, 95_000, 110_000]
+
+
+def spec026_grounding() -> None:
+    """SPEC-026 T033: 실제 영상 10초 구간 grounding 처리 시간 p95 30초(NFR-1)·메모리 2GB(NFR-2)."""
+    started = datetime.now(UTC)
+    keys = [k for k in storage.list_keys(f"sources/{Target.video}/normalizations/") if k.endswith("normalized.mp4")]
+    if not record("SPEC-026 실제 영상 정규화 사본", len(keys) == 1, keys):
+        return
+    normalized_key = keys[0]
+    done: list[dict] = []
+
+    def run() -> None:
+        for start in GROUNDING_STARTS_MS[:GROUNDING_ROUNDS]:
+            since = now_ms()
+            message = gw_support.grounding_request([gw_support.segment(0, start, start + 10_000)], targets=["person"])
+            body = to_body(message) | {"sourceId": str(Target.video), "ownerId": str(Target.owner),
+                                        "normalizationId": normalized_key.split("/")[3], "normalizedKey": normalized_key,
+                                        "requestId": str(uuid.uuid4())}
+            body["segments"][0] |= {"groundingId": str(uuid.uuid4()), "segmentId": str(uuid.uuid4())}
+            send("grounding.requested", body)
+            done.extend(collect("grounding.completed", lambda b, r=body["requestId"]: b.get("requestId") == r, 1, 300, since))
+
+    waiter = threading.Thread(target=run)
+    waiter.start()
+    peak = memory_peak_mib("vlm-grounding-worker-1", lambda: not waiter.is_alive())
+    waiter.join()
+    ready = [c for c in done if c.get("outcome") == "READY"]
+    record("SPEC-026 grounding.completed READY", len(ready) == GROUNDING_ROUNDS, f"{len(ready)}/{GROUNDING_ROUNDS}건")
+    schema_ok("SPEC-026 이벤트", done)
+    boxes = [sum(f["counts"].values()) for c in ready for f in c.get("frames") or []]
+    handle = wait_durations("vlm-grounding-worker-1", "grounding-worker.handle", started, GROUNDING_ROUNDS)
+    detect = stage_durations("vlm-grounding-worker-1", "grounding.detect", started)
+    record("SPEC-026 NFR-1 10초 구간 p95 30초", len(handle) >= GROUNDING_ROUNDS and p95(handle) <= 30_000,
+           f"p95 {p95(handle) if handle else '-'}ms ({len(handle)}건)")
+    record("SPEC-026 NFR-2 메모리 2GB 안", peak <= 2048, f"최대 {peak:.0f}MiB")
+    metric("SPEC-026", ready=len(ready), handle_p95_ms=p95(handle) if handle else None,
+           detect_p95_ms=p95(detect) if detect else None, memory_peak_mib=round(peak),
+           boxes_per_frame=round(sum(boxes) / len(boxes), 1) if boxes else 0,
+           clip_key=ready[-1]["clipKey"] if ready else None)
+
+
 def main() -> None:
     Target.load(Path(sys.argv[1]))
     steps = [spec021_deadline, spec022_stitcher, spec023_detector, spec024_track, spec025_embedding,
-             spec027_aggregate, spec028_inventory]
+             spec026_grounding, spec027_aggregate, spec028_inventory]
     only = set(sys.argv[2:])
     for step in steps:
         if only and step.__name__ not in only:

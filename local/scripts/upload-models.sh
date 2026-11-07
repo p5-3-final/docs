@@ -4,7 +4,7 @@
 #   local/scripts/upload-models.sh
 # - 인코더: Hugging Face timm/MobileCLIP2-S0-OpenCLIP(Apple AMLR, 비상용). manifest 경로와 sha256은
 #   repos/ai/services/ai-gateway·frame-encoder의 profiles/local.toml [encoder]와 같아야 한다.
-# - grounding 탐지기: Hugging Face google/owlv2-base-patch16-ensemble(Apache-2.0). manifest 경로와 sha256은
+# - grounding 탐지기: Hugging Face google/owlvit-base-patch32(Apache-2.0). manifest 경로와 sha256은
 #   repos/ai/services/grounding-worker/profiles/local.toml의 [detector]와 같아야 한다.
 set -euo pipefail
 
@@ -26,7 +26,7 @@ from botocore.exceptions import ClientError
 from huggingface_hub import hf_hub_download
 
 BUCKET = "vlm-models"
-OWLV2_REVISION = "cfd3195ba4ea9592eec887ded089f4c08eff231d"
+OWLVIT_REVISION = "cbc355fb364588351c5d51c7f74465e8e7ec6f72"
 # 항목마다 models/<종류>/<버전>/ 접두사(service-contracts/models/manifest.schema.json), Hugging Face 저장소와
 # 리비전, manifest, 프로필이 고정한 manifest 바이트 해시. 직렬화 형식을 바꾸면 해시와 프로필을 함께 바꾼다.
 MODELS = [
@@ -52,31 +52,30 @@ MODELS = [
         "manifest_sha256": "569e79292c638ca67fbe5318adb212c3e26c73fbacfc6453268abf95c9266131",
     },
     {
-        "prefix": "models/owlv2/owlv2-b16-ensemble",
-        "repo": "google/owlv2-base-patch16-ensemble",
-        "revision": OWLV2_REVISION,
+        "prefix": "models/owlvit/owlvit-b32",
+        "repo": "google/owlvit-base-patch32",
+        "revision": OWLVIT_REVISION,
         "manifest": {
             "kind": "detector",
-            "modelId": "transformers:owlv2-base-patch16:ensemble",
-            "version": "owlv2-b16-ensemble",
+            "modelId": "transformers:owlvit-base-patch32:base",
+            "version": "owlvit-b32",
             "files": [
                 {"name": name, "sha256": sha, "size": size}
                 for name, sha, size in [
-                    ("added_tokens.json", "e5dc0da35d20111e8ff3fdfc03682beca23d5f94ed74331bce81786b2636a24f", 67),
-                    ("config.json", "ba9df8c25a4b8461887dd0a93d9252c9cd84697fe8d49a9d8794ce409af9acb2", 414),
+                    ("config.json", "b5934e0d2933194b8a85f93674e577feaa1a1ba2dc1d143b2d5e5305ff7a9d7c", 4418),
                     ("merges.txt", "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a", 524619),
-                    ("model.safetensors", "e1e130b9e404cf91a75ad45644c1da9d7fa5284085eecc864266a6923efb99e7", 619918824),
-                    ("preprocessor_config.json", "cf3e396635b797ee1a464e1b2836e98748f8edac19e89aaa2c93b55ac15b0064", 425),
-                    ("special_tokens_map.json", "d6e2b9cf664efbad2d22998b8d3da986abcbeed3e0825ad33605c9401f9cf73e", 121),
-                    ("tokenizer_config.json", "b55cda6198e152ded427c8a9b3faf1cccf27a7fa080697a62f6ff143f511f44f", 1100),
+                    ("model.safetensors", "4dbe0399f0b7d7c8dddf1535a98769cc30743bebc877aea681998c8d984ce52b", 612983940),
+                    ("preprocessor_config.json", "2010d320cd2c68a8bb1de69aaa8f89daf173ef17cc22a30e4baf44b2f0e9bb6e", 392),
+                    ("special_tokens_map.json", "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6", 460),
+                    ("tokenizer_config.json", "da35aceebeda2adf44094a5867940b09379323b9390fa9197b57044e106bfb6e", 775),
                     ("vocab.json", "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349", 1059962),
                 ]
             ],
             "openVocabulary": True,
-            "source": {"type": "public", "origin": f"huggingface:google/owlv2-base-patch16-ensemble@{OWLV2_REVISION}"},
+            "source": {"type": "public", "origin": f"huggingface:google/owlvit-base-patch32@{OWLVIT_REVISION}"},
             "license": "Apache-2.0",
         },
-        "manifest_sha256": "cac61432484358fe3b62d86ed861e2f7ffdc87f66fced40dbc812ed0f1e55682",
+        "manifest_sha256": "d61e583174e35fbce8264447cbb8e2864afb97f13489b491b718ba3bf61f1cc2",
     },
 ]
 
