@@ -1036,11 +1036,11 @@ sequenceDiagram
 | --- | --- | --- |
 | Kafka(KRaft 단일) | 1GB | 힙 512MB, 파티션 3, 복제 1 |
 | PostgreSQL(pgvector) | 768MB | shared_buffers 256MB |
-| Redis · SeaweedFS | 256MB · 384MB | 버킷 이벤트 미지원이라 업로드 완료는 `/complete`만 |
+| Redis · SeaweedFS | 256MB · 1.5GB | 버킷 이벤트 미지원이라 업로드 완료는 `/complete`만 |
 | Spring 9개(analysis-loader 제외) | 각 512MB | 힙 256MB, 커넥션 풀 3~5 |
 | analysis-loader | 384MB | 힙 192MB |
 | ai-gateway | 768MB | 인코더 텍스트·이미지 타워 상주 |
-| normalize · chunk-processor · stream-ingestor | 768MB · 2GB · 2GB | FFmpeg 스레드 제한, YOLO nano 3종, 검출 2fps |
+| normalize · chunk-processor · stream-ingestor | 1GB · 2GB · 2GB | FFmpeg 스레드 제한, YOLO nano 3종, 검출 2fps |
 | frame-encoder · grounding-worker | 1GB · 1.5GB | 묶음 크기 축소, 동시 1 |
 | 나머지 워커 5개 | 각 256MB | 동시 처리 1~2 |
 | RTSP 재송출(mediamtx) | 128MB | `stream` 프로필만 |
