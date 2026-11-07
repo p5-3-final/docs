@@ -1036,7 +1036,7 @@ sequenceDiagram
 | --- | --- | --- |
 | Kafka(KRaft 단일) | 1GB | 힙 512MB, 파티션 3, 복제 1 |
 | PostgreSQL(pgvector) | 768MB | shared_buffers 256MB |
-| Redis · SeaweedFS | 256MB · 1.5GB | 버킷 이벤트 미지원이라 업로드 완료는 `/complete`만 |
+| Redis · SeaweedFS | 256MB · 2GB | 버킷 이벤트 미지원이라 업로드 완료는 `/complete`만 |
 | Spring 9개(analysis-loader 제외) | 각 512MB | 힙 256MB, 커넥션 풀 3~5 |
 | analysis-loader | 384MB | 힙 192MB |
 | ai-gateway | 768MB | 인코더 텍스트·이미지 타워 상주 |

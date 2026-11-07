@@ -95,8 +95,8 @@ services:
     deploy:
       resources:
         limits:
-          # 231MB 영상 업로드·정규화 사본 저장에서 최대 1021MiB를 썼다(2026-11-07 E2E, 384M에서 OOM으로 종료).
-          memory: 1536M
+          # 231MB 영상을 연속 세 번 업로드·재생하는 E2E에서 최대 1604MiB를 썼다(2026-11-07, 1536M에서 OOM으로 종료).
+          memory: 2048M
 
   # 영상 버킷, 모델 버킷(SPEC-011 인코더 가중치), Golden Set 버킷(SPEC-029 R-14)을 만들고 끝나는 일회성 컨테이너.
   # 운영 Golden Set 버킷은 Versioning·Object Lock을 켜지만(ADR-0011) 로컬은 흐름 확인용이라 켜지 않는다.
