@@ -1,11 +1,11 @@
 ---
 id: SPEC-032
 title: 플레이어 오버레이·클릭 조회·객체 질문·위험구역 편집 화면
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [frontend, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [SPEC-006, SPEC-022, SPEC-024, SPEC-027, SPEC-031, ADR-0015, ADR-0016, SPEC-036]
 ---
 

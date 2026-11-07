@@ -1,11 +1,11 @@
 ---
 id: SPEC-024
 title: track-analyzer 트랙 속성 분석과 객체 자유 질문
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, ADR-0012, ADR-0014, SPEC-009, SPEC-013, SPEC-016, SPEC-021, SPEC-022, ADR-0016]
 ---
 

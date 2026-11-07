@@ -1,11 +1,11 @@
 ---
 id: SPEC-027
 title: aggregator 영상 단위 병합·시간 규칙·위험 상태·노출 지표·요약
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, SPEC-013, SPEC-017, SPEC-020, SPEC-021, SPEC-022, SPEC-023, ADR-0015, ADR-0016, SPEC-028, SPEC-036]
 ---
 

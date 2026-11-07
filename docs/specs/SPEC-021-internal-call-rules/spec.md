@@ -1,11 +1,11 @@
 ---
 id: SPEC-021
 title: 내부 동기 호출 규약 적용 (ai-gateway 마감 시간, 생성 클라이언트, 재시도 규칙)
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0002, ADR-0014, SPEC-009, SPEC-011, SPEC-012, SPEC-016, SPEC-020]
 ---
 

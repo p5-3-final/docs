@@ -1,11 +1,11 @@
 ---
 id: SPEC-029
 title: quality-service 검토 큐·Golden Set·평가 실행·처리 단계 리포트
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0007, ADR-0008, ADR-0010, ADR-0011, SPEC-001, SPEC-013, SPEC-020, SPEC-023, ADR-0016, SPEC-036]
 ---
 

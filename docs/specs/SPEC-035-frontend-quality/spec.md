@@ -1,11 +1,11 @@
 ---
 id: SPEC-035
 title: 품질 화면(검토 큐·Golden Set·평가 실행·처리 단계·데이터셋 가져오기)
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [frontend, backend, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [SPEC-002, SPEC-029, SPEC-030, SPEC-031, ADR-0016]
 ---
 
@@ -115,7 +115,7 @@ AI 담당자로서 가져오기 버킷에 올린 매니페스트를 화면에서
 | R-18 | THE frontend SHALL 가져오기 상세에 상태, 영상·등록·실패·라벨·분할별 개수, 만든 Golden Set 버전(누르면 그 Golden Set 상세), 오류 목록을 표시한다. | US-5 |
 | R-19 | WHEN 운영자가 Golden Set이나 기간(최대 90일)으로 특징 내보내기를 시작하면, THE frontend SHALL 둘 중 하나만 받도록 입력을 막고 요청하며, 완료되면 파일 경로·줄 수·영상 수를 표시한다. | US-5 |
 | R-20 | IF 품질 API가 403을 돌려주면, THEN THE frontend SHALL 권한 없음 안내를 표시하고, 5xx·네트워크 오류면 다시 시도 버튼을 표시한다. | US-1 |
-| R-21 | THE frontend SHALL 검토 큐 목록에 사유 필터(`reviewRequired`·`budget_exceeded`·`call_cap_reached`·`model_unavailable`·`alert_dismissed`·표본)를 두고, 예산·상한 사유 항목에는 "재분석 뒤 자동 판정됨" 안내를 표시한다. | US-1 |
+| R-21 | THE frontend SHALL 검토 큐 목록에 사유 필터(`review_required`·`budget_exceeded`·`call_cap_reached`·`model_unavailable`·`alert_dismissed`·표본)를 두고, 예산·상한 사유 항목에는 "재분석 뒤 자동 판정됨" 안내를 표시한다. | US-1 |
 | R-22 | THE frontend SHALL 처리 단계 화면에 긴급 알림 지연(p50·p95)과 `dismissed` 비율 리포트를 표시한다. | US-4 |
 
 ### 비기능 요구사항

@@ -1,11 +1,11 @@
 ---
 id: SPEC-022
 title: track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID)
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, ADR-0009, ADR-0010, SPEC-013, SPEC-019, ADR-0015, SPEC-037]
 ---
 

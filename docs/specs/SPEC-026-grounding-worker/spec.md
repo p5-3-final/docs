@@ -1,11 +1,11 @@
 ---
 id: SPEC-026
 title: grounding-worker 검색 상위 구간 bbox 주석 클립
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, SPEC-013, SPEC-025]
 ---
 
@@ -83,15 +83,15 @@ related: [ADR-0008, SPEC-013, SPEC-025]
 | R-6 | THE grounding-worker SHALL 클립을 `sources/<sourceId>/groundings/<groundingId>/<groundingModel>/clip.mp4`에, 결과 파일(`groundings/v1/grounding-result`)을 같은 폴더의 `result.json`에 이 순서로 저장한 뒤 READY `grounding.completed`를 발행한다. | US-1 |
 | R-7 | THE grounding-worker SHALL READY `grounding.completed`의 `frames`에 샘플 프레임마다 대상어별 객체 수를 담는다. 탐지가 없으면 0으로 담는다. | US-1 |
 | R-8 | IF R-6의 결과 파일이 이미 있으면, THEN THE grounding-worker SHALL 탐지·인코딩을 하지 않고 그 파일 내용으로 `grounding.completed`를 발행한다. | US-2 |
-| R-9 | THE grounding-worker SHALL `grounding.completed`의 eventId를 groundingId와 탐지기 버전으로 결정적으로 만든다. | US-2 |
-| R-10 | IF 구간 끝이 정규화 영상 길이를 넘거나 `endMs`가 `startMs` 이하이면, THEN THE grounding-worker SHALL 그 항목을 `GROUNDING_SEGMENT_OUT_OF_RANGE`로 FAILED 발행한다. | US-3 |
+| R-9 | THE grounding-worker SHALL `grounding.completed`의 eventId를 groundingId, 탐지기 버전, 요청 ID, 결과(READY·FAILED)로 결정적으로 만든다. 같은 요청을 다시 처리하면 같은 eventId이고, FAILED 뒤 재요청한 READY는 다른 eventId다. | US-2 |
+| R-10 | IF 구간 끝이 정규화 영상 길이보다 프레임 간격(1000/fps ms) 하나를 넘게 초과하거나 `endMs`가 `startMs` 이하이면, THEN THE grounding-worker SHALL 그 항목을 `GROUNDING_SEGMENT_OUT_OF_RANGE`로 FAILED 발행한다. | US-3 |
 | R-11 | IF 정규화 영상이 없거나 디코딩하지 못하면, THEN THE grounding-worker SHALL 그 항목을 `GROUNDING_SOURCE_UNREADABLE`로 FAILED 발행한다. | US-3 |
 | R-12 | IF 탐지기가 오류를 내면, THEN THE grounding-worker SHALL 그 항목을 `GROUNDING_DETECTOR_FAILED`로 FAILED 발행한다. | US-3 |
 | R-13 | IF 항목 하나의 처리가 설정한 시간(기본 120초)을 넘으면, THEN THE grounding-worker SHALL 처리를 멈추고 그 항목을 `GROUNDING_TIMEOUT`으로 FAILED 발행한다. | US-3 |
 | R-14 | IF 저장소·Kafka가 일시적으로 응답하지 않으면, THEN THE grounding-worker SHALL 메시지를 재시도 토픽으로 보내 다시 처리하고, R-8로 이미 끝낸 항목은 다시 만들지 않는다. | US-2 |
 | R-15 | IF 메시지가 계약 스키마에 맞지 않거나 `normalizedKey`가 메시지의 sourceId·normalizationId 폴더가 아니면, THEN THE grounding-worker SHALL 재시도 없이 DLQ로 보낸다. | US-3 |
 | R-16 | WHILE 메시지를 처리하는 동안, THE grounding-worker SHALL 파티션 소비를 멈춰 두고(pause) poll을 계속 불러 재배치에 응답하며, 끝나면 소비를 재개한다(resume). | US-1 |
-| R-17 | THE grounding-worker SHALL 결과 파일과 `grounding.completed`에 탐지기 버전(가중치 manifest의 version)과 기준 신뢰도를 기록한다. | US-2 |
+| R-17 | THE grounding-worker SHALL 결과 파일에 탐지기 버전(가중치 manifest의 version)과 기준 신뢰도를, `grounding.completed`에 탐지기 버전을 기록한다. | US-2 |
 | R-18 | THE grounding-worker SHALL 처리 시간을 단계 `grounding.sample`·`grounding.detect`·`grounding.render`·`grounding.store`로 남긴다(SPEC-013). | US-1 |
 
 ### 비기능 요구사항

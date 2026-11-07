@@ -25,21 +25,21 @@
 | [SPEC-018](SPEC-018-media-retention-consent/spec.md) | 학습용 보존 동의와 보존 키 | Implementing | backend, docs | | 2026-11-06 |
 | [SPEC-019](SPEC-019-frame-encoder/spec.md) | frame-encoder 구간·크롭 벡터와 프로토타입 후보 | Implementing | ai, docs | | 2026-11-06 |
 | [SPEC-020](SPEC-020-event-analyzer-vector/spec.md) | event-analyzer 벡터 후보 판정 | Implementing | ai, docs | | 2026-11-06 |
-| [SPEC-021](SPEC-021-internal-call-rules/spec.md) | 내부 동기 호출 규약 적용 (ai-gateway 마감 시간, 생성 클라이언트, 재시도 규칙) | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-022](SPEC-022-track-stitcher/spec.md) | track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID) | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-023](SPEC-023-event-analyzer-detector/spec.md) | event-analyzer 탐지기·규칙 후보 판정과 event.manifest | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-024](SPEC-024-track-analyzer/spec.md) | track-analyzer 트랙 속성 분석과 객체 자유 질문 | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-025](SPEC-025-embedding-worker/spec.md) | embedding-worker 이벤트·트랙·구간 주석 텍스트 벡터 | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-026](SPEC-026-grounding-worker/spec.md) | grounding-worker 검색 상위 구간 bbox 주석 클립 | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-027](SPEC-027-aggregator/spec.md) | aggregator 영상 단위 병합·시간 규칙·위험 상태·노출 지표·요약 | Approved | ai, docs | | 2026-11-06 |
+| [SPEC-021](SPEC-021-internal-call-rules/spec.md) | 내부 동기 호출 규약 적용 (ai-gateway 마감 시간, 생성 클라이언트, 재시도 규칙) | Implementing | ai, docs | | 2026-11-07 |
+| [SPEC-022](SPEC-022-track-stitcher/spec.md) | track-stitcher 경계 트랙 연결과 재등장 연결(Re-ID) | Implementing | ai, docs | | 2026-11-07 |
+| [SPEC-023](SPEC-023-event-analyzer-detector/spec.md) | event-analyzer 탐지기·규칙 후보 판정과 event.manifest | Implementing | ai, docs | | 2026-11-07 |
+| [SPEC-024](SPEC-024-track-analyzer/spec.md) | track-analyzer 트랙 속성 분석과 객체 자유 질문 | Implementing | ai, docs | | 2026-11-07 |
+| [SPEC-025](SPEC-025-embedding-worker/spec.md) | embedding-worker 이벤트·트랙·구간 주석 텍스트 벡터 | Implementing | ai, docs | | 2026-11-07 |
+| [SPEC-026](SPEC-026-grounding-worker/spec.md) | grounding-worker 검색 상위 구간 bbox 주석 클립 | Implementing | ai, docs | | 2026-11-07 |
+| [SPEC-027](SPEC-027-aggregator/spec.md) | aggregator 영상 단위 병합·시간 규칙·위험 상태·노출 지표·요약 | Implementing | ai, docs | | 2026-11-07 |
 | [SPEC-028](SPEC-028-aggregator-inventory/spec.md) | aggregator 정적 객체 재고 비교·장비 방치·위험 노출 예측 | Approved | ai, docs | | 2026-11-06 |
-| [SPEC-029](SPEC-029-quality-service/spec.md) | quality-service 검토 큐·Golden Set·평가 실행·처리 단계 리포트 | Approved | backend, docs | | 2026-11-06 |
+| [SPEC-029](SPEC-029-quality-service/spec.md) | quality-service 검토 큐·Golden Set·평가 실행·처리 단계 리포트 | Implementing | backend, docs | | 2026-11-07 |
 | [SPEC-030](SPEC-030-quality-datasets/spec.md) | quality-service 외부 데이터셋 가져오기·라벨 3종·매칭 규칙·특징 내보내기·성능 Gate | Approved | backend, ai, docs | | 2026-11-06 |
-| [SPEC-031](SPEC-031-frontend-analysis-results/spec.md) | 분석 결과 화면(이벤트 타임라인·위험 상태·요약)과 실시간 알림 | Approved | frontend, docs | | 2026-11-06 |
-| [SPEC-032](SPEC-032-frontend-inspect-zones/spec.md) | 플레이어 오버레이·클릭 조회·객체 질문·위험구역 편집 화면 | Approved | frontend, docs | | 2026-11-06 |
-| [SPEC-033](SPEC-033-frontend-search/spec.md) | 검색 화면(문장·이미지 장면 찾기, 주석 클립)과 영상 질문(Video RAG) | Approved | frontend, docs | | 2026-11-06 |
-| [SPEC-034](SPEC-034-frontend-sessions-settings/spec.md) | 작업 세션·분석 이력 화면과 학습용 보존 설정 화면 | Approved | frontend, docs | | 2026-11-06 |
-| [SPEC-035](SPEC-035-frontend-quality/spec.md) | 품질 화면(검토 큐·Golden Set·평가 실행·처리 단계·데이터셋 가져오기) | Approved | frontend, backend, docs | | 2026-11-06 |
+| [SPEC-031](SPEC-031-frontend-analysis-results/spec.md) | 분석 결과 화면(이벤트 타임라인·위험 상태·요약)과 실시간 알림 | Implementing | frontend, docs | | 2026-11-07 |
+| [SPEC-032](SPEC-032-frontend-inspect-zones/spec.md) | 플레이어 오버레이·클릭 조회·객체 질문·위험구역 편집 화면 | Implementing | frontend, docs | | 2026-11-07 |
+| [SPEC-033](SPEC-033-frontend-search/spec.md) | 검색 화면(문장·이미지 장면 찾기, 주석 클립)과 영상 질문(Video RAG) | Implementing | frontend, docs | | 2026-11-07 |
+| [SPEC-034](SPEC-034-frontend-sessions-settings/spec.md) | 작업 세션·분석 이력 화면과 학습용 보존 설정 화면 | Implementing | frontend, docs | | 2026-11-07 |
+| [SPEC-035](SPEC-035-frontend-quality/spec.md) | 품질 화면(검토 큐·Golden Set·평가 실행·처리 단계·데이터셋 가져오기) | Implementing | frontend, backend, docs | | 2026-11-07 |
 | [SPEC-036](SPEC-036-stream-service/spec.md) | stream-service 카메라·수집 세션·STREAM Job 창 단위 완료·라이브 읽기 모델 | Approved | backend, docs | | 2026-11-06 |
 | [SPEC-037](SPEC-037-stream-ingestor/spec.md) | stream-ingestor 카메라 스트림 창 단위 산출물·연속 추적·긴급 후보 | Approved | ai, docs | | 2026-11-06 |
 
