@@ -20,3 +20,4 @@ CLAUDE.local.md
 # 로컬 E2E 산출물
 /scripts/e2e/out/
 /scripts/e2e/pw/node_modules
+/scripts/e2e/__pycache__/

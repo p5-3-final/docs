@@ -38,7 +38,8 @@ async function logInWithDefaultAccount(page) {
 test("로그인 → 화면에서 실제 영상 업로드 → 변환 완료 → 상세 재생", async ({ page }) => {
   await logInWithDefaultAccount(page);
   await page.getByLabel("영상 파일 고르기").setInputFiles(VIDEO);
-  await expect(page.getByText("업로드 완료").first()).toBeVisible({ timeout: 120_000 });
+  // 목록의 상태 표시와 섞이지 않게 업로드 대기열 안에서 본다. 끝나기 전에 새로 고치면 업로드가 끊긴다.
+  await expect(page.getByRole("list", { name: "업로드 대기열" }).getByText("업로드 완료")).toBeVisible({ timeout: 300_000 });
   const list = page.getByRole("list", { name: "내 영상" });
   // 목록은 정규화 완료 알림을 받지 않아(spec에 요구 없음) 새로 고쳐 상태를 확인한다.
   await expect(async () => {

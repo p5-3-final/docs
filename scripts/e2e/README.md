@@ -14,6 +14,7 @@
 ```bash
 scripts/e2e/run.sh up       # local/.env + compose.e2e.yml로 전체 프로필 기동
 scripts/e2e/run.sh all      # upload → workers → quality → ui → record
+scripts/e2e/run.sh measure  # 성공 지표·비기능 요구사항 측정(upload 뒤, mock 프로필)
 ```
 
 | 단계 | 확인하는 것 |
@@ -21,10 +22,11 @@ scripts/e2e/run.sh all      # upload → workers → quality → ui → record
 | `upload` | 관리자 계정 로그인 → 멀티파트 업로드 → 정규화 완료(READY) → 재생 주소 |
 | `workers` | ai 워커 다섯 흐름(벡터, 트랙 이어 붙이기, 트랙 속성, 주석 클립, 영상 단위 집계). 다른 담당자 서비스가 낼 메시지·파일은 ai 레포 테스트 도우미로 만든다 |
 | `quality` | api-gateway를 거친 quality API 11건. OPERATOR 전용(SPEC-029 R-4)이라 역할별 계정을 새로 만든다 |
-| `ui` | 화면에서 업로드 → 변환 → 상세 재생, OPERATOR 품질 검토 화면 |
+| `ui` | 화면에서 업로드 → 변환 → 상세 재생, OPERATOR 품질 검토 화면, 세션 만들기 → 작업 전·후 영상 → 역할별 표시와 보존 설정(SPEC-034) |
+| `measure` | v5.1 spec(SPEC-021~025, 027, 028)의 성공 지표와 비기능 요구사항. 결과는 `out/measure-result.txt`·`measure-result.json` |
 | `record` | 화면 흐름과 워커 산출물을 녹화해 `out/flow-recording.mp4`로 저장 |
 
-결과는 `scripts/e2e/out/`(git 제외)에 남는다. 다른 위치를 쓰려면 `E2E_OUT`을 지정한다.
+결과는 `scripts/e2e/out/`(git 제외)에 남는다. `workers.py`·`measure.py`는 메시지 보내기·모으기와 ID 바꾸기를 `e2e_common.py`에서, 계약 검증을 ai 레포 `vlm_testing.contracts`에서 가져다 쓴다. 다른 위치를 쓰려면 `E2E_OUT`을 지정한다.
 
 - `workers`는 테스트 도우미의 고정 영상·소유자 ID를 `upload`에서 관리자 계정이 올린 영상과 그 계정 ID로 바꿔 넣는다. 같은 영상으로 여러 번 돌려도 흐름을 시작한 뒤의 메시지만 본다.
 - `record`는 `upload`에서 분석한 영상을 웹에서 재생한 뒤 `out/results.html`(구간 프레임과 검색 순위, 트랙 속성, 주석 클립, 요약)을 보여 준다. 웹 화면은 분석 결과를 analysis-service·search-service에서 읽는데 로컬에 아직 없어서다.
@@ -44,6 +46,9 @@ E2E_REAL_MODELS=1 scripts/e2e/run.sh all
 - grounding-worker는 실제 탐지기가 아직 없어 mock이다(ai 레포 SPEC-026 T026~T028).
 
 ## 알려진 제약
+
+- `measure`는 함수 이름을 인자로 주면 그 측정만 돈다(`run.sh measure spec023_detector`). 자리 표시 analysis-api는 이벤트 2,000건(`E2E_MEASURE_EVENTS`)을 돌려준다.
+- SPEC-027 실시간 창(STREAM) 측정은 stream-service가 없어 하지 않는다.
 
 - auth에 역할 변경 API가 없어 OPERATOR 계정은 로컬 auth DB의 role을 `docker exec`로 직접 바꾼다.
 - analysis-api가 아직 없어 `compose.e2e.yml`이 aggregator를 호스트의 자리 표시 서버(8085)로 돌린다.

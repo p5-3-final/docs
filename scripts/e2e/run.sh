@@ -11,7 +11,7 @@ export E2E_VIDEO="${E2E_VIDEO:-$ROOT/video.mp4}"
 mkdir -p "$E2E_OUT"
 
 usage() {
-  echo "사용법: $0 {up|upload|workers|quality|ui|record|all}" >&2
+  echo "사용법: $0 {up|upload|workers|measure|quality|ui|record|all}" >&2
   exit 2
 }
 
@@ -50,19 +50,26 @@ upload() {
 }
 
 # 다른 담당자 서비스가 만들 메시지·파일은 ai 레포 테스트 도우미로 만들어 넣는다.
-workers() {
+# 다른 담당자 서비스가 만들 메시지·파일은 ai 레포 테스트 도우미로 만들어 넣는다.
+# 인자: 실행할 스크립트, 자리 표시 analysis-api가 돌려줄 이벤트 수, 스크립트에 더 넘길 인자
+run_with_helpers() {
   [[ -f "$E2E_OUT/upload-result.json" ]] || { echo "upload를 먼저 실행한다" >&2; exit 1; }
+  local script="$1" events="$2"
+  shift 2
   (
     cd "$AI_REPO"
     local t=services
-    export PYTHONPATH="$t/frame-encoder/tests:$t/track-stitcher/tests:$t/track-analyzer/tests:$t/grounding-worker/tests:$t/aggregator/tests:$t/embedding-worker/tests"
+    export PYTHONPATH="$t/frame-encoder/tests:$t/track-stitcher/tests:$t/track-analyzer/tests:$t/grounding-worker/tests:$t/aggregator/tests:$t/embedding-worker/tests:$t/event-analyzer/tests"
     # 테스트 데이터를 넣는 쓰기 키(local/seaweedfs/s3.json의 로컬 전용 샘플값)
     export S3_BUCKET=vlm-media S3_ENDPOINT_URL=http://localhost:8333 S3_PATH_STYLE=true
     export AWS_ACCESS_KEY_ID=local-media-key AWS_SECRET_ACCESS_KEY=local-media-secret AWS_REGION=us-east-1
-    uv run python - "$E2E_OUT/scenario.json" <<'PY'
+    # 위험 이벤트 1건 + 일반 이벤트(나머지)를 30초 간격으로 둔다.
+    uv run python - "$E2E_OUT/scenario.json" "$events" <<'PY'
 import json, sys
 from agg_support import ZONES, event, job_event_json, risk_event
-events = [job_event_json(risk_event(1, 30_000, detected=True)), job_event_json(event(2, start=0))]
+count = int(sys.argv[2])
+events = [job_event_json(risk_event(1, 30_000, detected=True))]
+events += [job_event_json(event(n, start=(n - 2) * 30_000)) for n in range(2, count + 1)]
 zones = [{"zoneId": str(z.zone_id), "name": z.name, "kind": z.kind} for z in ZONES]
 json.dump({"events": events, "zones": zones}, open(sys.argv[1], "w"), default=str)
 PY
@@ -72,8 +79,17 @@ PY
     local server=$!
     trap 'kill "$server"' EXIT
     until curl -s -o /dev/null localhost:8085/docs; do sleep 1; done
-    uv run python "$E2E_DIR/workers.py" "$E2E_OUT/upload-result.json" | tee "$E2E_OUT/workers-result.txt"
+    E2E_AGG_EVENTS="$events" uv run python "$E2E_DIR/$script" "$E2E_OUT/upload-result.json" "$@"
   )
+}
+
+workers() {
+  run_with_helpers workers.py 2 | tee "$E2E_OUT/workers-result.txt"
+}
+
+# 성공 지표·비기능 요구사항 측정(mock 프로필). 인자로 측정 함수 이름을 주면 그것만 돈다.
+measure() {
+  run_with_helpers measure.py "${E2E_MEASURE_EVENTS:-2000}" "$@" | tee "$E2E_OUT/measure-result.txt"
 }
 
 quality() {
@@ -88,6 +104,9 @@ playwright() {
 }
 
 ui() {
+  # 세션 화면 시연(SPEC-034)은 작업 전·후 두 번 올리므로 영상 앞 5초만 쓴다.
+  export E2E_SHORT_VIDEO="$E2E_OUT/short-5s.mp4"
+  ffmpeg -y -loglevel error -i "$E2E_VIDEO" -t 5 -c copy "$E2E_SHORT_VIDEO"
   playwright --config playwright.config.mjs
 }
 
@@ -104,6 +123,7 @@ case "${1:-}" in
   up) up ;;
   upload) upload ;;
   workers) workers ;;
+  measure) shift; measure "$@" ;;
   quality) quality ;;
   ui) ui ;;
   record) record ;;

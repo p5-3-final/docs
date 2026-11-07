@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "smoke.spec.mjs",
+  testMatch: ["smoke.spec.mjs", "sessions.spec.mjs"],
   outputDir: `${process.env.E2E_OUT ?? "../out"}/pw-results`,
   workers: 1,
   timeout: 300_000,
