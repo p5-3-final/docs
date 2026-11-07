@@ -15,7 +15,7 @@
 | postgres (auth_db, media_db, ai_db, quality_db) | 기본 | 5432 | 512M |
 | redis | 기본 | 6379 | 128M |
 | kafka (KRaft 단일 노드) | 기본 | 9092 | 512M |
-| seaweedfs (S3 API, 버킷 `vlm-media`) | 기본 | 8333 | 1536M |
+| seaweedfs (S3 API, 버킷 `vlm-media`) | 기본 | 8333 | 2048M |
 | track-stitcher (SPEC-022) | `analysis` | — (health 8000, 내부) | 256M |
 | track-analyzer (SPEC-024) | `analysis` | — (health 8000, 내부) | 256M |
 | embedding-worker (SPEC-025) | `analysis` | — (health 8000, 내부) | 256M |
@@ -29,15 +29,15 @@
 
 ## 프로필
 
-기본 구성의 메모리 상한 합은 7872M(약 7.7GB)이다. 프로필을 하나라도 켜면 Docker 할당 8GB를 넘고, 모두 켜면 11200M(약 10.9GB)이다. Docker 할당이 8GB면 작업에 필요한 묶음만 켜고 쓰지 않는 기본 서비스를 내린다. SeaweedFS·normalize 상한은 실제 크기 영상(1080p, 231MB)으로 잰 최대 사용량에 여유를 더한 값이다. 상한은 최대값이고 실제 사용량은 더 작지만, Docker VM 자체도 메모리를 쓰므로 합이 8GB에 가까우면 다른 컨테이너를 내린다.
+기본 구성의 메모리 상한 합은 8384M(약 8.2GB)이다. 기본 구성만으로 Docker 할당 8GB를 넘고, 프로필을 모두 켜면 11712M(약 11.4GB)이다. Docker 할당이 8GB면 작업에 필요한 묶음만 켜고 쓰지 않는 기본 서비스를 내린다. SeaweedFS·normalize 상한은 실제 크기 영상(1080p, 231MB)으로 잰 최대 사용량에 여유를 더한 값이다. 상한은 최대값이고 실제 사용량은 더 작지만, Docker VM 자체도 메모리를 쓰므로 합이 8GB에 가까우면 다른 컨테이너를 내린다.
 
 | 프로필 | 서비스 | 더하는 상한 | 기본 구성과 합계 |
 | --- | --- | --- | --- |
-| (없음) | 위 표의 "기본" 12개 | — | 7872M |
-| `analysis` | track-stitcher, track-analyzer, embedding-worker, aggregator | 1024M | 8896M |
-| `grounding` | grounding-worker | 1536M | 9408M |
-| `quality` | quality-service | 768M | 8640M |
-| `analysis` + `quality` | | 1792M | 9664M(8GB 초과, 기본 구성의 frame-encoder·normalize를 내리고 쓴다) |
+| (없음) | 위 표의 "기본" 12개 | — | 8384M |
+| `analysis` | track-stitcher, track-analyzer, embedding-worker, aggregator | 1024M | 9408M |
+| `grounding` | grounding-worker | 1536M | 9920M |
+| `quality` | quality-service | 768M | 9152M |
+| `analysis` + `quality` | | 1792M | 10176M(8GB 초과, 기본 구성의 frame-encoder·normalize를 내리고 쓴다) |
 
 ```bash
 docker compose -f local/docker-compose.yml --profile analysis up -d --build   # 기본 구성 + analysis
