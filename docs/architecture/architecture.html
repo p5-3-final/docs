@@ -776,7 +776,7 @@ chunk-processor와 같은 산출물(<code>jobType: STREAM</code>), 녹화
 <td><code>grounding.requested</code></td>
 <td><code>grounding.completed</code></td>
 <td>S3</td>
-<td>YOLOE 텍스트 클래스(안)</td>
+<td>OWLv2 개방 어휘 탐지기(워커 안)</td>
 </tr>
 <tr>
 <td>event-analyzer</td>
@@ -1667,7 +1667,7 @@ href="../specs/SPEC-012-ai-gateway-parse/spec.md">SPEC-012</a>)</td>
 <td>상위 3구간과 대상어로 <code>grounding.requested</code>. 같은
 groundingId 클립이 있으면 발행하지 않는다(<a
 href="../specs/SPEC-026-grounding-worker/spec.md">SPEC-026</a>)</td>
-<td>없음(YOLOE 워커 안)</td>
+<td>없음(OWLv2 워커 안)</td>
 </tr>
 <tr>
 <td>8</td>
@@ -3617,9 +3617,10 @@ href="../adr/0011-derived-data-retention.md">ADR-0011</a>)</td>
 <td>탐지기</td>
 <td><code>Detector</code>(chunk-processor, stream-ingestor,
 grounding-worker)</td>
-<td>가중치 manifest 경로·버전·학습
-출처·클래스·<code>supportedEvents</code></td>
-<td>YOLO26n, YOLO-pose, YOLOE</td>
+<td>가중치 manifest 경로·버전·학습 출처·클래스(개방 어휘는
+<code>openVocabulary</code>)·<code>supportedEvents</code></td>
+<td>YOLO26n, YOLO-pose, YOLOE(chunk-processor·stream-ingestor),
+OWLv2(grounding-worker)</td>
 </tr>
 <tr>
 <td>예측 모델</td>
@@ -3667,8 +3668,9 @@ grounding-worker)</td>
 활성 버전 전환이다. 코드·스키마 변경 없이 한다. 실시간은 다음 세션부터
 새 프로필이 적용되고, <code>reload_profile</code> 명령으로 진행 중
 세션의 다음 창부터 바꿀 수 있다.</li>
-<li>기본 탐지기(AGPL-3.0)와 기본 인코더(Apple AMLR)는 비상용 시연·학습
-목적으로만 쓴다. 가중치는 이미지에 넣지 않는다.</li>
+<li>기본 탐지기(Ultralytics, AGPL-3.0)와 기본 인코더(Apple AMLR)는
+비상용 시연·학습 목적으로만 쓴다. grounding-worker의 OWLv2는
+Apache-2.0이다. 가중치는 이미지에 넣지 않는다.</li>
 </ul>
 <h3 id="151-ai-담당자가-바꾸는-자리">15.1 AI 담당자가 바꾸는 자리</h3>
 <table>
@@ -4206,7 +4208,7 @@ gateway·auth·stream·stream-ingestor·event-analyzer·aggregator·analysis·no
 </tr>
 <tr>
 <td>frame-encoder · grounding-worker</td>
-<td>1GB · 1.5GB</td>
+<td>1GB · 2GB</td>
 <td>묶음 크기 축소, 동시 1</td>
 </tr>
 <tr>

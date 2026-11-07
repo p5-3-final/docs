@@ -20,7 +20,7 @@
 | track-analyzer (SPEC-024) | `analysis` | — (health 8000, 내부) | 256M |
 | embedding-worker (SPEC-025) | `analysis` | — (health 8000, 내부) | 256M |
 | aggregator (SPEC-027·028) | `analysis` | — (health 8000, 내부) | 256M |
-| grounding-worker (SPEC-026) | `grounding` | — (health 8000, 내부) | 1536M |
+| grounding-worker (SPEC-026) | `grounding` | — (health 8000, 내부) | 2048M |
 | quality-service (SPEC-029) | `quality` | 8088 | 768M |
 
 `seaweedfs-init`은 버킷(영상 `vlm-media`, 모델 가중치 `vlm-models`, Golden Set `vlm-golden`)을 만들고 끝나는 일회성 컨테이너다. SeaweedFS 접근 키는 `seaweedfs/s3.json`의 로컬 전용 샘플값이고 compose의 각 서비스 `AWS_ACCESS_KEY_ID`·`AWS_SECRET_ACCESS_KEY`와 같다. 키는 서비스마다 하나이고 쓰는 버킷과 동작만 허용한다. `s3.json`을 바꾸면 SeaweedFS를 다시 시작해야 반영된다.
@@ -29,13 +29,13 @@
 
 ## 프로필
 
-기본 구성의 메모리 상한 합은 8384M(약 8.2GB)이다. 기본 구성만으로 Docker 할당 8GB를 넘고, 프로필을 모두 켜면 11712M(약 11.4GB)이다. Docker 할당이 8GB면 작업에 필요한 묶음만 켜고 쓰지 않는 기본 서비스를 내린다. SeaweedFS·normalize 상한은 실제 크기 영상(1080p, 231MB)으로 잰 최대 사용량에 여유를 더한 값이다. 상한은 최대값이고 실제 사용량은 더 작지만, Docker VM 자체도 메모리를 쓰므로 합이 8GB에 가까우면 다른 컨테이너를 내린다.
+기본 구성의 메모리 상한 합은 8384M(약 8.2GB)이다. 기본 구성만으로 Docker 할당 8GB를 넘고, 프로필을 모두 켜면 12224M(약 11.9GB)이다. Docker 할당이 8GB면 작업에 필요한 묶음만 켜고 쓰지 않는 기본 서비스를 내린다. SeaweedFS·normalize 상한은 실제 크기 영상(1080p, 231MB)으로 잰 최대 사용량에 여유를 더한 값이다. 상한은 최대값이고 실제 사용량은 더 작지만, Docker VM 자체도 메모리를 쓰므로 합이 8GB에 가까우면 다른 컨테이너를 내린다.
 
 | 프로필 | 서비스 | 더하는 상한 | 기본 구성과 합계 |
 | --- | --- | --- | --- |
 | (없음) | 위 표의 "기본" 12개 | — | 8384M |
 | `analysis` | track-stitcher, track-analyzer, embedding-worker, aggregator | 1024M | 9408M |
-| `grounding` | grounding-worker | 1536M | 9920M |
+| `grounding` | grounding-worker | 2048M | 10432M |
 | `quality` | quality-service | 768M | 9152M |
 | `analysis` + `quality` | | 1792M | 10176M(8GB 초과, 기본 구성의 frame-encoder·normalize를 내리고 쓴다) |
 
@@ -175,7 +175,7 @@ docker compose -f local/docker-compose.yml up -d frame-encoder event-analyzer
 `/v1/embed`는 문장·검색용 이미지·텍스트를 벡터로 바꾼다. mock 프로필은 의미 없는 결정적 벡터를 돌려준다. 실제 인코더(MobileCLIP2-S0)와 텍스트 임베딩(Ollama `bge-m3`)을 쓰려면 아래를 한 번 한다.
 
 ```bash
-local/scripts/upload-models.sh   # Hugging Face에서 가중치(약 300MB)를 받아 sha256 확인 후 manifest와 함께 vlm-models 버킷에 올린다
+local/scripts/upload-models.sh   # Hugging Face에서 인코더(약 300MB)·grounding 탐지기(약 620MB) 가중치를 받아 sha256 확인 후 manifest와 함께 vlm-models 버킷에 올린다
 ollama pull bge-m3               # 텍스트 임베딩(한국어 포함, 1024차원)
 AI_GATEWAY_PROFILE_PATH=/app/profiles/local.toml docker compose -f local/docker-compose.yml up -d ai-gateway
 ```
@@ -207,7 +207,7 @@ curl -s -X POST localhost:8000/v1/embed -H 'Content-Type: application/json' -H '
 | grounding-worker | `grounding.requested` | `grounding.completed` | `grounding.requested`(search-service). 결과를 받는 search-service·notification-service도 없다 |
 
 - Redis는 서비스마다 DB 번호를 나눈다(ai-gateway 0, event-analyzer 1, track-stitcher 2, aggregator 3).
-- grounding-worker는 mock 탐지기(`GROUNDING_WORKER_ALLOW_MOCK=true`, `/app/profiles/local-mock.toml`)로 뜨고 박스에 의미가 없다. 실제 탐지기 프로필은 ai 레포 SPEC-026 tasks T026~T028에서 더한 뒤 `GROUNDING_WORKER_PROFILE_PATH`를 그 경로로 바꾸고 `GROUNDING_WORKER_ALLOW_MOCK`을 지운다.
+- grounding-worker는 기본으로 mock 탐지기(`/app/profiles/local-mock.toml`)로 뜨고 박스에 의미가 없다. 실제 탐지기(OWLv2 base, Apache-2.0)는 `local/scripts/upload-models.sh`로 가중치(약 620MB)를 올린 뒤 `GROUNDING_WORKER_PROFILE_PATH=/app/profiles/local.toml`로 띄운다. CPU에서 1080p 프레임당 약 2초가 걸리고(Mac 4스레드 측정) 최대 메모리는 약 1.7GB다.
 - 메시지를 직접 넣을 때는 Kafka 콘솔 도구를 쓴다. 메시지 모양은 docs `service-contracts/events/<토픽>.schema.json`의 예시를 따른다.
 
 ```bash

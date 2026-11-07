@@ -17,7 +17,7 @@ related: [ADR-0008, SPEC-013, SPEC-025]
 
 문장 검색은 이동 시각만 돌려준다. 그래서 사용자가 10초 구간 안에서 "안전모 안 쓴 사람"이 어디 있는지 다시 찾아야 한다. [아키텍처 v5](../../architecture/architecture.md) "검색 경로" 7단계에서는 search-service가 상위 3개 구간과 대상어로 `grounding.requested`를 보낸다. grounding-worker는 개방 어휘 탐지기로 대상어를 찾고, 박스를 그린 주석 클립을 만들어 `grounding.completed`로 알린다. 클립 경로는 notification-service가 SSE로 화면에 보낸다.
 
-- 영상을 다시 분석하지 않는다. 구간 하나에서 1fps로 최대 12장만 탐지한다(overview 메모리 표: 1.5GB, 동시 1).
+- 영상을 다시 분석하지 않는다. 구간 하나에서 1fps로 최대 12장만 탐지한다(overview 메모리 표: 2GB, 동시 1).
 - 같은 대상어·구간·탐지기 버전의 클립은 한 번만 만든다(overview "검색 결과 재사용" 주석 클립 행, 다중 Pod 표 grounding-worker 행).
 - 입력 `grounding.requested`는 search-service(다른 담당자)가 낸다. 계약이 없어 이 spec이 아키텍처 문서대로 소비 쪽에서 정한다(2026-11-06 사용자 결정, [handoff](../../handoff.md) 2.1).
 
@@ -99,7 +99,7 @@ related: [ADR-0008, SPEC-013, SPEC-025]
 | ID | 요구사항 |
 | --- | --- |
 | NFR-1 | THE grounding-worker SHALL 로컬 compose(CPU)에서 1080p 30fps 10초 구간 하나를 p95 30초 안에 처리한다. |
-| NFR-2 | THE grounding-worker SHALL 컨테이너 메모리 1.5GB 안에서 동작한다. |
+| NFR-2 | THE grounding-worker SHALL 컨테이너 메모리 2GB 안에서 동작한다. |
 | NFR-3 | THE grounding-worker SHALL 한 Pod에서 메시지를 한 번에 하나씩 처리하고, 모든 항목을 발행한 뒤 커밋한다. |
 
 ## 5. 영향 범위
@@ -122,8 +122,9 @@ related: [ADR-0008, SPEC-013, SPEC-025]
 | `service-contracts/asyncapi/grounding-worker.yaml` | 새 파일 | 예(추가) |
 | `service-contracts/asyncapi/search-service.yaml` | `grounding.requested` 발행 채널(0.1.0 → 0.2.0) | 예(추가) |
 | `service-contracts/stages/v1/stages.schema.json` | `grounding-worker.queue_wait`·`grounding-worker.handle`·`grounding.sample`·`grounding.detect`·`grounding.render`·`grounding.store` | 예(추가) |
+| `service-contracts/models/manifest.schema.json` | 개방 어휘 탐지기 표시 `openVocabulary`. true면 `classes`를 생략한다(2026-11-07) | 예(추가, 기존 manifest 그대로 유효) |
 
-계약 묶음 3.5.0 → 3.6.0
+계약 묶음 3.5.0 → 3.6.0, manifest 변경은 5.0.0 → 5.1.0
 
 ## 7. 성공 지표
 

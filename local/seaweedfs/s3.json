@@ -108,7 +108,8 @@
       "actions": [
         "Read:vlm-media",
         "Write:vlm-media",
-        "List:vlm-media"
+        "List:vlm-media",
+        "Read:vlm-models"
       ]
     },
     {
