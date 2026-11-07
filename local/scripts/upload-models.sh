@@ -26,7 +26,7 @@ from botocore.exceptions import ClientError
 from huggingface_hub import hf_hub_download
 
 BUCKET = "vlm-models"
-OWLV2_REVISION = "03682beca23d5f94ed74331bce81786b2636a24f"
+OWLV2_REVISION = "cfd3195ba4ea9592eec887ded089f4c08eff231d"
 # 항목마다 models/<종류>/<버전>/ 접두사(service-contracts/models/manifest.schema.json), Hugging Face 저장소와
 # 리비전, manifest, 프로필이 고정한 manifest 바이트 해시. 직렬화 형식을 바꾸면 해시와 프로필을 함께 바꾼다.
 MODELS = [
@@ -62,7 +62,7 @@ MODELS = [
             "files": [
                 {"name": name, "sha256": sha, "size": size}
                 for name, sha, size in [
-                    ("added_tokens.json", "cfd3195ba4ea9592eec887ded089f4c08eff231de5dc0da35d20111e8ff3fdfc", 67),
+                    ("added_tokens.json", "e5dc0da35d20111e8ff3fdfc03682beca23d5f94ed74331bce81786b2636a24f", 67),
                     ("config.json", "ba9df8c25a4b8461887dd0a93d9252c9cd84697fe8d49a9d8794ce409af9acb2", 414),
                     ("merges.txt", "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a", 524619),
                     ("model.safetensors", "e1e130b9e404cf91a75ad45644c1da9d7fa5284085eecc864266a6923efb99e7", 619918824),
@@ -76,7 +76,7 @@ MODELS = [
             "source": {"type": "public", "origin": f"huggingface:google/owlv2-base-patch16-ensemble@{OWLV2_REVISION}"},
             "license": "Apache-2.0",
         },
-        "manifest_sha256": "a0fe0f80722fb7385894da50203836f52ad9c4646391649bfbcf4a4c6827d641",
+        "manifest_sha256": "cac61432484358fe3b62d86ed861e2f7ffdc87f66fced40dbc812ed0f1e55682",
     },
 ]
 
