@@ -1,0 +1,8 @@
+# 로컬 E2E 전용 덮어쓰기: analysis-api가 아직 없어 aggregator가 호스트의 자리 표시 서버
+# (ai 레포 vlm_testing.analysis_api, run.sh workers가 8085에 띄운다)를 읽게 한다.
+services:
+  aggregator:
+    environment:
+      AGGREGATOR_ANALYSIS_API_URL: http://host.docker.internal:8085
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

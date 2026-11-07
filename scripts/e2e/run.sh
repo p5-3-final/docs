@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# 로컬 compose 스택에 E2E를 돌린다. 사용법은 scripts/e2e/README.md를 본다.
+set -euo pipefail
+
+E2E_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$E2E_DIR/../.." && pwd)"
+AI_REPO="$ROOT/repos/ai"
+FRONTEND_REPO="$ROOT/repos/frontend"
+export E2E_OUT="${E2E_OUT:-$E2E_DIR/out}"
+export E2E_VIDEO="${E2E_VIDEO:-$ROOT/video.mp4}"
+mkdir -p "$E2E_OUT"
+
+usage() {
+  echo "사용법: $0 {up|upload|workers|quality|ui|record|all}" >&2
+  exit 2
+}
+
+# local/.env를 읽도록 --env-file 없이 띄우고, E2E 전용 덮어쓰기만 더한다.
+up() {
+  docker compose -f "$ROOT/local/docker-compose.yml" -f "$E2E_DIR/compose.e2e.yml" --profile '*' up -d
+}
+
+ai_python() {
+  uv run --project "$AI_REPO" python "$@"
+}
+
+upload() {
+  [[ -f "$E2E_VIDEO" ]] || { echo "영상이 없다: $E2E_VIDEO (E2E_VIDEO로 지정)" >&2; exit 1; }
+  ai_python "$E2E_DIR/upload.py" "$E2E_VIDEO" "$E2E_OUT/upload-result.json"
+}
+
+# 다른 담당자 서비스가 만들 메시지·파일은 ai 레포 테스트 도우미로 만들어 넣는다.
+workers() {
+  [[ -f "$E2E_OUT/upload-result.json" ]] || { echo "upload를 먼저 실행한다" >&2; exit 1; }
+  (
+    cd "$AI_REPO"
+    local t=services
+    export PYTHONPATH="$t/frame-encoder/tests:$t/track-stitcher/tests:$t/track-analyzer/tests:$t/grounding-worker/tests:$t/aggregator/tests:$t/embedding-worker/tests"
+    # 테스트 데이터를 넣는 쓰기 키(local/seaweedfs/s3.json의 로컬 전용 샘플값)
+    export S3_BUCKET=vlm-media S3_ENDPOINT_URL=http://localhost:8333 S3_PATH_STYLE=true
+    export AWS_ACCESS_KEY_ID=local-media-key AWS_SECRET_ACCESS_KEY=local-media-secret AWS_REGION=us-east-1
+    uv run python - "$E2E_OUT/scenario.json" <<'PY'
+import json, sys
+from agg_support import ZONES, event, job_event_json, risk_event
+events = [job_event_json(risk_event(1, 30_000, detected=True)), job_event_json(event(2, start=0))]
+zones = [{"zoneId": str(z.zone_id), "name": z.name, "kind": z.kind} for z in ZONES]
+json.dump({"events": events, "zones": zones}, open(sys.argv[1], "w"), default=str)
+PY
+    # aggregator가 읽는 analysis-api 자리 표시 서버(compose.e2e.yml이 8085를 가리킨다)
+    ANALYSIS_API_SCENARIO="$E2E_OUT/scenario.json" ANALYSIS_API_HOST=0.0.0.0 ANALYSIS_API_PORT=8085 \
+      uv run python -m vlm_testing.analysis_api > "$E2E_OUT/analysis-api.log" 2>&1 &
+    local server=$!
+    trap 'kill "$server"' EXIT
+    until curl -s -o /dev/null localhost:8085/docs; do sleep 1; done
+    uv run python "$E2E_DIR/workers.py" "$E2E_OUT/upload-result.json" | tee "$E2E_OUT/workers-result.txt"
+  )
+}
+
+quality() {
+  ai_python "$E2E_DIR/quality.py" | tee "$E2E_OUT/quality-result.txt"
+}
+
+# 스펙 파일 옆에서 @playwright/test를 찾도록 frontend 레포의 의존성을 연결한다.
+playwright() {
+  [[ -d "$FRONTEND_REPO/node_modules" ]] || { echo "repos/frontend에서 npm ci를 먼저 실행한다" >&2; exit 1; }
+  ln -sfn "$FRONTEND_REPO/node_modules" "$E2E_DIR/pw/node_modules"
+  (cd "$E2E_DIR/pw" && ./node_modules/.bin/playwright test --reporter=line "$@")
+}
+
+ui() {
+  playwright --config playwright.config.mjs
+}
+
+record() {
+  python3 "$E2E_DIR/results_page.py" "$E2E_OUT"
+  playwright --config record.config.mjs
+  local webm
+  webm="$(find "$E2E_OUT/recording" -name video.webm | head -1)"
+  ffmpeg -y -loglevel error -i "$webm" -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$E2E_OUT/flow-recording.mp4"
+  echo "녹화: $E2E_OUT/flow-recording.mp4"
+}
+
+case "${1:-}" in
+  up) up ;;
+  upload) upload ;;
+  workers) workers ;;
+  quality) quality ;;
+  ui) ui ;;
+  record) record ;;
+  all) upload && workers && quality && ui && record ;;
+  *) usage ;;
+esac
