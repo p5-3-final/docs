@@ -1,11 +1,11 @@
 ---
 id: SPEC-028
 title: aggregator 정적 객체 재고 비교·장비 방치·위험 노출 예측
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0008, SPEC-013, SPEC-017, SPEC-021, SPEC-027, ADR-0015, ADR-0016]
 ---
 

@@ -1,11 +1,11 @@
 ---
 id: SPEC-030
 title: quality-service 외부 데이터셋 가져오기·라벨 3종·매칭 규칙·특징 내보내기·성능 Gate
-status: Approved
+status: Implementing
 owner: <이름>
 repos: [backend, ai, docs]
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 related: [ADR-0010, ADR-0011, SPEC-013, SPEC-027, SPEC-028, SPEC-029]
 ---
 
